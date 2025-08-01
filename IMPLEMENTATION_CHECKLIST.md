@@ -9,9 +9,9 @@ Use this checklist to track progress through each stage. Mark each box as you co
 ### 1. Project Setup
 - [x] Scaffold project structure and modules
 - [x] Install dependencies (`pandas`, `openai`, `streamlit`, `openpyxl`)
-- [ ] Set up environment variable for OpenAI API key
+- [x] Set up OpenAI API key using a `.env` file (recommended) or environment variable
 - [x] Create sample T12 Excel template for testing
-**✅ VALIDATION REQUIRED**: All dependencies installed, sample T12 file created, API key configured
+**✅ VALIDATION REQUIRED**: All dependencies installed, sample T12 file created, API key configured via `.env` or environment variable
 
 ### 2. T12 Data Format Standardization
 - [x] Define standard T12 Excel structure (columns, headers, sheet names)
@@ -23,9 +23,9 @@ Use this checklist to track progress through each stage. Mark each box as you co
 ### 3. Data Ingestion & Preprocessing
 - [x] Implement `tidy_sheet_all()` to clean and reshape T12 Excel data
 - [x] Add robust error handling for malformed Excel files
-- [ ] Test with multiple sample T12 Excel files
-- [ ] Validate output DataFrame structure and content
-- [ ] Implement data quality checks (missing values, invalid dates, etc.)
+- [x] Test with multiple sample T12 Excel files
+- [x] Validate output DataFrame structure and content
+- [x] Implement data quality checks (missing values, invalid dates, etc.)
 **✅ VALIDATION REQUIRED**: Clean data output, proper error handling, consistent DataFrame structure
 
 ### 4. KPI Summary Generation

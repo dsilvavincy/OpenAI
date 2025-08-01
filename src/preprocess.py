@@ -84,6 +84,30 @@ def tidy_sheet_all(excel_path, sheet_name=None):
         df_long["Month_Name"] = df_long["MonthParsed"].dt.strftime("%b")
         df_long["Is_Negative"] = df_long["Value"] < 0
 
+        # 10. Data quality checks
+        quality_issues = []
+        # Check for missing values in critical columns
+        missing_metrics = df_long["Metric"].isna().sum()
+        missing_months = df_long["Month"].isna().sum()
+        missing_values = df_long["Value"].isna().sum()
+        if missing_metrics > 0:
+            quality_issues.append(f"Missing Metric values: {missing_metrics}")
+        if missing_months > 0:
+            quality_issues.append(f"Missing Month values: {missing_months}")
+        if missing_values > 0:
+            quality_issues.append(f"Missing Value entries: {missing_values}")
+
+        # Check for invalid dates
+        invalid_dates = df_long["MonthParsed"].isna().sum()
+        if invalid_dates > 0:
+            quality_issues.append(f"Invalid MonthParsed dates: {invalid_dates}")
+
+        # Optionally, print or log quality issues
+        if quality_issues:
+            print("[T12 Data Quality Checks]")
+            for issue in quality_issues:
+                print("-", issue)
+
         return df_long[["Sheet", "Metric", "Month", "MonthParsed", "IsYTD", "Value", "Year", "Month_Name", "Is_Negative"]]
         
     except Exception as e:

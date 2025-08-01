@@ -6,63 +6,56 @@ import pandas as pd
 
 def generate_kpi_summary(df):
     """
-    Generate standardized KPI summary for T12 property data.
-    Input: Long-format DataFrame with columns: [Sheet, Metric, Month, MonthParsed, IsYTD, Value, Year, Month_Name, Is_Negative]
+    Generate a comprehensive KPI summary for T12 property data.
+    Dynamically includes all metrics found in the file, grouped by logical categories.
     """
     try:
         summary_parts = []
-        
-        # Filter out YTD data for latest month analysis
         monthly_data = df[~df["IsYTD"]].copy()
-        
-        # Get latest month data
         if monthly_data.empty:
             return "No monthly data found to analyze."
-        
         latest_month = monthly_data["MonthParsed"].max()
         latest_data = monthly_data[monthly_data["MonthParsed"] == latest_month]
-        
-        # Add header with analysis period
         summary_parts.append(f"=== T12 PROPERTY ANALYSIS - {latest_month.strftime('%B %Y')} ===")
         summary_parts.append(f"Sheet: {df['Sheet'].iloc[0]}")
         summary_parts.append("")
-        
-        # Key Revenue Metrics
-        summary_parts.append("=== REVENUE PERFORMANCE ===")
-        
-        # Property Asking Rent
-        asking_rent = get_metric_value(latest_data, 'Property Asking Rent')
-        if asking_rent is not None:
-            summary_parts.append(f"• Property Asking Rent: ${asking_rent:,.2f}")
-        
-        # Effective Rental Income
-        effective_income = get_metric_value(latest_data, 'Effective Rental Income')
-        if effective_income is not None:
-            summary_parts.append(f"• Effective Rental Income: ${effective_income:,.2f}")
-            
-        # Gross Scheduled Rent
-        gross_rent = get_metric_value(latest_data, 'Gross Scheduled Rent')
-        if gross_rent is not None:
-            summary_parts.append(f"• Gross Scheduled Rent: ${gross_rent:,.2f}")
-        
-        # Loss Factors
-        summary_parts.append("\n=== REVENUE LOSS FACTORS ===")
-        
-        loss_metrics = ['Loss to lease', 'Vacancy', 'Concessions', 'Delinquency', 'Non Revenue Units']
-        for metric in loss_metrics:
-            value = get_metric_value(latest_data, metric)
-            if value is not None:
-                summary_parts.append(f"• {metric}: ${value:,.2f}")
-        
-        # Other Income
-        summary_parts.append("\n=== OTHER INCOME SOURCES ===")
-        
-        other_income_metrics = ['Parking Garage Income', 'Utility Income', 'Other - Income', 'Other Income']
-        for metric in other_income_metrics:
-            value = get_metric_value(latest_data, metric)
-            if value is not None and value != 0:
-                summary_parts.append(f"• {metric}: ${value:,.2f}")
-        
+
+        # Group metrics by logical categories
+        categories = {
+            "REVENUE PERFORMANCE": ["Rent", "Income", "Gross Scheduled Rent", "Effective Rental Income", "Other - Income", "Other Income"],
+            "REVENUE LOSS FACTORS": ["Loss to lease", "Vacancy", "Concessions", "Delinquency", "Non Revenue Units"],
+            "EXPENSES": ["General & Admin.", "Management Fee", "Payroll", "Insurance", "Property Taxes", "Leasing & Marketing", "Professional fees", "Landscaping", "Security & Life Safety", "Repairs & Maintenance", "Unit T/O Refurbishment", "Utilities", "Trash Removal", "Miscellaneous", "Other - Expense", "Total Expense"],
+            "NOI & BELOW LINE": ["EBITDA (NOI)", "Repl. Reserve Fund", "State Franchise Fee", "Partnership Professional Fees", "Asset Management Fees", "Debt Service", "Other - Below Line", "Total Below Line", "Renovations", "Monthly Cash Flow"],
+            "BALANCE SHEET & ESCROW": ["Operating Account Balance", "Interest Reserve Account", "Undeposited Funds", "Security Deposits", "Total Cash", "Open ARR", "Escrow - Taxes", "Escrow - Insurance", "Escrow - Other", "Escrow - RR", "Open AP", "Total Equity", "Total Debt"]
+        }
+
+        # Find all unique metrics in the file
+        all_metrics = latest_data["Metric"].unique()
+        used_metrics = set()
+
+        # Print each category
+        for cat, patterns in categories.items():
+            cat_metrics = []
+            for pattern in patterns:
+                for metric in all_metrics:
+                    if pattern.lower().replace(" ", "") in metric.lower().replace(" ", "") and metric not in used_metrics:
+                        value = get_metric_value(latest_data, metric)
+                        if value is not None:
+                            cat_metrics.append(f"• {metric}: ${value:,.2f}")
+                            used_metrics.add(metric)
+            if cat_metrics:
+                summary_parts.append(f"=== {cat} ===")
+                summary_parts.extend(cat_metrics)
+
+        # Any remaining metrics not categorized
+        uncategorized = [m for m in all_metrics if m not in used_metrics]
+        if uncategorized:
+            summary_parts.append("=== OTHER METRICS ===")
+            for metric in uncategorized:
+                value = get_metric_value(latest_data, metric)
+                if value is not None:
+                    summary_parts.append(f"• {metric}: ${value:,.2f}")
+
         # Trend Analysis
         summary_parts.append("\n=== TREND ANALYSIS ===")
         trend_analysis = analyze_trends(monthly_data)
@@ -70,7 +63,7 @@ def generate_kpi_summary(df):
             summary_parts.extend(trend_analysis)
         else:
             summary_parts.append("• Insufficient data for trend analysis")
-        
+
         # Performance Ratios
         summary_parts.append("\n=== KEY PERFORMANCE RATIOS ===")
         ratios = calculate_ratios(latest_data)
@@ -78,17 +71,17 @@ def generate_kpi_summary(df):
             summary_parts.extend(ratios)
         else:
             summary_parts.append("• Unable to calculate performance ratios")
-        
+
         # YTD Summary if available
         ytd_data = df[df["IsYTD"]]
         if not ytd_data.empty:
             summary_parts.append("\n=== YEAR-TO-DATE SUMMARY ===")
-            ytd_effective_income = get_metric_value(ytd_data, 'Effective Rental Income')
-            if ytd_effective_income is not None:
-                summary_parts.append(f"• YTD Effective Rental Income: ${ytd_effective_income:,.2f}")
-        
+            for metric in ytd_data["Metric"].unique():
+                value = get_metric_value(ytd_data, metric)
+                if value is not None:
+                    summary_parts.append(f"• YTD {metric}: ${value:,.2f}")
+
         return "\n".join(summary_parts)
-        
     except Exception as e:
         return f"Error generating KPI summary: {str(e)}"
 

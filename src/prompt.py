@@ -1,8 +1,10 @@
 """
 Prompt construction and OpenAI API call
 """
+
 import os
 import openai
+from dotenv import load_dotenv
 
 def build_prompt(kpi_summary):
     """Build standardized prompt for T12 property analysis"""
@@ -37,15 +39,15 @@ Based on this data, provide your analysis following the framework outlined in yo
 def call_openai(system_prompt, user_prompt, api_key=None):
     """Call OpenAI API with the constructed prompts"""
     try:
+        # Load .env file if present
+        load_dotenv()
         # Use provided API key or environment variable
         if api_key:
             openai.api_key = api_key
         else:
             openai.api_key = os.getenv("OPENAI_API_KEY")
-            
         if not openai.api_key:
-            return "Error: OpenAI API key not provided. Please set OPENAI_API_KEY environment variable or provide it in the UI."
-        
+            return "Error: OpenAI API key not provided. Please set it in a .env file or provide it in the UI."
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[
@@ -55,9 +57,7 @@ def call_openai(system_prompt, user_prompt, api_key=None):
             max_tokens=1000,
             temperature=0.3  # Lower temperature for more consistent analysis
         )
-        
         return response.choices[0].message['content']
-        
     except openai.error.APIError as e:
         return f"OpenAI API Error: {str(e)}"
     except openai.error.AuthenticationError:

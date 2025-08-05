@@ -126,7 +126,7 @@ def main():
                     st.text_area("", kpi_summary, height=300, disabled=True)
                 
                 # Display prompt testing tools
-                display_prompt_testing_section(kpi_summary)
+                display_prompt_testing_section(kpi_summary, df)
                 
                 # AI Analysis Section
                 processed_output = display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address)

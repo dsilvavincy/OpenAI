@@ -91,22 +91,80 @@ def display_kpi_testing_section(df):
                     st.write("**Sample data:**")
                     st.dataframe(df.head(), use_container_width=True)
 
-def display_prompt_testing_section(kpi_summary):
+def display_prompt_testing_section(kpi_summary, df=None):
     """Display OpenAI prompt testing tools"""
     with st.expander("🧪 Test OpenAI Prompt", expanded=False):
+        
+        # Prompt type selection
+        prompt_type = st.radio(
+            "Select Prompt Type to Preview:",
+            ["📄 Standard Analysis", "🚀 Enhanced Analysis"],
+            horizontal=True,
+            help="Choose which analysis method's prompt you want to see"
+        )
+        
         if st.button("Generate Test Prompt", key="test_prompt"):
             try:
-                system_prompt, user_prompt = build_prompt(kpi_summary)
-                st.write("**System Prompt:**")
-                st.text_area("", system_prompt, height=200, disabled=True, key="sys_prompt")
-                st.write("**User Prompt:**")
-                st.text_area("", user_prompt, height=300, disabled=True, key="user_prompt")
-                st.success("✅ Prompts generated successfully!")
+                if prompt_type == "📄 Standard Analysis":
+                    # Standard Analysis Prompt
+                    system_prompt, user_prompt = build_prompt(kpi_summary)
+                    
+                    st.write("**📄 Standard Analysis - System Prompt:**")
+                    st.text_area("", system_prompt, height=200, disabled=True, key="sys_prompt_std")
+                    
+                    st.write("**📄 Standard Analysis - User Prompt:**")
+                    st.text_area("", user_prompt, height=300, disabled=True, key="user_prompt_std")
+                    
+                    # Show token count estimation
+                    total_chars = len(system_prompt) + len(user_prompt)
+                    estimated_tokens = total_chars // 4
+                    st.info(f"📊 Standard Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
+                    
+                else:
+                    # Enhanced Analysis Prompt
+                    if df is None:
+                        st.warning("⚠️ Enhanced Analysis requires uploaded data. Please upload a T12 file first.")
+                        return
+                        
+                    from src.ai.assistants_api import T12AssistantAnalyzer
+                    
+                    # Get the Enhanced Analysis prompts
+                    analyzer = T12AssistantAnalyzer()
+                    system_instructions = analyzer.get_assistant_instructions()
+                    
+                    # Build the user prompt
+                    user_content = f"""Analyze this T12 property financial data efficiently:
+
+RAW DATA: Attached CSV file with complete T12 data (monthly + YTD figures)
+
+LOCAL SUMMARY: 
+{kpi_summary}
+
+FOCUSED ANALYSIS NEEDED:
+1. Validate key calculations in my summary (spot check only)
+2. Identify top 3 concerning trends
+3. Generate 5 strategic management questions
+4. Provide 3-5 actionable recommendations to improve NOI
+
+Please be concise and focus on actionable insights for property management decisions. Limit code analysis to essential validations only."""
+                    
+                    st.write("**🚀 Enhanced Analysis - System Instructions (Assistant):**")
+                    st.text_area("", system_instructions, height=300, disabled=True, key="sys_prompt_enh")
+                    
+                    st.write("**🚀 Enhanced Analysis - User Message:**")
+                    st.text_area("", user_content, height=250, disabled=True, key="user_prompt_enh")
+                    
+                    st.write("**🚀 Enhanced Analysis - Additional Context:**")
+                    st.info("📁 **Raw Data File**: Complete T12 CSV data is uploaded to OpenAI with code_interpreter access")
+                    st.info("🧠 **AI Model**: GPT-4o with code_interpreter tool enabled")
+                    st.info("🔍 **Analysis Capability**: AI can run Python code to analyze your raw data directly")
+                    
+                    # Show token count estimation
+                    total_chars = len(system_instructions) + len(user_content) + len(kpi_summary)
+                    estimated_tokens = total_chars // 4
+                    st.info(f"📊 Enhanced Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
                 
-                # Show token count estimation
-                total_chars = len(system_prompt) + len(user_prompt)
-                estimated_tokens = total_chars // 4  # Rough estimation
-                st.info(f"📊 Estimated tokens: ~{estimated_tokens:,} (Character count: {total_chars:,})")
+                st.success("✅ Prompts generated successfully!")
                 
             except Exception as e:
                 st.error(f"❌ Error generating prompts: {str(e)}")

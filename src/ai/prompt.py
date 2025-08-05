@@ -125,12 +125,28 @@ def call_openai(system_prompt, user_prompt, api_key=None):
             logger.error(f"Unexpected OpenAI API error: {str(e)}")
             return f"Error calling OpenAI API: {str(e)}"
 
-def validate_response(response):
+def validate_response(response, analysis_type="standard"):
     """Validate OpenAI API response for completeness and structure"""
     if not response or len(response.strip()) < 50:
         return False, "Response too short or empty"
     
-    # Check for key sections
+    # More flexible validation for Enhanced Analysis (Assistants API)
+    if analysis_type == "enhanced":
+        # For Assistants API, just check if we have substantial content
+        # and some basic analysis indicators
+        response_upper = response.upper()
+        has_content_indicators = any(word in response_upper for word in [
+            "PROPERTY", "REVENUE", "INCOME", "EXPENSE", "OCCUPANCY", 
+            "ANALYSIS", "PERFORMANCE", "TREND", "RECOMMENDATION", "SUGGEST",
+            "DATA", "FINANCIAL", "CASH", "NOI", "RENTAL"
+        ])
+        
+        if has_content_indicators and len(response.strip()) > 100:
+            return True, "Enhanced analysis validation passed"
+        else:
+            return False, "Enhanced analysis lacks sufficient real estate content"
+    
+    # Original validation for Standard Analysis
     response_upper = response.upper()
     has_questions = any(word in response_upper for word in ["QUESTION", "INVESTIGATE", "WHAT", "HOW", "WHY"])
     has_recommendations = any(word in response_upper for word in ["RECOMMEND", "SUGGEST", "IMPROVE", "ACTION"])

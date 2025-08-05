@@ -11,13 +11,18 @@ class DeveloperResultsSection:
     
     def render(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """Render enhanced results section with organized collapsible developer insights."""
+        from src.ui.shared_file_manager import SharedFileManager
+        
         st.markdown("### 📈 Analysis & Results")
         
-        if 'processed_df' not in st.session_state:
+        # Sync any legacy data first
+        SharedFileManager.sync_legacy_session_state()
+        
+        df = SharedFileManager.get_processed_df()
+        if df is None:
             st.info("👆 Upload a T12 file to begin analysis")
             return
         
-        df = st.session_state['processed_df']
         api_key = config.get('api_key', '')
         
         if not api_key:
@@ -139,23 +144,20 @@ class DeveloperResultsSection:
                     self._render_kpi_debug(df, debug_format_name, kpi_summary)
         
         # AI Analysis with enhanced developer options
-        processed_output = display_ai_analysis_section(
-            df, 
-            kpi_summary, 
-            config['api_key'], 
-            config['property_name'], 
-            config['property_address']
-        )
+        from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options, get_existing_analysis_results
         
-        if processed_output:
-            # Analysis Results
-            st.markdown("### � Analysis Report")
-            display_analysis_results(processed_output)
+        # Check for existing results first
+        existing_output = get_existing_analysis_results()
+        
+        if existing_output:
+            # Display existing results immediately
+            st.markdown("### 📊 Analysis Report")
+            display_analysis_results(existing_output, display_mode="both")
             
             # Developer Analysis Insights (collapsible)
             if config.get('debug_mode', False):
                 with st.expander("🔬 Analysis Quality Metrics", expanded=False):
-                    quality_metrics = processed_output.get('quality_metrics', {})
+                    quality_metrics = existing_output.get('quality_metrics', {})
                     if quality_metrics:
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -163,24 +165,70 @@ class DeveloperResultsSection:
                         with col2:
                             st.metric("Quality Level", quality_metrics.get('quality_level', 'Unknown'))
                         with col3:
-                            st.metric("Response Length", len(str(processed_output.get('analysis', ''))))
+                            st.metric("Response Length", len(str(existing_output.get('analysis', ''))))
             
             # Advanced Export Options (collapsible)
             with st.expander("💾 Export Options & Templates", expanded=False):
-                display_export_options(processed_output, config['property_name'])
+                display_export_options(existing_output, config['property_name'])
                 
                 # Developer export options
                 if config.get('save_responses', False):
                     st.markdown("**Developer Options:**")
                     if st.button("💾 Save Raw Analysis Data"):
                         # Save processed_output to session state or file
-                        st.session_state['last_analysis_data'] = processed_output
+                        st.session_state['last_analysis_data'] = existing_output
                         st.success("✅ Analysis data saved to session state")
                 
                 if config.get('enable_ab_testing', False):
                     st.markdown("**A/B Testing:**")
                     if st.button("🔄 Generate Alternative Analysis"):
                         st.info("🚧 A/B testing feature coming soon")
+            
+            # Show regenerate option
+            st.markdown("---")
+            if st.button("🔄 Generate New Analysis", type="secondary", use_container_width=True):
+                from src.ui.ai_analysis import clear_analysis_results
+                clear_analysis_results()
+                st.rerun()
+        else:
+            # No existing results, show analysis interface
+            processed_output = display_ai_analysis_section(
+                df, 
+                kpi_summary, 
+                config['api_key'], 
+                config['property_name'], 
+                config['property_address']
+            )
+            
+            if processed_output:
+                # Analysis Results
+                st.markdown("### 📊 Analysis Report")
+                display_analysis_results(processed_output, display_mode="both")
+                
+                # Developer Analysis Insights (collapsible)
+                if config.get('debug_mode', False):
+                    with st.expander("🔬 Analysis Quality Metrics", expanded=False):
+                        quality_metrics = processed_output.get('quality_metrics', {})
+                        if quality_metrics:
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Overall Score", f"{quality_metrics.get('overall_score', 0)}/100")
+                            with col2:
+                                st.metric("Quality Level", quality_metrics.get('quality_level', 'Unknown'))
+                            with col3:
+                                st.metric("Response Length", len(str(processed_output.get('analysis', ''))))
+                
+                # Advanced Export Options (collapsible)
+                with st.expander("💾 Export Options & Templates", expanded=False):
+                    display_export_options(processed_output, config['property_name'])
+                    
+                    # Developer export options
+                    if config.get('save_responses', False):
+                        st.markdown("**Developer Options:**")
+                        if st.button("💾 Save Raw Analysis Data"):
+                            # Save processed_output to session state or file
+                            st.session_state['last_analysis_data'] = processed_output
+                            st.success("✅ Analysis data saved to session state")
         
         # Custom Prompt Testing (if enabled)
         if config.get('enable_prompt_testing', False):

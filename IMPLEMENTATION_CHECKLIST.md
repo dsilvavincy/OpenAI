@@ -142,6 +142,21 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [ ] **Test multiple T12 files**: Validate consistency across different property data
 - [x] **Display analysis results**: Ensure all AI output is properly shown in UI
 
+#### 9.1 **AI Output Display & Formatting Issues**
+- [x] **Fix Duplicate Analysis Display**: Remove duplicate analysis sections - currently showing both HTML rendered and collapsible sections
+- [x] **Consolidate Output Display Logic**: Single source of truth for analysis results display across production and developer modes
+- [x] **Raw AI Response Viewer**: Add collapsible section to display the raw, unprocessed AI response with proper HTML rendering
+- [x] **Structured vs Raw Output Toggle**: Allow users to switch between formatted sections and raw AI output
+- [x] **HTML Content Rendering**: Ensure AI-generated HTML content is properly rendered without escaping
+- [x] **Output Formatting Standards**: Standardize how AI responses are processed and displayed across all UI modes
+- [x] **Response Type Detection**: Auto-detect if AI response contains HTML, Markdown, or plain text and render appropriately
+- [x] **Session State Persistence**: Prevent re-running analysis when switching between Production/Developer modes - analysis results now persist across mode switches
+- [x] **Cross-Mode File Sharing**: Files uploaded in one mode are now available in both Production and Developer modes - implemented SharedFileManager for unified file persistence
+- [x] **Side-by-Side Analysis Display**: Production mode now shows both structured analysis and complete AI report side-by-side with individual export options for each format
+- [ ] **Debug Output Panel**: Developer mode panel showing raw API response, processed output, and final display format
+- [ ] **Output Quality Validation**: Check for formatting issues, broken HTML, or display problems in AI responses
+- [ ] **Better Section Organization**: Improve how analysis sections (questions, recommendations, trends) are organized and displayed
+
 ### 10. **Hybrid Assistants API Implementation** 
 - [x] **HYBRID ARCHITECTURE**: Keep local preprocessing AND send raw data to OpenAI
 - [x] Refactor workflow to use OpenAI Assistants API with code_interpreter tool

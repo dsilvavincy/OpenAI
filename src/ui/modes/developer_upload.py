@@ -13,11 +13,15 @@ class DeveloperUploadSection:
     
     def render(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """Render enhanced file upload section with collapsible developer tools."""
+        from src.ui.shared_file_manager import SharedFileManager
+        
         st.markdown("### 📁 File Upload & Processing")
         
-        # Use session state to persist uploaded file
-        if 'dev_uploaded_file' not in st.session_state:
-            st.session_state['dev_uploaded_file'] = None
+        # Sync any legacy session state data
+        SharedFileManager.sync_legacy_session_state()
+        
+        # Check if we already have an uploaded file from any mode
+        existing_file = SharedFileManager.get_uploaded_file()
         
         uploaded_file = st.file_uploader(
             "T12 Excel File",
@@ -26,36 +30,52 @@ class DeveloperUploadSection:
             key="developer_file_uploader"
         )
         
-        # Update session state when file changes
+        # Update shared file manager when file changes
         if uploaded_file is not None:
-            st.session_state['dev_uploaded_file'] = uploaded_file
-        elif st.session_state['dev_uploaded_file'] is not None:
-            uploaded_file = st.session_state['dev_uploaded_file']
-            
-        if uploaded_file is not None:
-            # Basic file info (always visible)
-            st.success(f"✅ **{uploaded_file.name}** ({uploaded_file.size:,} bytes)")
-            
-            # File Analysis (collapsible)
-            with st.expander("🔍 File Analysis & Validation", expanded=config.get('show_format_details', False)):
-                st.info(f"**Type:** {uploaded_file.type}")
+            # Check if this is a new file
+            if SharedFileManager.is_file_changed(uploaded_file):
+                SharedFileManager.set_uploaded_file(uploaded_file)
                 
-                # Format detection
-                if config.get('auto_detect_format', True):
-                    self._perform_format_detection(uploaded_file, config)
+                # Basic file info (always visible)
+                SharedFileManager.display_file_info(uploaded_file)
                 
-                # File validation details
-                self._show_validation_results(uploaded_file)
+                # File Analysis (collapsible)
+                with st.expander("🔍 File Analysis & Validation", expanded=config.get('show_format_details', False)):
+                    st.info(f"**Type:** {uploaded_file.type}")
+                    
+                    # Format detection
+                    if config.get('auto_detect_format', True):
+                        self._perform_format_detection(uploaded_file, config)
+                    
+                    # File validation details
+                    self._show_validation_results(uploaded_file)
+                
+                # Process file with detailed feedback
+                df = self._process_file_with_debug(uploaded_file, config)
+                
+                if df is not None:
+                    st.success(f"✅ **Processing complete:** {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
+                    
+                    # Store in shared session state
+                    SharedFileManager.set_processed_df(df)
+                    
+                    # Data Quality Checks (collapsible)
+                    with st.expander("📊 Data Quality & Structure", expanded=False):
+                        self._render_data_quality_analysis(df)
+                    
+                    # Raw Data Viewer (collapsible)
+                    if config.get('show_raw_data', True):
+                        with st.expander("👁️ Raw Data Preview", expanded=False):
+                            self._render_raw_data_viewer(df)
+        elif existing_file is not None:
+            # Show info about existing file from other mode
+            st.info("📄 **File from previous session/mode:**")
+            SharedFileManager.display_file_info()
             
-            # Process file with detailed feedback
-            df = self._process_file_with_debug(uploaded_file, config)
-            
+            # Show processed data if available
+            df = SharedFileManager.get_processed_df()
             if df is not None:
-                st.success(f"✅ **Processing complete:** {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
-                
-                # Store in session state
-                st.session_state['processed_df'] = df
-                st.session_state['uploaded_file'] = uploaded_file
+                st.success(f"✅ **Data available:** {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
                 
                 # Data Quality Checks (collapsible)
                 with st.expander("📊 Data Quality & Structure", expanded=False):
@@ -65,6 +85,11 @@ class DeveloperUploadSection:
                 if config.get('show_raw_data', True):
                     with st.expander("👁️ Raw Data Preview", expanded=False):
                         self._render_raw_data_viewer(df)
+            
+            # Option to clear and upload new file
+            if st.button("🗑️ Clear and Upload New File", key="dev_clear_existing_file"):
+                SharedFileManager.clear_uploaded_file()
+                st.rerun()
     
     def _perform_format_detection(self, uploaded_file, config: Dict[str, Any]):
         """Perform format detection with detailed feedback."""

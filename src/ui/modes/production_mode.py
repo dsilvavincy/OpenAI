@@ -231,7 +231,8 @@ class ProductionMode(BaseUIMode):
             # Prominent export section at bottom
             st.markdown("---")
             st.markdown("## 💾 Export Report")
-            display_export_options(processed_output, config['property_name'])
+            st.markdown("Download your analysis in multiple professional formats:")
+            display_export_options(processed_output, config['property_name'], export_type="full")
     
     def get_layout_config(self) -> Dict[str, Any]:
         """

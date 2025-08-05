@@ -26,12 +26,18 @@ class DeveloperToolsPanel:
                     
                 kpi_summary = kpi_registry.calculate_kpis(df, format_name)
                 
-                st.markdown("#### 🧪 Prompt Testing")
+                st.markdown("#### 🧪 Prompt Testing & AI Debugging")
+                st.info("💡 **View OpenAI Prompts:** See the exact prompts sent to OpenAI for both Standard and Enhanced Analysis modes.")
+                
                 from src.ui.data_analysis import display_prompt_testing_section
                 display_prompt_testing_section(kpi_summary, df)
                 
             except Exception as e:
                 st.error(f"Error loading prompt testing: {str(e)}")
+        else:
+            # Show message when no data is uploaded
+            st.markdown("#### 🧪 Prompt Testing & AI Debugging")
+            st.info("💡 **Upload a T12 file** to see the exact prompts sent to OpenAI for analysis.")
         
         # Format registry info
         st.markdown("#### 📋 Format Registry")

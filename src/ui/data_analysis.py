@@ -4,6 +4,7 @@ Data analysis and debugging UI components
 import streamlit as st
 import pandas as pd
 import io
+import os
 from src.core.kpi_summary import generate_kpi_summary
 from src.ai.prompt import build_prompt
 
@@ -93,7 +94,49 @@ def display_kpi_testing_section(df):
 
 def display_prompt_testing_section(kpi_summary, df=None):
     """Display OpenAI prompt testing tools"""
-    with st.expander("🧪 Test OpenAI Prompt", expanded=False):
+    with st.expander("🧪 View OpenAI Prompts (Click to expand)", expanded=True):
+        
+        st.markdown("**🔍 What you'll see here:**")
+        st.markdown("- The exact system and user prompts sent to OpenAI")
+        st.markdown("- Token count estimates for cost planning")  
+        st.markdown("- Comparison between Standard vs Enhanced Analysis approaches")
+        st.markdown("- Test your custom prompt modifications live")
+        
+        # Prompt Library/Save functionality
+        st.markdown("**💾 Prompt Management:**")
+        col_save, col_load = st.columns(2)
+        
+        with col_save:
+            if st.button("💾 Save Current Prompts", help="Save your edited prompts for later use"):
+                if 'sys_prompt_std' in st.session_state or 'sys_prompt_enh' in st.session_state:
+                    if 'saved_prompts' not in st.session_state:
+                        st.session_state['saved_prompts'] = {}
+                    
+                    prompt_name = st.text_input("Save as:", placeholder="My Custom Prompt")
+                    if prompt_name:
+                        st.session_state['saved_prompts'][prompt_name] = {
+                            'std_system': st.session_state.get('sys_prompt_std', ''),
+                            'std_user': st.session_state.get('user_prompt_std', ''),
+                            'enh_system': st.session_state.get('sys_prompt_enh', ''),
+                            'enh_user': st.session_state.get('user_prompt_enh', '')
+                        }
+                        st.success(f"✅ Saved '{prompt_name}'")
+        
+        with col_load:
+            if st.button("📁 Load Saved Prompts", help="Load previously saved prompts"):
+                if st.session_state.get('saved_prompts'):
+                    saved_names = list(st.session_state['saved_prompts'].keys())
+                    selected = st.selectbox("Choose saved prompt:", saved_names)
+                    if selected and st.button("Load"):
+                        saved = st.session_state['saved_prompts'][selected]
+                        st.session_state['sys_prompt_std'] = saved['std_system']
+                        st.session_state['user_prompt_std'] = saved['std_user']
+                        st.session_state['sys_prompt_enh'] = saved['enh_system']
+                        st.session_state['user_prompt_enh'] = saved['enh_user']
+                        st.success(f"✅ Loaded '{selected}'")
+                        st.rerun()
+                else:
+                    st.info("No saved prompts found")
         
         # Prompt type selection
         prompt_type = st.radio(
@@ -103,22 +146,46 @@ def display_prompt_testing_section(kpi_summary, df=None):
             help="Choose which analysis method's prompt you want to see"
         )
         
-        if st.button("Generate Test Prompt", key="test_prompt"):
+        if st.button("🔍 Show Me The Prompts!", key="test_prompt", type="primary"):
             try:
                 if prompt_type == "📄 Standard Analysis":
                     # Standard Analysis Prompt
                     system_prompt, user_prompt = build_prompt(kpi_summary)
                     
-                    st.write("**📄 Standard Analysis - System Prompt:**")
-                    st.text_area("", system_prompt, height=200, disabled=True, key="sys_prompt_std")
+                    st.write("**📄 Standard Analysis - System Prompt (Editable):**")
+                    edited_system_prompt = st.text_area(
+                        "System Prompt", 
+                        system_prompt, 
+                        height=200, 
+                        key="sys_prompt_std",
+                        label_visibility="collapsed"
+                    )
                     
-                    st.write("**📄 Standard Analysis - User Prompt:**")
-                    st.text_area("", user_prompt, height=300, disabled=True, key="user_prompt_std")
+                    st.write("**📄 Standard Analysis - User Prompt (Editable):**")
+                    edited_user_prompt = st.text_area(
+                        "User Prompt", 
+                        user_prompt, 
+                        height=300, 
+                        key="user_prompt_std",
+                        label_visibility="collapsed"
+                    )
                     
                     # Show token count estimation
-                    total_chars = len(system_prompt) + len(user_prompt)
+                    total_chars = len(edited_system_prompt) + len(edited_user_prompt)
                     estimated_tokens = total_chars // 4
                     st.info(f"📊 Standard Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
+                    
+                    # Test the edited prompts
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🧪 Test Edited Prompts", key="test_edited_std"):
+                            st.session_state['test_system_prompt'] = edited_system_prompt
+                            st.session_state['test_user_prompt'] = edited_user_prompt
+                            st.session_state['show_test_result'] = True
+                    
+                    with col2:
+                        if st.button("↩️ Reset to Default", key="reset_std"):
+                            st.rerun()
                     
                 else:
                     # Enhanced Analysis Prompt
@@ -148,11 +215,23 @@ FOCUSED ANALYSIS NEEDED:
 
 Please be concise and focus on actionable insights for property management decisions. Limit code analysis to essential validations only."""
                     
-                    st.write("**🚀 Enhanced Analysis - System Instructions (Assistant):**")
-                    st.text_area("", system_instructions, height=300, disabled=True, key="sys_prompt_enh")
+                    st.write("**🚀 Enhanced Analysis - System Instructions (Editable):**")
+                    edited_system_instructions = st.text_area(
+                        "System Instructions", 
+                        system_instructions, 
+                        height=300, 
+                        key="sys_prompt_enh",
+                        label_visibility="collapsed"
+                    )
                     
-                    st.write("**🚀 Enhanced Analysis - User Message:**")
-                    st.text_area("", user_content, height=250, disabled=True, key="user_prompt_enh")
+                    st.write("**🚀 Enhanced Analysis - User Message (Editable):**")
+                    edited_user_content = st.text_area(
+                        "User Message", 
+                        user_content, 
+                        height=250, 
+                        key="user_prompt_enh",
+                        label_visibility="collapsed"
+                    )
                     
                     st.write("**🚀 Enhanced Analysis - Additional Context:**")
                     st.info("📁 **Raw Data File**: Complete T12 CSV data is uploaded to OpenAI with code_interpreter access")
@@ -160,14 +239,79 @@ Please be concise and focus on actionable insights for property management decis
                     st.info("🔍 **Analysis Capability**: AI can run Python code to analyze your raw data directly")
                     
                     # Show token count estimation
-                    total_chars = len(system_instructions) + len(user_content) + len(kpi_summary)
+                    total_chars = len(edited_system_instructions) + len(edited_user_content) + len(kpi_summary)
                     estimated_tokens = total_chars // 4
                     st.info(f"📊 Enhanced Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
+                    
+                    # Test the edited prompts for Enhanced Analysis
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🧪 Test Edited Enhanced Analysis", key="test_edited_enh"):
+                            st.session_state['test_enhanced_system'] = edited_system_instructions
+                            st.session_state['test_enhanced_user'] = edited_user_content
+                            st.session_state['show_enhanced_test_result'] = True
+                    
+                    with col2:
+                        if st.button("↩️ Reset to Default", key="reset_enh"):
+                            st.rerun()
                 
                 st.success("✅ Prompts generated successfully!")
                 
             except Exception as e:
                 st.error(f"❌ Error generating prompts: {str(e)}")
+        
+        # Handle test results for edited prompts
+        if st.session_state.get('show_test_result', False):
+            st.markdown("---")
+            st.markdown("### 🧪 Custom Prompt Test Results")
+            
+            # Get API key from session state or environment
+            from dotenv import load_dotenv
+            load_dotenv()
+            api_key = st.session_state.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+            
+            if not api_key:
+                st.error("❌ API key required to test prompts. Please set your API key in the sidebar.")
+                st.session_state['show_test_result'] = False
+            else:
+                with st.spinner("🔄 Testing your custom prompts..."):
+                    try:
+                        from src.ai.prompt import call_openai
+                        result = call_openai(
+                            st.session_state['test_system_prompt'],
+                            st.session_state['test_user_prompt'],
+                            api_key
+                        )
+                        
+                        st.success("✅ Custom prompt test completed!")
+                        st.text_area("Test Result", result, height=400, label_visibility="collapsed")
+                        
+                        # Clear test state
+                        if st.button("✨ Clear Test Results"):
+                            st.session_state['show_test_result'] = False
+                            st.rerun()
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error testing custom prompts: {str(e)}")
+                        st.session_state['show_test_result'] = False
+        
+        # Handle Enhanced Analysis test results  
+        if st.session_state.get('show_enhanced_test_result', False):
+            st.markdown("---")
+            st.markdown("### 🚀 Custom Enhanced Analysis Test Results")
+            st.info("⚠️ Enhanced Analysis testing requires the full Assistants API implementation with file upload.")
+            st.info("💡 **Note:** This would create a new Assistant with your custom instructions and test it with your data.")
+            
+            # For now, show what would be sent
+            st.write("**Your Custom System Instructions:**")
+            st.text_area("", st.session_state.get('test_enhanced_system', ''), height=200, disabled=True)
+            
+            st.write("**Your Custom User Message:**")
+            st.text_area("", st.session_state.get('test_enhanced_user', ''), height=150, disabled=True)
+            
+            if st.button("✨ Clear Enhanced Test Results"):
+                st.session_state['show_enhanced_test_result'] = False
+                st.rerun()
 
 def display_file_processing_section(uploaded_file):
     """Handle file processing workflow"""

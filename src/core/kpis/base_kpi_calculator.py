@@ -125,7 +125,10 @@ class BaseKPICalculator(ABC):
             return pd.DataFrame()
         
         # Find the latest period
-        if 'PeriodParsed' in non_ytd_data.columns:
+        if 'MonthParsed' in non_ytd_data.columns:
+            latest_period = non_ytd_data["MonthParsed"].max()
+            return non_ytd_data[non_ytd_data["MonthParsed"] == latest_period]
+        elif 'PeriodParsed' in non_ytd_data.columns:
             latest_period = non_ytd_data["PeriodParsed"].max()
             return non_ytd_data[non_ytd_data["PeriodParsed"] == latest_period]
         else:

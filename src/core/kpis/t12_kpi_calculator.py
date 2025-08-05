@@ -51,7 +51,10 @@ class T12MonthlyFinancialKPICalculator(BaseKPICalculator):
                 return "No monthly data found to analyze."
             
             # Get the latest month name for header
-            if 'PeriodParsed' in latest_data.columns:
+            if 'MonthParsed' in latest_data.columns:
+                latest_month = latest_data["MonthParsed"].max()
+                month_str = latest_month.strftime('%B %Y')
+            elif 'PeriodParsed' in latest_data.columns:
                 latest_month = latest_data["PeriodParsed"].max()
                 month_str = latest_month.strftime('%B %Y')
             else:
@@ -169,10 +172,16 @@ class T12MonthlyFinancialKPICalculator(BaseKPICalculator):
                 
                 if len(metric_data) >= 2:
                     # Sort by period and calculate change
-                    if 'PeriodParsed' in metric_data.columns:
+                    if 'MonthParsed' in metric_data.columns:
+                        metric_data = metric_data.sort_values('MonthParsed')
+                    elif 'PeriodParsed' in metric_data.columns:
                         metric_data = metric_data.sort_values('PeriodParsed')
+                    elif 'Month' in metric_data.columns:
+                        metric_data = metric_data.sort_values('Month')
                     else:
-                        metric_data = metric_data.sort_values('Period')
+                        # No valid time column found, skip this metric
+                        self.add_calculation_issue(f"Error calculating trend for {metric}: No valid time column found")
+                        continue
                     
                     values = metric_data['Value'].tolist()
                     

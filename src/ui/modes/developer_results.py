@@ -57,7 +57,10 @@ class DeveloperResultsSection:
                 with tabs[2]:
                     if config.get('debug_mode', False):
                         self._render_kpi_debug(df, format_name, kpi_summary)
-            # Enhanced AI Analysis
+
+            # Add vertical space to ensure separation
+            st.markdown("<div style='margin-top: 2em'></div>", unsafe_allow_html=True)
+            # AI-Powered Analysis section below Financial Summary (no redundant header)
             self._render_enhanced_ai_analysis(df, kpi_summary, config)
             
         except Exception as e:

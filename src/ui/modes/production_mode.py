@@ -180,12 +180,13 @@ class ProductionMode(BaseUIMode):
             with st.spinner("📊 Generating KPI analysis..."):
                 kpi_summary = kpi_registry.calculate_kpis(df, format_name)
             
-            # Show KPI Summary (production-focused)
-            st.markdown("#### 📋 Financial Summary")
-            with st.expander("View KPI Summary", expanded=True):
-                st.text_area("", kpi_summary, height=300, label_visibility="collapsed")
-            
-            # AI Analysis Section
+            # Show KPI Summary (production-focused, collapsed by default, no separate expander for KPI summary)
+            with st.expander("📋 Financial Summary", expanded=False):
+                st.text_area("KPI Summary", kpi_summary, height=300, label_visibility="collapsed")
+
+            # Add vertical space to ensure separation
+            st.markdown("<div style='margin-top: 2em'></div>", unsafe_allow_html=True)
+            # AI-Powered Analysis section below Financial Summary (no redundant header)
             self._render_ai_analysis(df, kpi_summary, config)
             
         except Exception as e:
@@ -196,9 +197,7 @@ class ProductionMode(BaseUIMode):
         """Render AI analysis section (production-focused)."""
         from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options
         
-        st.markdown("#### 🤖 AI Analysis")
-        
-        # Streamlined AI analysis
+        # Streamlined AI analysis (no redundant header)
         processed_output = display_ai_analysis_section(
             df, 
             kpi_summary, 
@@ -206,12 +205,10 @@ class ProductionMode(BaseUIMode):
             config['property_name'], 
             config['property_address']
         )
-        
         if processed_output:
             # Display results with focus on export
             st.markdown("#### 📄 Analysis Report")
             display_analysis_results(processed_output)
-            
             # Prominent export options
             st.markdown("#### 💾 Export Report")
             display_export_options(processed_output, config['property_name'])

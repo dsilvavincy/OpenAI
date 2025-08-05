@@ -71,7 +71,6 @@ class ProductionResults:
             # Display existing results
             st.markdown("## 📊 Analysis Report")
             self._display_analysis_with_options(existing_output, config)
-            self._display_export_section(existing_output, config)
             self._display_regenerate_option()
             return
         
@@ -100,7 +99,6 @@ class ProductionResults:
             st.markdown("---")
             st.markdown("## 📊 Analysis Report")
             self._display_analysis_with_options(processed_output, config)
-            self._display_export_section(processed_output, config)
     
     def _display_analysis_with_options(self, output: Dict[str, Any], config: Dict[str, Any]):
         """Display only the raw response as the main content."""
@@ -129,15 +127,6 @@ class ProductionResults:
             )
         else:
             st.warning("No raw response available")
-    
-    def _display_export_section(self, output: Dict[str, Any], config: Dict[str, Any]):
-        """Display export options."""
-        from src.ui.ai_analysis import display_export_options
-        
-        st.markdown("---")
-        st.markdown("## 💾 Export Report")
-        st.markdown("Download your analysis in multiple professional formats:")
-        display_export_options(output, config.get('property_name', 'property'), export_type="full")
     
     def _display_regenerate_option(self):
         """Display option to regenerate analysis."""

@@ -29,8 +29,18 @@ T12-Property-Analysis/
 │   │   ├── 📄 ai_analysis.py         # AI analysis interface
 │   │   ├── 📄 reports.py             # Report generation and export
 │   │   └── 📁 modes/                 # UI mode-specific components
-│   │       ├── 📄 production_mode.py # Clean, minimal production UI
-│   │       └── � developer_mode.py  # Advanced debugging and settings UI
+│   │       ├── 📄 production_mode.py         # Entry point for production UI (delegates to modular components)
+│   │       ├── 📄 production_mode_core.py    # Main orchestration for production mode
+│   │       ├── 📄 production_sidebar.py      # Sidebar configuration for production mode
+│   │       ├── 📄 production_upload.py       # File upload handling for production mode
+│   │       ├── 📄 production_results.py      # Analysis display (structured + raw response) for production mode
+│   │       ├── 📄 developer_mode.py          # Advanced debugging and settings interface (entry point)
+│   │       ├── 📄 developer_mode_core.py     # Main orchestration for developer mode
+│   │       ├── 📄 developer_sidebar.py       # Sidebar configuration for developer mode
+│   │       ├── 📄 developer_upload.py        # File upload handling for developer mode
+│   │       ├── 📄 developer_results.py       # Results display for developer mode
+│   │       ├── 📄 developer_tools.py         # Developer tools and debug panels
+│   │       └── 📄 mode_manager.py            # Mode switching and management
 │   │
 │   ├── 📁 export/                    # Report generation and export
 │   │   ├── 📄 pdf_generator.py       # PDF report creation
@@ -113,8 +123,18 @@ T12-Property-Analysis/
 - **`data_analysis.py`**: Data visualization and debugging tools
 - **`ai_analysis.py`**: AI analysis interface with Enhanced/Standard options
 - **`reports.py`**: PDF, Word, and text report generation
-- **`modes/production_mode.py`**: Clean, minimal UI for end users
-- **`modes/developer_mode.py`**: Advanced debugging and settings interface
+- **`modes/production_mode.py`**: Entry point for production UI (delegates to modular components)
+- **`modes/production_mode_core.py`**: Main orchestration for production mode
+- **`modes/production_sidebar.py`**: Sidebar configuration for production mode
+- **`modes/production_upload.py`**: File upload handling for production mode
+- **`modes/production_results.py`**: Analysis display (structured + raw response) for production mode
+- **`modes/developer_mode.py`**: Entry point for developer UI (delegates to modular components)
+- **`modes/developer_mode_core.py`**: Main orchestration for developer mode
+- **`modes/developer_sidebar.py`**: Sidebar configuration for developer mode
+- **`modes/developer_upload.py`**: File upload handling for developer mode
+- **`modes/developer_results.py`**: Results display for developer mode
+- **`modes/developer_tools.py`**: Developer tools and debug panels
+- **`modes/mode_manager.py`**: Mode switching and management
 
 ### **Export & Reports** (`src/export/`)
 - **`pdf_generator.py`**: Professional PDF report creation with templates

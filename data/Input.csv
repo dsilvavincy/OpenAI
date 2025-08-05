@@ -1,0 +1,508 @@
+﻿,Sheet,Metric,Month,MonthParsed,IsYTD,Value,Year,Month_Name,Is_Negative
+0,CRES,Property Asking Rent,Jul 2024,2024-07-01T00:00:00.000,false,271.161,2024,Jul,false
+1,CRES,Loss to lease,Jul 2024,2024-07-01T00:00:00.000,false,-52.711,2024,Jul,true
+2,CRES,Gross Scheduled Rent,Jul 2024,2024-07-01T00:00:00.000,false,218.45,2024,Jul,false
+3,CRES,Vacancy,Jul 2024,2024-07-01T00:00:00.000,false,-13.709700000000002,2024,Jul,true
+4,CRES,Non Revenue Units,Jul 2024,2024-07-01T00:00:00.000,false,-1.732,2024,Jul,true
+5,CRES,Concessions,Jul 2024,2024-07-01T00:00:00.000,false,-0.5333,2024,Jul,true
+6,CRES,Delinquency,Jul 2024,2024-07-01T00:00:00.000,false,-23.199150000000003,2024,Jul,true
+7,CRES,Effective Rental Income,Jul 2024,2024-07-01T00:00:00.000,false,179.27585,2024,Jul,false
+8,CRES,Parking Garage Income,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+9,CRES,Utility Income,Jul 2024,2024-07-01T00:00:00.000,false,6.79827,2024,Jul,false
+10,CRES,Other - Income,Jul 2024,2024-07-01T00:00:00.000,false,19.95066,2024,Jul,false
+11,CRES,Total Other Income,Jul 2024,2024-07-01T00:00:00.000,false,26.748929999999998,2024,Jul,false
+12,CRES,Net Eff. Gross Income,Jul 2024,2024-07-01T00:00:00.000,false,206.02478,2024,Jul,false
+13,CRES,General & Admin.,Jul 2024,2024-07-01T00:00:00.000,false,-9.551619999999998,2024,Jul,true
+14,CRES,Management Fee,Jul 2024,2024-07-01T00:00:00.000,false,-6.43959,2024,Jul,true
+15,CRES,Payroll,Jul 2024,2024-07-01T00:00:00.000,false,-27.558979999999995,2024,Jul,true
+16,CRES,Insurance,Jul 2024,2024-07-01T00:00:00.000,false,-5.45225,2024,Jul,true
+17,CRES,Property Taxes,Jul 2024,2024-07-01T00:00:00.000,false,-31.337,2024,Jul,true
+18,CRES,Leasing & Marketing,Jul 2024,2024-07-01T00:00:00.000,false,-5.23631,2024,Jul,true
+19,CRES,Professional fees,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+20,CRES,Landscaping,Jul 2024,2024-07-01T00:00:00.000,false,-2.55908,2024,Jul,true
+21,CRES,Security & Life Safety,Jul 2024,2024-07-01T00:00:00.000,false,0.09988,2024,Jul,false
+22,CRES,Repairs & Maintenance,Jul 2024,2024-07-01T00:00:00.000,false,-4.38872,2024,Jul,true
+23,CRES,Unit T/O Refurbishment,Jul 2024,2024-07-01T00:00:00.000,false,-5.72101,2024,Jul,true
+24,CRES,Utilities,Jul 2024,2024-07-01T00:00:00.000,false,-9.95882,2024,Jul,true
+25,CRES,Trash Removal,Jul 2024,2024-07-01T00:00:00.000,false,-5.38529,2024,Jul,true
+26,CRES,Miscellaneous,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+27,CRES,Other - Expense,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+28,CRES,Total Expense,Jul 2024,2024-07-01T00:00:00.000,false,-113.48879,2024,Jul,true
+29,CRES,EBITDA (NOI),Jul 2024,2024-07-01T00:00:00.000,false,92.53599,2024,Jul,false
+30,CRES,Repl. Reserve Fund,Jul 2024,2024-07-01T00:00:00.000,false,-5.0047299999999995,2024,Jul,true
+31,CRES,State Franchise Fee,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+32,CRES,Partnership Professional Fees,Jul 2024,2024-07-01T00:00:00.000,false,-1.21,2024,Jul,true
+33,CRES,Asset Management Fees,Jul 2024,2024-07-01T00:00:00.000,false,-3.3991100000000003,2024,Jul,true
+34,CRES,Debt Service,Jul 2024,2024-07-01T00:00:00.000,false,-163.37724,2024,Jul,true
+35,CRES,Other - Below Line,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+36,CRES,Total Below Line,Jul 2024,2024-07-01T00:00:00.000,false,-172.99108,2024,Jul,true
+37,CRES,Renovations,Jul 2024,2024-07-01T00:00:00.000,false,0,2024,Jul,false
+38,CRES,Monthly Cash Flow,Jul 2024,2024-07-01T00:00:00.000,false,-80.45509000000001,2024,Jul,true
+39,CRES,Property Asking Rent,Aug 2024,2024-08-01T00:00:00.000,false,271.161,2024,Aug,false
+40,CRES,Loss to lease,Aug 2024,2024-08-01T00:00:00.000,false,-52.58,2024,Aug,true
+41,CRES,Gross Scheduled Rent,Aug 2024,2024-08-01T00:00:00.000,false,218.58100000000002,2024,Aug,false
+42,CRES,Vacancy,Aug 2024,2024-08-01T00:00:00.000,false,-12.020629999999999,2024,Aug,true
+43,CRES,Non Revenue Units,Aug 2024,2024-08-01T00:00:00.000,false,-1.732,2024,Aug,true
+44,CRES,Concessions,Aug 2024,2024-08-01T00:00:00.000,false,-0.15990000000000001,2024,Aug,true
+45,CRES,Delinquency,Aug 2024,2024-08-01T00:00:00.000,false,-7.63524,2024,Aug,true
+46,CRES,Effective Rental Income,Aug 2024,2024-08-01T00:00:00.000,false,197.03323,2024,Aug,false
+47,CRES,Parking Garage Income,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+48,CRES,Utility Income,Aug 2024,2024-08-01T00:00:00.000,false,6.37379,2024,Aug,false
+49,CRES,Other - Income,Aug 2024,2024-08-01T00:00:00.000,false,18.482539999999997,2024,Aug,false
+50,CRES,Total Other Income,Aug 2024,2024-08-01T00:00:00.000,false,24.856329999999996,2024,Aug,false
+51,CRES,Net Eff. Gross Income,Aug 2024,2024-08-01T00:00:00.000,false,221.88956,2024,Aug,false
+52,CRES,General & Admin.,Aug 2024,2024-08-01T00:00:00.000,false,-6.38157,2024,Aug,true
+53,CRES,Management Fee,Aug 2024,2024-08-01T00:00:00.000,false,-7.8174399999999995,2024,Aug,true
+54,CRES,Payroll,Aug 2024,2024-08-01T00:00:00.000,false,-13.434759999999997,2024,Aug,true
+55,CRES,Insurance,Aug 2024,2024-08-01T00:00:00.000,false,-5.45225,2024,Aug,true
+56,CRES,Property Taxes,Aug 2024,2024-08-01T00:00:00.000,false,-31.337,2024,Aug,true
+57,CRES,Leasing & Marketing,Aug 2024,2024-08-01T00:00:00.000,false,-3.8596500000000002,2024,Aug,true
+58,CRES,Professional fees,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+59,CRES,Landscaping,Aug 2024,2024-08-01T00:00:00.000,false,-2.22644,2024,Aug,true
+60,CRES,Security & Life Safety,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+61,CRES,Repairs & Maintenance,Aug 2024,2024-08-01T00:00:00.000,false,-2.72555,2024,Aug,true
+62,CRES,Unit T/O Refurbishment,Aug 2024,2024-08-01T00:00:00.000,false,-2.745,2024,Aug,true
+63,CRES,Utilities,Aug 2024,2024-08-01T00:00:00.000,false,-4.47982,2024,Aug,true
+64,CRES,Trash Removal,Aug 2024,2024-08-01T00:00:00.000,false,1.84696,2024,Aug,false
+65,CRES,Miscellaneous,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+66,CRES,Other - Expense,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+67,CRES,Total Expense,Aug 2024,2024-08-01T00:00:00.000,false,-78.61252,2024,Aug,true
+68,CRES,EBITDA (NOI),Aug 2024,2024-08-01T00:00:00.000,false,143.27704,2024,Aug,false
+69,CRES,Repl. Reserve Fund,Aug 2024,2024-08-01T00:00:00.000,false,-2.61006,2024,Aug,true
+70,CRES,State Franchise Fee,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+71,CRES,Partnership Professional Fees,Aug 2024,2024-08-01T00:00:00.000,false,-1.62809,2024,Aug,true
+72,CRES,Asset Management Fees,Aug 2024,2024-08-01T00:00:00.000,false,-3.32831,2024,Aug,true
+73,CRES,Debt Service,Aug 2024,2024-08-01T00:00:00.000,false,-163.31857,2024,Aug,true
+74,CRES,Other - Below Line,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+75,CRES,Total Below Line,Aug 2024,2024-08-01T00:00:00.000,false,-170.88503,2024,Aug,true
+76,CRES,Renovations,Aug 2024,2024-08-01T00:00:00.000,false,0,2024,Aug,false
+77,CRES,Monthly Cash Flow,Aug 2024,2024-08-01T00:00:00.000,false,-27.60799,2024,Aug,true
+78,CRES,Property Asking Rent,Sep 2024,2024-09-01T00:00:00.000,false,236.61,2024,Sep,false
+79,CRES,Loss to lease,Sep 2024,2024-09-01T00:00:00.000,false,-15.800870000000002,2024,Sep,true
+80,CRES,Gross Scheduled Rent,Sep 2024,2024-09-01T00:00:00.000,false,220.80913,2024,Sep,false
+81,CRES,Vacancy,Sep 2024,2024-09-01T00:00:00.000,false,-15.936350000000001,2024,Sep,true
+82,CRES,Non Revenue Units,Sep 2024,2024-09-01T00:00:00.000,false,-1.565,2024,Sep,true
+83,CRES,Concessions,Sep 2024,2024-09-01T00:00:00.000,false,-4.698720000000001,2024,Sep,true
+84,CRES,Delinquency,Sep 2024,2024-09-01T00:00:00.000,false,-5.76954,2024,Sep,true
+85,CRES,Effective Rental Income,Sep 2024,2024-09-01T00:00:00.000,false,192.83952,2024,Sep,false
+86,CRES,Parking Garage Income,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+87,CRES,Utility Income,Sep 2024,2024-09-01T00:00:00.000,false,4.848949999999999,2024,Sep,false
+88,CRES,Other - Income,Sep 2024,2024-09-01T00:00:00.000,false,7.555400000000001,2024,Sep,false
+89,CRES,Total Other Income,Sep 2024,2024-09-01T00:00:00.000,false,12.40435,2024,Sep,false
+90,CRES,Net Eff. Gross Income,Sep 2024,2024-09-01T00:00:00.000,false,205.24387,2024,Sep,false
+91,CRES,General & Admin.,Sep 2024,2024-09-01T00:00:00.000,false,-6.1547600000000005,2024,Sep,true
+92,CRES,Management Fee,Sep 2024,2024-09-01T00:00:00.000,false,-10.89911,2024,Sep,true
+93,CRES,Payroll,Sep 2024,2024-09-01T00:00:00.000,false,-29.364870000000003,2024,Sep,true
+94,CRES,Insurance,Sep 2024,2024-09-01T00:00:00.000,false,-9.18009,2024,Sep,true
+95,CRES,Property Taxes,Sep 2024,2024-09-01T00:00:00.000,false,-31.337,2024,Sep,true
+96,CRES,Leasing & Marketing,Sep 2024,2024-09-01T00:00:00.000,false,-0.48817,2024,Sep,true
+97,CRES,Professional fees,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+98,CRES,Landscaping,Sep 2024,2024-09-01T00:00:00.000,false,-2.2,2024,Sep,true
+99,CRES,Security & Life Safety,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+100,CRES,Repairs & Maintenance,Sep 2024,2024-09-01T00:00:00.000,false,-4.4206,2024,Sep,true
+101,CRES,Unit T/O Refurbishment,Sep 2024,2024-09-01T00:00:00.000,false,-3.5114300000000003,2024,Sep,true
+102,CRES,Utilities,Sep 2024,2024-09-01T00:00:00.000,false,-6.752110000000001,2024,Sep,true
+103,CRES,Trash Removal,Sep 2024,2024-09-01T00:00:00.000,false,-3.40104,2024,Sep,true
+104,CRES,Miscellaneous,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+105,CRES,Other - Expense,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+106,CRES,Total Expense,Sep 2024,2024-09-01T00:00:00.000,false,-107.70918,2024,Sep,true
+107,CRES,EBITDA (NOI),Sep 2024,2024-09-01T00:00:00.000,false,97.53468999999998,2024,Sep,false
+108,CRES,Repl. Reserve Fund,Sep 2024,2024-09-01T00:00:00.000,false,-4.6,2024,Sep,true
+109,CRES,State Franchise Fee,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+110,CRES,Partnership Professional Fees,Sep 2024,2024-09-01T00:00:00.000,false,-3.96605,2024,Sep,true
+111,CRES,Asset Management Fees,Sep 2024,2024-09-01T00:00:00.000,false,-3.12958,2024,Sep,true
+112,CRES,Debt Service,Sep 2024,2024-09-01T00:00:00.000,false,-152.88809,2024,Sep,true
+113,CRES,Other - Below Line,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+114,CRES,Total Below Line,Sep 2024,2024-09-01T00:00:00.000,false,-164.58372,2024,Sep,true
+115,CRES,Renovations,Sep 2024,2024-09-01T00:00:00.000,false,0,2024,Sep,false
+116,CRES,Monthly Cash Flow,Sep 2024,2024-09-01T00:00:00.000,false,-67.04903000000002,2024,Sep,true
+117,CRES,Property Asking Rent,Oct 2024,2024-10-01T00:00:00.000,false,235.91,2024,Oct,false
+118,CRES,Loss to lease,Oct 2024,2024-10-01T00:00:00.000,false,-16.69427,2024,Oct,true
+119,CRES,Gross Scheduled Rent,Oct 2024,2024-10-01T00:00:00.000,false,219.21573,2024,Oct,false
+120,CRES,Vacancy,Oct 2024,2024-10-01T00:00:00.000,false,-19.862419999999997,2024,Oct,true
+121,CRES,Non Revenue Units,Oct 2024,2024-10-01T00:00:00.000,false,-1.565,2024,Oct,true
+122,CRES,Concessions,Oct 2024,2024-10-01T00:00:00.000,false,-1.68635,2024,Oct,true
+123,CRES,Delinquency,Oct 2024,2024-10-01T00:00:00.000,false,-1.7946600000000001,2024,Oct,true
+124,CRES,Effective Rental Income,Oct 2024,2024-10-01T00:00:00.000,false,194.30730000000003,2024,Oct,false
+125,CRES,Parking Garage Income,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+126,CRES,Utility Income,Oct 2024,2024-10-01T00:00:00.000,false,5.3019099999999995,2024,Oct,false
+127,CRES,Other - Income,Oct 2024,2024-10-01T00:00:00.000,false,9.155649999999998,2024,Oct,false
+128,CRES,Total Other Income,Oct 2024,2024-10-01T00:00:00.000,false,14.457559999999997,2024,Oct,false
+129,CRES,Net Eff. Gross Income,Oct 2024,2024-10-01T00:00:00.000,false,208.76486000000003,2024,Oct,false
+130,CRES,General & Admin.,Oct 2024,2024-10-01T00:00:00.000,false,-1.10669,2024,Oct,true
+131,CRES,Management Fee,Oct 2024,2024-10-01T00:00:00.000,false,-7.533,2024,Oct,true
+132,CRES,Payroll,Oct 2024,2024-10-01T00:00:00.000,false,-27.81409,2024,Oct,true
+133,CRES,Insurance,Oct 2024,2024-10-01T00:00:00.000,false,-9.18009,2024,Oct,true
+134,CRES,Property Taxes,Oct 2024,2024-10-01T00:00:00.000,false,-31.337,2024,Oct,true
+135,CRES,Leasing & Marketing,Oct 2024,2024-10-01T00:00:00.000,false,-3.6193700000000004,2024,Oct,true
+136,CRES,Professional fees,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+137,CRES,Landscaping,Oct 2024,2024-10-01T00:00:00.000,false,-2.56728,2024,Oct,true
+138,CRES,Security & Life Safety,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+139,CRES,Repairs & Maintenance,Oct 2024,2024-10-01T00:00:00.000,false,-3.2134899999999997,2024,Oct,true
+140,CRES,Unit T/O Refurbishment,Oct 2024,2024-10-01T00:00:00.000,false,-8.26492,2024,Oct,true
+141,CRES,Utilities,Oct 2024,2024-10-01T00:00:00.000,false,-6.62676,2024,Oct,true
+142,CRES,Trash Removal,Oct 2024,2024-10-01T00:00:00.000,false,-4.9126199999999995,2024,Oct,true
+143,CRES,Miscellaneous,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+144,CRES,Other - Expense,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+145,CRES,Total Expense,Oct 2024,2024-10-01T00:00:00.000,false,-106.17531000000001,2024,Oct,true
+146,CRES,EBITDA (NOI),Oct 2024,2024-10-01T00:00:00.000,false,102.58955000000002,2024,Oct,false
+147,CRES,Repl. Reserve Fund,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+148,CRES,State Franchise Fee,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+149,CRES,Partnership Professional Fees,Oct 2024,2024-10-01T00:00:00.000,false,-1.2185,2024,Oct,true
+150,CRES,Asset Management Fees,Oct 2024,2024-10-01T00:00:00.000,false,-3.23487,2024,Oct,true
+151,CRES,Debt Service,Oct 2024,2024-10-01T00:00:00.000,false,-158.75898999999998,2024,Oct,true
+152,CRES,Other - Below Line,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+153,CRES,Total Below Line,Oct 2024,2024-10-01T00:00:00.000,false,-163.21236,2024,Oct,true
+154,CRES,Renovations,Oct 2024,2024-10-01T00:00:00.000,false,0,2024,Oct,false
+155,CRES,Monthly Cash Flow,Oct 2024,2024-10-01T00:00:00.000,false,-60.62280999999997,2024,Oct,true
+156,CRES,Property Asking Rent,Nov 2024,2024-11-01T00:00:00.000,false,236.41,2024,Nov,false
+157,CRES,Loss to lease,Nov 2024,2024-11-01T00:00:00.000,false,-15.465219999999999,2024,Nov,true
+158,CRES,Gross Scheduled Rent,Nov 2024,2024-11-01T00:00:00.000,false,220.94478,2024,Nov,false
+159,CRES,Vacancy,Nov 2024,2024-11-01T00:00:00.000,false,-18.00432,2024,Nov,true
+160,CRES,Non Revenue Units,Nov 2024,2024-11-01T00:00:00.000,false,-2.03995,2024,Nov,true
+161,CRES,Concessions,Nov 2024,2024-11-01T00:00:00.000,false,-1.1599000000000002,2024,Nov,true
+162,CRES,Delinquency,Nov 2024,2024-11-01T00:00:00.000,false,-15.758040000000001,2024,Nov,true
+163,CRES,Effective Rental Income,Nov 2024,2024-11-01T00:00:00.000,false,183.98257,2024,Nov,false
+164,CRES,Parking Garage Income,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+165,CRES,Utility Income,Nov 2024,2024-11-01T00:00:00.000,false,5.349609999999999,2024,Nov,false
+166,CRES,Other - Income,Nov 2024,2024-11-01T00:00:00.000,false,11.65817,2024,Nov,false
+167,CRES,Total Other Income,Nov 2024,2024-11-01T00:00:00.000,false,17.00778,2024,Nov,false
+168,CRES,Net Eff. Gross Income,Nov 2024,2024-11-01T00:00:00.000,false,200.99035,2024,Nov,false
+169,CRES,General & Admin.,Nov 2024,2024-11-01T00:00:00.000,false,-2.859,2024,Nov,true
+170,CRES,Management Fee,Nov 2024,2024-11-01T00:00:00.000,false,-13.79983,2024,Nov,true
+171,CRES,Payroll,Nov 2024,2024-11-01T00:00:00.000,false,-32.08065,2024,Nov,true
+172,CRES,Insurance,Nov 2024,2024-11-01T00:00:00.000,false,-9.18009,2024,Nov,true
+173,CRES,Property Taxes,Nov 2024,2024-11-01T00:00:00.000,false,-31.75919,2024,Nov,true
+174,CRES,Leasing & Marketing,Nov 2024,2024-11-01T00:00:00.000,false,-5.94748,2024,Nov,true
+175,CRES,Professional fees,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+176,CRES,Landscaping,Nov 2024,2024-11-01T00:00:00.000,false,-8.37,2024,Nov,true
+177,CRES,Security & Life Safety,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+178,CRES,Repairs & Maintenance,Nov 2024,2024-11-01T00:00:00.000,false,-12.28809,2024,Nov,true
+179,CRES,Unit T/O Refurbishment,Nov 2024,2024-11-01T00:00:00.000,false,-7.2309899999999985,2024,Nov,true
+180,CRES,Utilities,Nov 2024,2024-11-01T00:00:00.000,false,-10.385380000000001,2024,Nov,true
+181,CRES,Trash Removal,Nov 2024,2024-11-01T00:00:00.000,false,-5.20052,2024,Nov,true
+182,CRES,Miscellaneous,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+183,CRES,Other - Expense,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+184,CRES,Total Expense,Nov 2024,2024-11-01T00:00:00.000,false,-139.10122,2024,Nov,true
+185,CRES,EBITDA (NOI),Nov 2024,2024-11-01T00:00:00.000,false,61.889129999999994,2024,Nov,false
+186,CRES,Repl. Reserve Fund,Nov 2024,2024-11-01T00:00:00.000,false,-1.73547,2024,Nov,true
+187,CRES,State Franchise Fee,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+188,CRES,Partnership Professional Fees,Nov 2024,2024-11-01T00:00:00.000,false,-1.5319800000000001,2024,Nov,true
+189,CRES,Asset Management Fees,Nov 2024,2024-11-01T00:00:00.000,false,-3.04756,2024,Nov,true
+190,CRES,Debt Service,Nov 2024,2024-11-01T00:00:00.000,false,-150.2879,2024,Nov,true
+191,CRES,Other - Below Line,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+192,CRES,Total Below Line,Nov 2024,2024-11-01T00:00:00.000,false,-156.60291,2024,Nov,true
+193,CRES,Renovations,Nov 2024,2024-11-01T00:00:00.000,false,0,2024,Nov,false
+194,CRES,Monthly Cash Flow,Nov 2024,2024-11-01T00:00:00.000,false,-94.71378000000001,2024,Nov,true
+195,CRES,Property Asking Rent,Dec 2024,2024-12-01T00:00:00.000,false,236.295,2024,Dec,false
+196,CRES,Loss to lease,Dec 2024,2024-12-01T00:00:00.000,false,-15.87041,2024,Dec,true
+197,CRES,Gross Scheduled Rent,Dec 2024,2024-12-01T00:00:00.000,false,220.42459,2024,Dec,false
+198,CRES,Vacancy,Dec 2024,2024-12-01T00:00:00.000,false,-21.631130000000002,2024,Dec,true
+199,CRES,Non Revenue Units,Dec 2024,2024-12-01T00:00:00.000,false,-2.1845,2024,Dec,true
+200,CRES,Concessions,Dec 2024,2024-12-01T00:00:00.000,false,-3.1599,2024,Dec,true
+201,CRES,Delinquency,Dec 2024,2024-12-01T00:00:00.000,false,-10.16156,2024,Dec,true
+202,CRES,Effective Rental Income,Dec 2024,2024-12-01T00:00:00.000,false,183.28749999999997,2024,Dec,false
+203,CRES,Parking Garage Income,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+204,CRES,Utility Income,Dec 2024,2024-12-01T00:00:00.000,false,9.51241,2024,Dec,false
+205,CRES,Other - Income,Dec 2024,2024-12-01T00:00:00.000,false,17.317,2024,Dec,false
+206,CRES,Total Other Income,Dec 2024,2024-12-01T00:00:00.000,false,26.82941,2024,Dec,false
+207,CRES,Net Eff. Gross Income,Dec 2024,2024-12-01T00:00:00.000,false,210.11690999999996,2024,Dec,false
+208,CRES,General & Admin.,Dec 2024,2024-12-01T00:00:00.000,false,-5.571869999999999,2024,Dec,true
+209,CRES,Management Fee,Dec 2024,2024-12-01T00:00:00.000,false,-7.5,2024,Dec,true
+210,CRES,Payroll,Dec 2024,2024-12-01T00:00:00.000,false,-24.222990000000003,2024,Dec,true
+211,CRES,Insurance,Dec 2024,2024-12-01T00:00:00.000,false,-9.68009,2024,Dec,true
+212,CRES,Property Taxes,Dec 2024,2024-12-01T00:00:00.000,false,-31.42691,2024,Dec,true
+213,CRES,Leasing & Marketing,Dec 2024,2024-12-01T00:00:00.000,false,-11.677560000000001,2024,Dec,true
+214,CRES,Professional fees,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+215,CRES,Landscaping,Dec 2024,2024-12-01T00:00:00.000,false,-4.16015,2024,Dec,true
+216,CRES,Security & Life Safety,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+217,CRES,Repairs & Maintenance,Dec 2024,2024-12-01T00:00:00.000,false,-5.95662,2024,Dec,true
+218,CRES,Unit T/O Refurbishment,Dec 2024,2024-12-01T00:00:00.000,false,-7.16533,2024,Dec,true
+219,CRES,Utilities,Dec 2024,2024-12-01T00:00:00.000,false,-11.541139999999999,2024,Dec,true
+220,CRES,Trash Removal,Dec 2024,2024-12-01T00:00:00.000,false,-8.19635,2024,Dec,true
+221,CRES,Miscellaneous,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+222,CRES,Other - Expense,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+223,CRES,Total Expense,Dec 2024,2024-12-01T00:00:00.000,false,-127.09900999999999,2024,Dec,true
+224,CRES,EBITDA (NOI),Dec 2024,2024-12-01T00:00:00.000,false,83.01789999999997,2024,Dec,false
+225,CRES,Repl. Reserve Fund,Dec 2024,2024-12-01T00:00:00.000,false,65.48008,2024,Dec,false
+226,CRES,State Franchise Fee,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+227,CRES,Partnership Professional Fees,Dec 2024,2024-12-01T00:00:00.000,false,-2.02935,2024,Dec,true
+228,CRES,Asset Management Fees,Dec 2024,2024-12-01T00:00:00.000,false,-3.17406,2024,Dec,true
+229,CRES,Debt Service,Dec 2024,2024-12-01T00:00:00.000,false,-150.94259,2024,Dec,true
+230,CRES,Other - Below Line,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+231,CRES,Total Below Line,Dec 2024,2024-12-01T00:00:00.000,false,-90.66592,2024,Dec,true
+232,CRES,Renovations,Dec 2024,2024-12-01T00:00:00.000,false,0,2024,Dec,false
+233,CRES,Monthly Cash Flow,Dec 2024,2024-12-01T00:00:00.000,false,-7.648020000000031,2024,Dec,true
+234,CRES,Property Asking Rent,Jan 2025,2025-01-01T00:00:00.000,false,235.911,2025,Jan,false
+235,CRES,Loss to lease,Jan 2025,2025-01-01T00:00:00.000,false,-15.37974,2025,Jan,true
+236,CRES,Gross Scheduled Rent,Jan 2025,2025-01-01T00:00:00.000,false,220.53126,2025,Jan,false
+237,CRES,Vacancy,Jan 2025,2025-01-01T00:00:00.000,false,-21.85842,2025,Jan,true
+238,CRES,Non Revenue Units,Jan 2025,2025-01-01T00:00:00.000,false,-2.1845,2025,Jan,true
+239,CRES,Concessions,Jan 2025,2025-01-01T00:00:00.000,false,-3.2599,2025,Jan,true
+240,CRES,Delinquency,Jan 2025,2025-01-01T00:00:00.000,false,-15.78407,2025,Jan,true
+241,CRES,Effective Rental Income,Jan 2025,2025-01-01T00:00:00.000,false,177.44437,2025,Jan,false
+242,CRES,Parking Garage Income,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+243,CRES,Utility Income,Jan 2025,2025-01-01T00:00:00.000,false,9.14551,2025,Jan,false
+244,CRES,Other - Income,Jan 2025,2025-01-01T00:00:00.000,false,11.024869999999998,2025,Jan,false
+245,CRES,Total Other Income,Jan 2025,2025-01-01T00:00:00.000,false,20.170379999999998,2025,Jan,false
+246,CRES,Net Eff. Gross Income,Jan 2025,2025-01-01T00:00:00.000,false,197.61475,2025,Jan,false
+247,CRES,General & Admin.,Jan 2025,2025-01-01T00:00:00.000,false,-1.7264099999999998,2025,Jan,true
+248,CRES,Management Fee,Jan 2025,2025-01-01T00:00:00.000,false,-7.5,2025,Jan,true
+249,CRES,Payroll,Jan 2025,2025-01-01T00:00:00.000,false,-29.51785,2025,Jan,true
+250,CRES,Insurance,Jan 2025,2025-01-01T00:00:00.000,false,-9.18009,2025,Jan,true
+251,CRES,Property Taxes,Jan 2025,2025-01-01T00:00:00.000,false,-31.337,2025,Jan,true
+252,CRES,Leasing & Marketing,Jan 2025,2025-01-01T00:00:00.000,false,-3.7190499999999997,2025,Jan,true
+253,CRES,Professional fees,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+254,CRES,Landscaping,Jan 2025,2025-01-01T00:00:00.000,false,-4.800559999999999,2025,Jan,true
+255,CRES,Security & Life Safety,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+256,CRES,Repairs & Maintenance,Jan 2025,2025-01-01T00:00:00.000,false,-2.05406,2025,Jan,true
+257,CRES,Unit T/O Refurbishment,Jan 2025,2025-01-01T00:00:00.000,false,-5.50371,2025,Jan,true
+258,CRES,Utilities,Jan 2025,2025-01-01T00:00:00.000,false,-20.611629999999998,2025,Jan,true
+259,CRES,Trash Removal,Jan 2025,2025-01-01T00:00:00.000,false,-4.98968,2025,Jan,true
+260,CRES,Miscellaneous,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+261,CRES,Other - Expense,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+262,CRES,Total Expense,Jan 2025,2025-01-01T00:00:00.000,false,-120.94003999999998,2025,Jan,true
+263,CRES,EBITDA (NOI),Jan 2025,2025-01-01T00:00:00.000,false,76.67471,2025,Jan,false
+264,CRES,Repl. Reserve Fund,Jan 2025,2025-01-01T00:00:00.000,false,-2.32565,2025,Jan,true
+265,CRES,State Franchise Fee,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+266,CRES,Partnership Professional Fees,Jan 2025,2025-01-01T00:00:00.000,false,-7.12985,2025,Jan,true
+267,CRES,Asset Management Fees,Jan 2025,2025-01-01T00:00:00.000,false,-3.0946100000000003,2025,Jan,true
+268,CRES,Debt Service,Jan 2025,2025-01-01T00:00:00.000,false,-149.07326999999998,2025,Jan,true
+269,CRES,Other - Below Line,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+270,CRES,Total Below Line,Jan 2025,2025-01-01T00:00:00.000,false,-161.62337999999997,2025,Jan,true
+271,CRES,Renovations,Jan 2025,2025-01-01T00:00:00.000,false,0,2025,Jan,false
+272,CRES,Monthly Cash Flow,Jan 2025,2025-01-01T00:00:00.000,false,-84.94866999999996,2025,Jan,true
+273,CRES,Property Asking Rent,Feb 2025,2025-02-01T00:00:00.000,false,235.895,2025,Feb,false
+274,CRES,Loss to lease,Feb 2025,2025-02-01T00:00:00.000,false,-15.43153,2025,Feb,true
+275,CRES,Gross Scheduled Rent,Feb 2025,2025-02-01T00:00:00.000,false,220.46347,2025,Feb,false
+276,CRES,Vacancy,Feb 2025,2025-02-01T00:00:00.000,false,-27.98297,2025,Feb,true
+277,CRES,Non Revenue Units,Feb 2025,2025-02-01T00:00:00.000,false,-2.1845,2025,Feb,true
+278,CRES,Concessions,Feb 2025,2025-02-01T00:00:00.000,false,-1.4599000000000002,2025,Feb,true
+279,CRES,Delinquency,Feb 2025,2025-02-01T00:00:00.000,false,-2.39172,2025,Feb,true
+280,CRES,Effective Rental Income,Feb 2025,2025-02-01T00:00:00.000,false,186.44438,2025,Feb,false
+281,CRES,Parking Garage Income,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+282,CRES,Utility Income,Feb 2025,2025-02-01T00:00:00.000,false,10.34277,2025,Feb,false
+283,CRES,Other - Income,Feb 2025,2025-02-01T00:00:00.000,false,11.23292,2025,Feb,false
+284,CRES,Total Other Income,Feb 2025,2025-02-01T00:00:00.000,false,21.57569,2025,Feb,false
+285,CRES,Net Eff. Gross Income,Feb 2025,2025-02-01T00:00:00.000,false,208.02007,2025,Feb,false
+286,CRES,General & Admin.,Feb 2025,2025-02-01T00:00:00.000,false,-7.63021,2025,Feb,true
+287,CRES,Management Fee,Feb 2025,2025-02-01T00:00:00.000,false,-7.5,2025,Feb,true
+288,CRES,Payroll,Feb 2025,2025-02-01T00:00:00.000,false,-23.439260000000004,2025,Feb,true
+289,CRES,Insurance,Feb 2025,2025-02-01T00:00:00.000,false,-9.18009,2025,Feb,true
+290,CRES,Property Taxes,Feb 2025,2025-02-01T00:00:00.000,false,-31.337,2025,Feb,true
+291,CRES,Leasing & Marketing,Feb 2025,2025-02-01T00:00:00.000,false,-5.678710000000001,2025,Feb,true
+292,CRES,Professional fees,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+293,CRES,Landscaping,Feb 2025,2025-02-01T00:00:00.000,false,-2.48649,2025,Feb,true
+294,CRES,Security & Life Safety,Feb 2025,2025-02-01T00:00:00.000,false,-4.7518400000000005,2025,Feb,true
+295,CRES,Repairs & Maintenance,Feb 2025,2025-02-01T00:00:00.000,false,-0.13437000000000002,2025,Feb,true
+296,CRES,Unit T/O Refurbishment,Feb 2025,2025-02-01T00:00:00.000,false,-2.9195499999999996,2025,Feb,true
+297,CRES,Utilities,Feb 2025,2025-02-01T00:00:00.000,false,-10.70401,2025,Feb,true
+298,CRES,Trash Removal,Feb 2025,2025-02-01T00:00:00.000,false,0.5674499999999998,2025,Feb,false
+299,CRES,Miscellaneous,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+300,CRES,Other - Expense,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+301,CRES,Total Expense,Feb 2025,2025-02-01T00:00:00.000,false,-105.19408000000001,2025,Feb,true
+302,CRES,EBITDA (NOI),Feb 2025,2025-02-01T00:00:00.000,false,102.82598999999999,2025,Feb,false
+303,CRES,Repl. Reserve Fund,Feb 2025,2025-02-01T00:00:00.000,false,-5.78282,2025,Feb,true
+304,CRES,State Franchise Fee,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+305,CRES,Partnership Professional Fees,Feb 2025,2025-02-01T00:00:00.000,false,-13.49,2025,Feb,true
+306,CRES,Asset Management Fees,Feb 2025,2025-02-01T00:00:00.000,false,-2.85558,2025,Feb,true
+307,CRES,Debt Service,Feb 2025,2025-02-01T00:00:00.000,false,-134.73959,2025,Feb,true
+308,CRES,Other - Below Line,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+309,CRES,Total Below Line,Feb 2025,2025-02-01T00:00:00.000,false,-156.86799,2025,Feb,true
+310,CRES,Renovations,Feb 2025,2025-02-01T00:00:00.000,false,0,2025,Feb,false
+311,CRES,Monthly Cash Flow,Feb 2025,2025-02-01T00:00:00.000,false,-54.042,2025,Feb,true
+312,CRES,Property Asking Rent,Mar 2025,2025-03-01T00:00:00.000,false,235.45,2025,Mar,false
+313,CRES,Loss to lease,Mar 2025,2025-03-01T00:00:00.000,false,-15.36058,2025,Mar,true
+314,CRES,Gross Scheduled Rent,Mar 2025,2025-03-01T00:00:00.000,false,220.08942,2025,Mar,false
+315,CRES,Vacancy,Mar 2025,2025-03-01T00:00:00.000,false,-24.76219,2025,Mar,true
+316,CRES,Non Revenue Units,Mar 2025,2025-03-01T00:00:00.000,false,-2.1845,2025,Mar,true
+317,CRES,Concessions,Mar 2025,2025-03-01T00:00:00.000,false,-1.9599000000000002,2025,Mar,true
+318,CRES,Delinquency,Mar 2025,2025-03-01T00:00:00.000,false,-8.47726,2025,Mar,true
+319,CRES,Effective Rental Income,Mar 2025,2025-03-01T00:00:00.000,false,182.70556999999997,2025,Mar,false
+320,CRES,Parking Garage Income,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+321,CRES,Utility Income,Mar 2025,2025-03-01T00:00:00.000,false,7.56977,2025,Mar,false
+322,CRES,Other - Income,Mar 2025,2025-03-01T00:00:00.000,false,25.019470000000002,2025,Mar,false
+323,CRES,Total Other Income,Mar 2025,2025-03-01T00:00:00.000,false,32.589240000000004,2025,Mar,false
+324,CRES,Net Eff. Gross Income,Mar 2025,2025-03-01T00:00:00.000,false,215.29480999999998,2025,Mar,false
+325,CRES,General & Admin.,Mar 2025,2025-03-01T00:00:00.000,false,-23.41802,2025,Mar,true
+326,CRES,Management Fee,Mar 2025,2025-03-01T00:00:00.000,false,-7.5,2025,Mar,true
+327,CRES,Payroll,Mar 2025,2025-03-01T00:00:00.000,false,-23.415819999999997,2025,Mar,true
+328,CRES,Insurance,Mar 2025,2025-03-01T00:00:00.000,false,-9.18009,2025,Mar,true
+329,CRES,Property Taxes,Mar 2025,2025-03-01T00:00:00.000,false,-31.337,2025,Mar,true
+330,CRES,Leasing & Marketing,Mar 2025,2025-03-01T00:00:00.000,false,-5.379410000000001,2025,Mar,true
+331,CRES,Professional fees,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+332,CRES,Landscaping,Mar 2025,2025-03-01T00:00:00.000,false,-3.05373,2025,Mar,true
+333,CRES,Security & Life Safety,Mar 2025,2025-03-01T00:00:00.000,false,-0.34382999999999997,2025,Mar,true
+334,CRES,Repairs & Maintenance,Mar 2025,2025-03-01T00:00:00.000,false,-3.8456899999999994,2025,Mar,true
+335,CRES,Unit T/O Refurbishment,Mar 2025,2025-03-01T00:00:00.000,false,-5.81329,2025,Mar,true
+336,CRES,Utilities,Mar 2025,2025-03-01T00:00:00.000,false,-9.31124,2025,Mar,true
+337,CRES,Trash Removal,Mar 2025,2025-03-01T00:00:00.000,false,-4.05,2025,Mar,true
+338,CRES,Miscellaneous,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+339,CRES,Other - Expense,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+340,CRES,Total Expense,Mar 2025,2025-03-01T00:00:00.000,false,-126.64811999999999,2025,Mar,true
+341,CRES,EBITDA (NOI),Mar 2025,2025-03-01T00:00:00.000,false,88.64668999999999,2025,Mar,false
+342,CRES,Repl. Reserve Fund,Mar 2025,2025-03-01T00:00:00.000,false,-11.1821,2025,Mar,true
+343,CRES,State Franchise Fee,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+344,CRES,Partnership Professional Fees,Mar 2025,2025-03-01T00:00:00.000,false,-20.4864,2025,Mar,true
+345,CRES,Asset Management Fees,Mar 2025,2025-03-01T00:00:00.000,false,-3.24529,2025,Mar,true
+346,CRES,Debt Service,Mar 2025,2025-03-01T00:00:00.000,false,-106.44333,2025,Mar,true
+347,CRES,Other - Below Line,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+348,CRES,Total Below Line,Mar 2025,2025-03-01T00:00:00.000,false,-141.35712,2025,Mar,true
+349,CRES,Renovations,Mar 2025,2025-03-01T00:00:00.000,false,0,2025,Mar,false
+350,CRES,Monthly Cash Flow,Mar 2025,2025-03-01T00:00:00.000,false,-52.71043000000002,2025,Mar,true
+351,CRES,Property Asking Rent,Apr 2025,2025-04-01T00:00:00.000,false,235.014,2025,Apr,false
+352,CRES,Loss to lease,Apr 2025,2025-04-01T00:00:00.000,false,-14.87067,2025,Apr,true
+353,CRES,Gross Scheduled Rent,Apr 2025,2025-04-01T00:00:00.000,false,220.14333000000002,2025,Apr,false
+354,CRES,Vacancy,Apr 2025,2025-04-01T00:00:00.000,false,-24.465529999999998,2025,Apr,true
+355,CRES,Non Revenue Units,Apr 2025,2025-04-01T00:00:00.000,false,-2.1845,2025,Apr,true
+356,CRES,Concessions,Apr 2025,2025-04-01T00:00:00.000,false,-4.422899999999999,2025,Apr,true
+357,CRES,Delinquency,Apr 2025,2025-04-01T00:00:00.000,false,-4.357360000000001,2025,Apr,true
+358,CRES,Effective Rental Income,Apr 2025,2025-04-01T00:00:00.000,false,184.71304000000003,2025,Apr,false
+359,CRES,Parking Garage Income,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+360,CRES,Utility Income,Apr 2025,2025-04-01T00:00:00.000,false,8.214540000000001,2025,Apr,false
+361,CRES,Other - Income,Apr 2025,2025-04-01T00:00:00.000,false,16.48196,2025,Apr,false
+362,CRES,Total Other Income,Apr 2025,2025-04-01T00:00:00.000,false,24.6965,2025,Apr,false
+363,CRES,Net Eff. Gross Income,Apr 2025,2025-04-01T00:00:00.000,false,209.40954000000005,2025,Apr,false
+364,CRES,General & Admin.,Apr 2025,2025-04-01T00:00:00.000,false,-4.83545,2025,Apr,true
+365,CRES,Management Fee,Apr 2025,2025-04-01T00:00:00.000,false,-7.5,2025,Apr,true
+366,CRES,Payroll,Apr 2025,2025-04-01T00:00:00.000,false,-28.490679999999998,2025,Apr,true
+367,CRES,Insurance,Apr 2025,2025-04-01T00:00:00.000,false,-9.18009,2025,Apr,true
+368,CRES,Property Taxes,Apr 2025,2025-04-01T00:00:00.000,false,-31.337,2025,Apr,true
+369,CRES,Leasing & Marketing,Apr 2025,2025-04-01T00:00:00.000,false,-4.884720000000001,2025,Apr,true
+370,CRES,Professional fees,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+371,CRES,Landscaping,Apr 2025,2025-04-01T00:00:00.000,false,-4.33914,2025,Apr,true
+372,CRES,Security & Life Safety,Apr 2025,2025-04-01T00:00:00.000,false,-0.52383,2025,Apr,true
+373,CRES,Repairs & Maintenance,Apr 2025,2025-04-01T00:00:00.000,false,-7.00491,2025,Apr,true
+374,CRES,Unit T/O Refurbishment,Apr 2025,2025-04-01T00:00:00.000,false,-6.57544,2025,Apr,true
+375,CRES,Utilities,Apr 2025,2025-04-01T00:00:00.000,false,-13.420279999999998,2025,Apr,true
+376,CRES,Trash Removal,Apr 2025,2025-04-01T00:00:00.000,false,-4.3838099999999995,2025,Apr,true
+377,CRES,Miscellaneous,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+378,CRES,Other - Expense,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+379,CRES,Total Expense,Apr 2025,2025-04-01T00:00:00.000,false,-122.47535,2025,Apr,true
+380,CRES,EBITDA (NOI),Apr 2025,2025-04-01T00:00:00.000,false,86.93419000000004,2025,Apr,false
+381,CRES,Repl. Reserve Fund,Apr 2025,2025-04-01T00:00:00.000,false,-9.52209,2025,Apr,true
+382,CRES,State Franchise Fee,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+383,CRES,Partnership Professional Fees,Apr 2025,2025-04-01T00:00:00.000,false,-3.9500100000000002,2025,Apr,true
+384,CRES,Asset Management Fees,Apr 2025,2025-04-01T00:00:00.000,false,-3.18311,2025,Apr,true
+385,CRES,Debt Service,Apr 2025,2025-04-01T00:00:00.000,false,-96.90521000000001,2025,Apr,true
+386,CRES,Other - Below Line,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+387,CRES,Total Below Line,Apr 2025,2025-04-01T00:00:00.000,false,-113.56042000000001,2025,Apr,true
+388,CRES,Renovations,Apr 2025,2025-04-01T00:00:00.000,false,0,2025,Apr,false
+389,CRES,Monthly Cash Flow,Apr 2025,2025-04-01T00:00:00.000,false,-26.626229999999964,2025,Apr,true
+390,CRES,Property Asking Rent,May 2025,2025-05-01T00:00:00.000,false,234.0793,2025,May,false
+391,CRES,Loss to lease,May 2025,2025-05-01T00:00:00.000,false,-14.575569999999999,2025,May,true
+392,CRES,Gross Scheduled Rent,May 2025,2025-05-01T00:00:00.000,false,219.50373,2025,May,false
+393,CRES,Vacancy,May 2025,2025-05-01T00:00:00.000,false,-27.11695,2025,May,true
+394,CRES,Non Revenue Units,May 2025,2025-05-01T00:00:00.000,false,-2.1845,2025,May,true
+395,CRES,Concessions,May 2025,2025-05-01T00:00:00.000,false,-3.1663,2025,May,true
+396,CRES,Delinquency,May 2025,2025-05-01T00:00:00.000,false,-9.7091,2025,May,true
+397,CRES,Effective Rental Income,May 2025,2025-05-01T00:00:00.000,false,177.32687999999996,2025,May,false
+398,CRES,Parking Garage Income,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+399,CRES,Utility Income,May 2025,2025-05-01T00:00:00.000,false,7.7631499999999996,2025,May,false
+400,CRES,Other - Income,May 2025,2025-05-01T00:00:00.000,false,19.311619999999998,2025,May,false
+401,CRES,Total Other Income,May 2025,2025-05-01T00:00:00.000,false,27.074769999999997,2025,May,false
+402,CRES,Net Eff. Gross Income,May 2025,2025-05-01T00:00:00.000,false,204.40164999999996,2025,May,false
+403,CRES,General & Admin.,May 2025,2025-05-01T00:00:00.000,false,20.721029999999995,2025,May,false
+404,CRES,Management Fee,May 2025,2025-05-01T00:00:00.000,false,-7.5,2025,May,true
+405,CRES,Payroll,May 2025,2025-05-01T00:00:00.000,false,-23.471870000000003,2025,May,true
+406,CRES,Insurance,May 2025,2025-05-01T00:00:00.000,false,-9.18009,2025,May,true
+407,CRES,Property Taxes,May 2025,2025-05-01T00:00:00.000,false,-31.50121,2025,May,true
+408,CRES,Leasing & Marketing,May 2025,2025-05-01T00:00:00.000,false,-8.14604,2025,May,true
+409,CRES,Professional fees,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+410,CRES,Landscaping,May 2025,2025-05-01T00:00:00.000,false,-2.88779,2025,May,true
+411,CRES,Security & Life Safety,May 2025,2025-05-01T00:00:00.000,false,-0.34382999999999997,2025,May,true
+412,CRES,Repairs & Maintenance,May 2025,2025-05-01T00:00:00.000,false,-2.9514899999999997,2025,May,true
+413,CRES,Unit T/O Refurbishment,May 2025,2025-05-01T00:00:00.000,false,-0.73,2025,May,true
+414,CRES,Utilities,May 2025,2025-05-01T00:00:00.000,false,-11.41003,2025,May,true
+415,CRES,Trash Removal,May 2025,2025-05-01T00:00:00.000,false,-4.893719999999999,2025,May,true
+416,CRES,Miscellaneous,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+417,CRES,Other - Expense,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+418,CRES,Total Expense,May 2025,2025-05-01T00:00:00.000,false,-82.29504000000001,2025,May,true
+419,CRES,EBITDA (NOI),May 2025,2025-05-01T00:00:00.000,false,122.10660999999995,2025,May,false
+420,CRES,Repl. Reserve Fund,May 2025,2025-05-01T00:00:00.000,false,-45.08336,2025,May,true
+421,CRES,State Franchise Fee,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+422,CRES,Partnership Professional Fees,May 2025,2025-05-01T00:00:00.000,false,-16.05901,2025,May,true
+423,CRES,Asset Management Fees,May 2025,2025-05-01T00:00:00.000,false,-3.1490500000000003,2025,May,true
+424,CRES,Debt Service,May 2025,2025-05-01T00:00:00.000,false,-103.36534,2025,May,true
+425,CRES,Other - Below Line,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+426,CRES,Total Below Line,May 2025,2025-05-01T00:00:00.000,false,-167.65676000000002,2025,May,true
+427,CRES,Renovations,May 2025,2025-05-01T00:00:00.000,false,0,2025,May,false
+428,CRES,Monthly Cash Flow,May 2025,2025-05-01T00:00:00.000,false,-45.55015000000007,2025,May,true
+429,CRES,Property Asking Rent,Jun 2025,2025-06-01T00:00:00.000,false,234.33195999999998,2025,Jun,false
+430,CRES,Loss to lease,Jun 2025,2025-06-01T00:00:00.000,false,-14.74146,2025,Jun,true
+431,CRES,Gross Scheduled Rent,Jun 2025,2025-06-01T00:00:00.000,false,219.5905,2025,Jun,false
+432,CRES,Vacancy,Jun 2025,2025-06-01T00:00:00.000,false,-27.68306,2025,Jun,true
+433,CRES,Non Revenue Units,Jun 2025,2025-06-01T00:00:00.000,false,-2.1845,2025,Jun,true
+434,CRES,Concessions,Jun 2025,2025-06-01T00:00:00.000,false,-7.42739,2025,Jun,true
+435,CRES,Delinquency,Jun 2025,2025-06-01T00:00:00.000,false,-3.8613300000000006,2025,Jun,true
+436,CRES,Effective Rental Income,Jun 2025,2025-06-01T00:00:00.000,false,178.43421999999998,2025,Jun,false
+437,CRES,Parking Garage Income,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+438,CRES,Utility Income,Jun 2025,2025-06-01T00:00:00.000,false,8.08883,2025,Jun,false
+439,CRES,Other - Income,Jun 2025,2025-06-01T00:00:00.000,false,10.044360000000001,2025,Jun,false
+440,CRES,Total Other Income,Jun 2025,2025-06-01T00:00:00.000,false,18.13319,2025,Jun,false
+441,CRES,Net Eff. Gross Income,Jun 2025,2025-06-01T00:00:00.000,false,196.56741,2025,Jun,false
+442,CRES,General & Admin.,Jun 2025,2025-06-01T00:00:00.000,false,-5.40826,2025,Jun,true
+443,CRES,Management Fee,Jun 2025,2025-06-01T00:00:00.000,false,-7.5,2025,Jun,true
+444,CRES,Payroll,Jun 2025,2025-06-01T00:00:00.000,false,-26.01337,2025,Jun,true
+445,CRES,Insurance,Jun 2025,2025-06-01T00:00:00.000,false,-9.18009,2025,Jun,true
+446,CRES,Property Taxes,Jun 2025,2025-06-01T00:00:00.000,false,-31.337,2025,Jun,true
+447,CRES,Leasing & Marketing,Jun 2025,2025-06-01T00:00:00.000,false,-6.72848,2025,Jun,true
+448,CRES,Professional fees,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+449,CRES,Landscaping,Jun 2025,2025-06-01T00:00:00.000,false,-2.93596,2025,Jun,true
+450,CRES,Security & Life Safety,Jun 2025,2025-06-01T00:00:00.000,false,-3.00783,2025,Jun,true
+451,CRES,Repairs & Maintenance,Jun 2025,2025-06-01T00:00:00.000,false,-3.74404,2025,Jun,true
+452,CRES,Unit T/O Refurbishment,Jun 2025,2025-06-01T00:00:00.000,false,-1.7169,2025,Jun,true
+453,CRES,Utilities,Jun 2025,2025-06-01T00:00:00.000,false,-7.966489999999999,2025,Jun,true
+454,CRES,Trash Removal,Jun 2025,2025-06-01T00:00:00.000,false,-4.613659999999999,2025,Jun,true
+455,CRES,Miscellaneous,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+456,CRES,Other - Expense,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+457,CRES,Total Expense,Jun 2025,2025-06-01T00:00:00.000,false,-110.15207999999998,2025,Jun,true
+458,CRES,EBITDA (NOI),Jun 2025,2025-06-01T00:00:00.000,false,86.41533000000001,2025,Jun,false
+459,CRES,Repl. Reserve Fund,Jun 2025,2025-06-01T00:00:00.000,false,-44.92517000000001,2025,Jun,true
+460,CRES,State Franchise Fee,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+461,CRES,Partnership Professional Fees,Jun 2025,2025-06-01T00:00:00.000,false,-1.47501,2025,Jun,true
+462,CRES,Asset Management Fees,Jun 2025,2025-06-01T00:00:00.000,false,-2.89211,2025,Jun,true
+463,CRES,Debt Service,Jun 2025,2025-06-01T00:00:00.000,false,-96.52155,2025,Jun,true
+464,CRES,Other - Below Line,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+465,CRES,Total Below Line,Jun 2025,2025-06-01T00:00:00.000,false,-145.81384000000003,2025,Jun,true
+466,CRES,Renovations,Jun 2025,2025-06-01T00:00:00.000,false,0,2025,Jun,false
+467,CRES,Monthly Cash Flow,Jun 2025,2025-06-01T00:00:00.000,false,-59.398510000000016,2025,Jun,true
+468,CRES,Property Asking Rent,YTD,,true,2898.22826,,,false
+469,CRES,Loss to lease,YTD,,true,-259.48132,,,true
+470,CRES,Gross Scheduled Rent,YTD,,true,2638.7469399999995,,,false
+471,CRES,Vacancy,YTD,,true,-255.03367000000003,,,true
+472,CRES,Non Revenue Units,YTD,,true,-23.925449999999998,,,true
+473,CRES,Concessions,YTD,,true,-33.09436,,,true
+474,CRES,Delinquency,YTD,,true,-108.89903,,,true
+475,CRES,Effective Rental Income,YTD,,true,2217.79443,,,false
+476,CRES,Parking Garage Income,YTD,,true,0,,,false
+477,CRES,Utility Income,YTD,,true,89.30951,,,false
+478,CRES,Other - Income,YTD,,true,177.23462000000004,,,false
+479,CRES,Total Other Income,YTD,,true,266.54413000000005,,,false
+480,CRES,Net Eff. Gross Income,YTD,,true,2484.3385599999997,,,false
+481,CRES,General & Admin.,YTD,,true,-53.92282999999999,,,true
+482,CRES,Management Fee,YTD,,true,-98.98897,,,true
+483,CRES,Payroll,YTD,,true,-308.82519,,,true
+484,CRES,Insurance,YTD,,true,-103.20540000000003,,,true
+485,CRES,Property Taxes,YTD,,true,-376.72031,,,true
+486,CRES,Leasing & Marketing,YTD,,true,-65.36495000000001,,,true
+487,CRES,Professional fees,YTD,,true,0,,,false
+488,CRES,Landscaping,YTD,,true,-42.586619999999996,,,true
+489,CRES,Security & Life Safety,YTD,,true,-8.87128,,,true
+490,CRES,Repairs & Maintenance,YTD,,true,-52.72763,,,true
+491,CRES,Unit T/O Refurbishment,YTD,,true,-57.89757,,,true
+492,CRES,Utilities,YTD,,true,-123.16771,,,true
+493,CRES,Trash Removal,YTD,,true,-47.61228,,,true
+494,CRES,Miscellaneous,YTD,,true,0,,,false
+495,CRES,Other - Expense,YTD,,true,0,,,false
+496,CRES,Total Expense,YTD,,true,-1339.89074,,,true
+497,CRES,EBITDA (NOI),YTD,,true,1144.4478199999996,,,false
+498,CRES,Repl. Reserve Fund,YTD,,true,-67.29137,,,true
+499,CRES,State Franchise Fee,YTD,,true,0,,,false
+500,CRES,Partnership Professional Fees,YTD,,true,-74.17425,,,true
+501,CRES,Asset Management Fees,YTD,,true,-37.73324,,,true
+502,CRES,Debt Service,YTD,,true,-1626.6216699999998,,,true
+503,CRES,Other - Below Line,YTD,,true,0,,,false
+504,CRES,Total Below Line,YTD,,true,-1805.8205300000002,,,true
+505,CRES,Renovations,YTD,,true,0,,,false
+506,CRES,Monthly Cash Flow,YTD,,true,-661.37271,,,true

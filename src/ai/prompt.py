@@ -114,12 +114,29 @@ def validate_response(response, analysis_type="standard", format_name="t12_month
         else:
             return False, f"Enhanced analysis lacks sufficient relevant content for {format_name} format"
     
-    # Standard validation using format-specific keywords
+    # Enhanced validation for structured responses
     response_upper = response.upper()
     
+    # Check for structured sections (numbered headers with emojis)
+    structured_sections = [
+        "CURRENT MONTH KPI SNAPSHOT", "YTD PERFORMANCE", "KEY OBSERVATIONS", 
+        "STRATEGIC MANAGEMENT QUESTIONS", "ACTIONABLE RECOMMENDATIONS", "RED FLAGS"
+    ]
+    section_count = sum(1 for section in structured_sections if section in response_upper)
+    
+    # If we have structured sections, validate those
+    if section_count >= 4:  # At least 4 of the 6 main sections
+        # Check for key financial content
+        financial_indicators = ["$", "%", "INCOME", "EXPENSE", "NOI", "EBITDA"]
+        has_financial_content = sum(1 for indicator in financial_indicators if indicator in response_upper) >= 3
+        
+        if has_financial_content:
+            return True, f"Structured response validation passed ({section_count}/6 sections found)"
+    
+    # Fallback to standard validation using format-specific keywords
     questions_keywords = validation_keywords.get("questions", ["question", "what", "how", "why"])
-    recommendations_keywords = validation_keywords.get("recommendations", ["recommend", "suggest", "improve"])
-    analysis_keywords = validation_keywords.get("analysis", ["trend", "performance", "concern"])
+    recommendations_keywords = validation_keywords.get("recommendations", ["recommend", "suggest", "improve", "actionable"])
+    analysis_keywords = validation_keywords.get("analysis", ["trend", "performance", "concern", "observations", "kpi"])
     
     has_questions = any(word.upper() in response_upper for word in questions_keywords)
     has_recommendations = any(word.upper() in response_upper for word in recommendations_keywords)

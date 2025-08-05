@@ -1,0 +1,148 @@
+{
+  "format_name": "T12_Monthly_Financial",
+  "description": "KPI Calculator for T12 Monthly Property Financial Reports",
+  "key_metrics": [
+    "Property Asking Rent",
+    "Effective Rental Income",
+    "Gross Scheduled Rent",
+    "Loss to lease",
+    "Vacancy",
+    "Concessions", 
+    "Delinquency",
+    "EBITDA (NOI)",
+    "Total Expense",
+    "Management Fee",
+    "Property Taxes",
+    "Insurance",
+    "Monthly Cash Flow"
+  ],
+  "trend_metrics": [
+    "Effective Rental Income",
+    "Property Asking Rent",
+    "Vacancy",
+    "Delinquency", 
+    "Loss to lease",
+    "EBITDA",
+    "NOI",
+    "Total Expense"
+  ],
+  "ratio_calculations": {
+    "Collection Rate": {
+      "formula": "(Effective Rental Income / Property Asking Rent) * 100",
+      "description": "Percentage of asking rent actually collected"
+    },
+    "Loss-to-Lease Rate": {
+      "formula": "(|Loss to lease| / Property Asking Rent) * 100", 
+      "description": "Percentage of potential rent lost due to below-market leases"
+    },
+    "Vacancy Rate": {
+      "formula": "(|Vacancy| / Property Asking Rent) * 100",
+      "description": "Percentage of potential rent lost due to vacant units"
+    },
+    "Economic Occupancy Rate": {
+      "formula": "(Effective Rental Income / Gross Scheduled Rent) * 100",
+      "description": "Effective occupancy considering all revenue losses"
+    },
+    "NOI Margin": {
+      "formula": "(NOI / Effective Rental Income) * 100",
+      "description": "Net Operating Income as percentage of effective rental income"
+    },
+    "Expense Ratio": {
+      "formula": "(Total Expense / Effective Rental Income) * 100",
+      "description": "Operating expenses as percentage of effective rental income"
+    }
+  },
+  "metric_categories": {
+    "REVENUE_PERFORMANCE": {
+      "title": "=== REVENUE PERFORMANCE ===",
+      "metrics": [
+        "Rent",
+        "Income", 
+        "Gross Scheduled Rent",
+        "Effective Rental Income",
+        "Other - Income",
+        "Other Income",
+        "Parking Garage Income",
+        "Utility Income"
+      ]
+    },
+    "REVENUE_LOSS_FACTORS": {
+      "title": "=== REVENUE LOSS FACTORS ===",
+      "metrics": [
+        "Loss to lease",
+        "Vacancy", 
+        "Concessions",
+        "Delinquency",
+        "Non Revenue Units"
+      ]
+    },
+    "EXPENSES": {
+      "title": "=== EXPENSES ===",
+      "metrics": [
+        "General & Admin.",
+        "Management Fee",
+        "Payroll",
+        "Insurance",
+        "Property Taxes",
+        "Leasing & Marketing",
+        "Professional fees",
+        "Landscaping",
+        "Security & Life Safety",
+        "Repairs & Maintenance",
+        "Unit T/O Refurbishment",
+        "Utilities",
+        "Trash Removal",
+        "Miscellaneous",
+        "Other - Expense",
+        "Total Expense"
+      ]
+    },
+    "NOI_AND_BELOW_LINE": {
+      "title": "=== NOI & BELOW LINE ===",
+      "metrics": [
+        "EBITDA (NOI)",
+        "Repl. Reserve Fund",
+        "State Franchise Fee",
+        "Partnership Professional Fees",
+        "Asset Management Fees",
+        "Debt Service",
+        "Other - Below Line",
+        "Total Below Line",
+        "Renovations",
+        "Monthly Cash Flow"
+      ]
+    },
+    "BALANCE_SHEET_ESCROW": {
+      "title": "=== BALANCE SHEET & ESCROW ===",
+      "metrics": [
+        "Operating Account Balance",
+        "Interest Reserve Account",
+        "Undeposited Funds",
+        "Security Deposits",
+        "Total Cash",
+        "Open ARR",
+        "Escrow - Taxes",
+        "Escrow - Insurance",
+        "Escrow - Other",
+        "Escrow - RR",
+        "Open AP",
+        "Total Equity",
+        "Total Debt"
+      ]
+    }
+  },
+  "ytd_categorization": {
+    "revenue_patterns": ["income", "rent", "revenue"],
+    "expense_patterns": ["expense", "cost", "fee", "tax", "insurance", "maintenance", "utility"]
+  },
+  "formatting": {
+    "currency_format": "${:,.2f}",
+    "percentage_format": "{:.1f}%",
+    "change_format": "{} by {} ({})"
+  },
+  "validation_rules": {
+    "required_columns": ["Metric", "Value", "IsYTD"],
+    "min_metrics_for_analysis": 5,
+    "trend_analysis_min_periods": 2
+  }
+}

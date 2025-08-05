@@ -1,0 +1,89 @@
+{
+  "format_name": "T12_Monthly_Financial",
+  "description": "T12 Monthly Property Financial Reports with monthly columns",
+  "file_extensions": [".xlsx", ".xls"],
+  "detection_criteria": {
+    "month_pattern": "^[A-Za-z]{3} \\d{4}$",
+    "required_metrics": [
+      "Property Asking Rent",
+      "Effective Rental Income",
+      "Gross Scheduled Rent",
+      "NOI",
+      "EBITDA"
+    ],
+    "sheet_names": ["Sheet1", "T12", "Financial", "Monthly"]
+  },
+  "validation_rules": {
+    "required_columns": ["Sheet", "Metric", "Period", "Value"],
+    "min_metrics": 5,
+    "max_missing_values_percent": 10
+  },
+  "metric_categories": {
+    "REVENUE_PERFORMANCE": [
+      "Rent",
+      "Income", 
+      "Gross Scheduled Rent",
+      "Effective Rental Income",
+      "Other - Income",
+      "Other Income"
+    ],
+    "REVENUE_LOSS_FACTORS": [
+      "Loss to lease",
+      "Vacancy",
+      "Concessions", 
+      "Delinquency",
+      "Non Revenue Units"
+    ],
+    "EXPENSES": [
+      "General & Admin.",
+      "Management Fee",
+      "Payroll",
+      "Insurance",
+      "Property Taxes",
+      "Leasing & Marketing",
+      "Professional fees",
+      "Landscaping",
+      "Security & Life Safety",
+      "Repairs & Maintenance",
+      "Unit T/O Refurbishment",
+      "Utilities",
+      "Trash Removal",
+      "Miscellaneous",
+      "Other - Expense",
+      "Total Expense"
+    ],
+    "NOI_AND_BELOW_LINE": [
+      "EBITDA (NOI)",
+      "Repl. Reserve Fund",
+      "State Franchise Fee",
+      "Partnership Professional Fees",
+      "Asset Management Fees",
+      "Debt Service",
+      "Other - Below Line",
+      "Total Below Line",
+      "Renovations",
+      "Monthly Cash Flow"
+    ],
+    "BALANCE_SHEET_ESCROW": [
+      "Operating Account Balance",
+      "Interest Reserve Account",
+      "Undeposited Funds",
+      "Security Deposits",
+      "Total Cash",
+      "Open ARR",
+      "Escrow - Taxes",
+      "Escrow - Insurance",
+      "Escrow - Other",
+      "Escrow - RR",
+      "Open AP",
+      "Total Equity",
+      "Total Debt"
+    ]
+  },
+  "processing_options": {
+    "parse_ytd": true,
+    "parse_months": true,
+    "include_negative_flag": true,
+    "include_year_month_columns": true
+  }
+}

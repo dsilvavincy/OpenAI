@@ -20,21 +20,43 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Handle common T12 format variations and edge cases
 **✅ VALIDATION REQUIRED**: Process multiple T12 formats successfully, validation catches errors
 
-### 3. Data Ingestion & Preprocessing
+### 3. Data Ingestion & Preprocessing - Scalable Format System
 - [x] Implement `tidy_sheet_all()` to clean and reshape T12 Excel data
 - [x] Add robust error handling for malformed Excel files
 - [x] Test with multiple sample T12 Excel files
 - [x] Validate output DataFrame structure and content
 - [x] Implement data quality checks (missing values, invalid dates, etc.)
-**✅ VALIDATION REQUIRED**: Clean data output, proper error handling, consistent DataFrame structure
+- [x] **Format Registry System**: Create registry to dynamically load format processors
+- [x] **Base Format Processor**: Create abstract base class for all format processors
+- [x] **T12 Processor Module**: Refactor existing T12 logic into modular processor class
+- [ ] **Weekly Database Processor**: Create second format processor following base class pattern
+- [x] **Format Auto-Detection**: Auto-detect format type from file structure/headers
+- [x] **Unified Output Interface**: All processors return standardized data structure
+- [x] **Format Validation Framework**: Base validation with format-specific validation rules
+- [x] **Plugin Architecture**: Easy addition of new format types without core app changes
+- [x] **Project Structure**: Create `src/core/formats/` with `base_processor.py`, `t12_processor.py`, `weekly_processor.py`
+- [x] **Format Registry**: Create `src/core/format_registry.py` to manage available processors
+- [x] **Configuration**: Create `config/formats/` folder with JSON config for each format type
+**✅ VALIDATION REQUIRED**: Plugin system works, easy to add new formats, consistent interface across all processors
 
-### 4. KPI Summary Generation
+### 4. KPI Summary Generation - Scalable KPI System
 - [x] Implement `generate_kpi_summary()` to extract and summarize KPIs
 - [x] Define standard KPI calculations (Revenue, NOI, Occupancy, etc.)
 - [x] Add trend analysis (month-over-month, year-over-year)
 - [x] Test summary output for accuracy and clarity
 - [x] Validate bullet-point formatting for LLM input
-**✅ VALIDATION REQUIRED**: Accurate KPI calculations, professional summary format, proper trend analysis
+- [x] **Base KPI Calculator**: Create abstract base class for all KPI calculators
+- [x] **T12 KPI Calculator**: Refactor existing KPI logic into T12-specific calculator class
+- [ ] **Weekly Database KPI Calculator**: Create KPI calculator for weekly database format
+- [x] **KPI Registry System**: Registry to dynamically load KPI calculators for each format
+- [x] **Format-Specific Metrics**: Each format defines its own relevant KPIs and calculations
+- [x] **Standardized KPI Output**: All calculators return consistent KPI summary structure
+- [x] **Trend Analysis Framework**: Base trend analysis with format-specific trend calculations
+- [x] **Cross-Format KPI Mapping**: Map similar KPIs across formats when possible
+- [x] **KPI Templates**: Template system for each format's analysis focus
+- [x] **Project Structure**: Create `src/core/kpis/` with `base_kpi_calculator.py`, format-specific calculators
+- [x] **KPI Configuration**: Create `config/kpis/` with JSON configs defining KPIs for each format
+**✅ VALIDATION REQUIRED**: KPI system is modular, easy to add new KPI calculators, consistent output format
 
 ### 5. Standardized AI Prompt Engineering
 - [x] Create comprehensive system prompt template for T12 analysis
@@ -136,12 +158,33 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [ ] **Backup/Restore**: Save and load custom settings and templates
 - [ ] **Performance Metrics**: Track token usage, response times, and analysis quality scores
 - [ ] **Advanced Filters**: Developer controls for data preprocessing and analysis scope
-- [ ] **Project Structure**: Create `src/settings/` folder with `template_manager.py`, `config_editor.py`, and `performance_tracker.py`
+- [ ] **Format Manager**: UI to create, edit, and test custom T12 format processors
+- [ ] **Format Testing**: Test new formats with sample data before deployment
+- [ ] **Preprocessing Pipeline Editor**: Visual editor for creating custom preprocessing workflows
+- [ ] **Project Structure**: Create `src/settings/` folder with `template_manager.py`, `config_editor.py`, `performance_tracker.py`, and `format_manager.py`
 - [ ] **Settings Storage**: Create `settings/` folder with JSON files for user preferences, templates, and configurations
 - [ ] **Backup System**: Create `backups/` folder with versioned settings and template snapshots
-**✅ VALIDATION REQUIRED**: All settings persist correctly, templates are editable and apply properly, performance tracking works
+**✅ VALIDATION REQUIRED**: All settings persist correctly, templates are editable and apply properly, performance tracking works, format management is functional
 
-### 14. Desktop Application Packaging
+### 14. Property Data Format Management - Scalable Plugin Architecture
+- [ ] **Format Plugin Framework**: Create plugin system where new formats are added as independent modules
+- [ ] **Format Registration**: Auto-discovery and registration of format processors in system
+- [ ] **Format Detection Engine**: Smart detection system that tries each registered format processor
+- [ ] **Format Configuration System**: JSON-based configuration for each format (headers, validation rules, KPIs)
+- [ ] **Format Validation Framework**: Base validation with format-specific validation extensions
+- [ ] **Format Documentation Generator**: Auto-generate format documentation from configuration files
+- [ ] **Format Testing Framework**: Standardized testing approach for each format processor
+- [ ] **Format Manager UI**: Developer mode UI to manage, test, and configure format processors
+- [ ] **Hot-Reload Support**: Add new formats without restarting application
+- [ ] **Format Versioning**: Support format processor versioning and updates
+- [ ] **Cross-Format Analysis**: Framework for combining insights from multiple format types
+- [ ] **Format Dependencies**: Handle formats that depend on or extend other formats
+- [ ] **Project Structure**: Create `src/formats/` with individual format packages
+- [ ] **Format Storage**: Create `formats/` folder with format-specific configs, samples, and documentation
+- [ ] **Plugin Registry**: Create `src/core/plugin_manager.py` for format plugin management
+**✅ VALIDATION REQUIRED**: Plugin system allows easy addition of new formats, maintains consistent interface, supports complex format requirements
+
+### 15. Desktop Application Packaging
 - [ ] Package Streamlit app as a standalone desktop executable using PyInstaller
 - [ ] Include all dependencies and assets in executable
 - [ ] Test packaged app on target desktop environment

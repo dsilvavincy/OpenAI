@@ -60,11 +60,8 @@ class DeveloperSidebar:
                 0.0, 2.0, 0.7, 0.1,
                 help="Controls randomness in AI responses"
             )
-            max_tokens = st.number_input(
-                "Max Tokens",
-                100, 4000, 2000,
-                help="Maximum length of AI response"
-            )
+            # No token limit in developer mode - allow unlimited response length
+            st.info("🚀 Unlimited Tokens - No response length restrictions")
         
         # Property Metadata (collapsible)
         with st.expander("📋 Property Metadata", expanded=False):
@@ -106,7 +103,7 @@ class DeveloperSidebar:
             "property_address": updated_property_address,
             "model_selection": model_selection,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            # No max_tokens - allowing unlimited response length
             "property_type": property_type,
             "units_count": units_count,
             "acquisition_date": acquisition_date,

@@ -45,9 +45,9 @@ def display_ai_analysis_section(df, kpi_summary, api_key, property_name, propert
         model_config = {
             "model_selection": "gpt-4o",
             "temperature": 0.2,
-            "max_tokens": 2500
+            # No token limit - allow unlimited response length
         }
-    
+
     # Use shared file manager data if df is None
     if df is None:
         df = SharedFileManager.get_processed_df()
@@ -87,13 +87,11 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, f
         model_config = {
             "model_selection": "gpt-4o",
             "temperature": 0.2,
-            "max_tokens": 2500
+            # No token limit - allow unlimited response length
         }
-    
+
     # Display current AI model settings
-    st.info(f"🤖 **AI Model:** {model_config['model_selection']} | **Temperature:** {model_config['temperature']} | **Max Tokens:** {model_config['max_tokens']}")
-    
-    # AI Analysis with detailed progress
+    st.info(f"🤖 **AI Model:** {model_config['model_selection']} | **Temperature:** {model_config['temperature']} | **Unlimited Tokens**")    # AI Analysis with detailed progress
     ai_progress = st.progress(0)
     ai_status = st.empty()
     

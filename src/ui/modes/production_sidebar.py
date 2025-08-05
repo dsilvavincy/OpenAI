@@ -85,16 +85,10 @@ class ProductionSidebar:
                 )
             
             with col2:
-                max_tokens = st.number_input(
-                    "Max Tokens",
-                    min_value=500,
-                    max_value=4000,
-                    value=2500,  # Higher for detailed reports
-                    step=100,
-                    help="Maximum response length (higher = more detailed analysis)"
-                )
+                # No token limit in production mode - allow unlimited response length
+                st.info("🚀 Unlimited Tokens - Complete detailed analysis without restrictions")
             
-            st.info(f"💡 **Current:** {model_selection} | Temp: {temperature} | Tokens: {max_tokens}")
+            st.info(f"💡 **Current:** {model_selection} | Temp: {temperature} | Unlimited Tokens")
         
         # Display Options (collapsible)
         with st.expander("📋 Display Options", expanded=False):
@@ -124,7 +118,7 @@ class ProductionSidebar:
             "property_address": updated_property_address,
             "model_selection": model_selection,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            # No max_tokens - allowing unlimited response length
             "show_side_by_side": show_side_by_side,
             "layout_ratio": layout_ratio
         }

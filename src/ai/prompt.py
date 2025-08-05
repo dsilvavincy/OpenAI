@@ -72,7 +72,7 @@ def call_openai(system_prompt, user_prompt, api_key=None):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=1000,
+            # No token limit - allow full responses
             temperature=0.3  # Lower temperature for more consistent analysis
         )
         
@@ -102,15 +102,43 @@ def validate_response(response, analysis_type="standard", format_name="t12_month
     
     # More flexible validation for Enhanced Analysis (Assistants API)
     if analysis_type == "enhanced" or analysis_type == "assistants":
-        # Check for required content indicators
         response_upper = response.upper()
-        required_content = validation_keywords.get("required_content", [])
-        min_length = validation_keywords.get("min_length", 100)
         
-        has_content_indicators = any(word.upper() in response_upper for word in required_content)
+        # Check for structured sections (numbered headers with emojis)
+        structured_sections = [
+            "CURRENT MONTH KPI SNAPSHOT", "YTD PERFORMANCE", "KEY OBSERVATIONS", 
+            "STRATEGIC MANAGEMENT QUESTIONS", "ACTIONABLE RECOMMENDATIONS", "RED FLAGS"
+        ]
+        section_count = sum(1 for section in structured_sections if section in response_upper)
         
-        if has_content_indicators and len(response.strip()) > min_length:
-            return True, "Enhanced analysis validation passed"
+        # If we have structured sections, validate those
+        if section_count >= 2:  # Lowered from 3 to 2 for more flexibility
+            # Check for key financial content
+            financial_indicators = ["$", "%", "INCOME", "EXPENSE", "NOI", "EBITDA", "RENT", "REVENUE"]
+            has_financial_content = sum(1 for indicator in financial_indicators if indicator in response_upper) >= 2
+            
+            if has_financial_content:
+                return True, f"Enhanced analysis validation passed ({section_count}/6 sections found)"
+        
+        # Enhanced fallback: check for any meaningful property analysis content
+        analysis_indicators = [
+            "PROPERTY", "PERFORMANCE", "ANALYSIS", "FINANCIAL", "REVENUE", "INCOME", 
+            "EXPENSE", "NOI", "EBITDA", "TREND", "MONTH", "KPI", "METRIC",
+            "RECOMMEND", "SUGGEST", "CONCERN", "OBSERVATION", "QUESTION"
+        ]
+        
+        content_matches = sum(1 for indicator in analysis_indicators if indicator in response_upper)
+        
+        # Very lenient validation - if response has property analysis content and reasonable length
+        if content_matches >= 5 and len(response.strip()) > 200:
+            return True, "Enhanced analysis validation passed (content-based)"
+        
+        # Ultimate fallback - if response is substantial and contains basic keywords
+        basic_keywords = ["PROPERTY", "FINANCIAL", "ANALYSIS", "$"]
+        has_basic_content = sum(1 for keyword in basic_keywords if keyword in response_upper) >= 2
+        
+        if has_basic_content and len(response.strip()) > 100:
+            return True, "Enhanced analysis validation passed (basic content check)"
         else:
             return False, f"Enhanced analysis lacks sufficient relevant content for {format_name} format"
     

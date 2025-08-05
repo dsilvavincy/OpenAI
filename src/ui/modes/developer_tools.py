@@ -8,44 +8,51 @@ class DeveloperToolsPanel:
     """Developer tools panel with advanced debugging features."""
     
     def render(self, config: Dict[str, Any]):
-        """Render developer tools panel."""
+        """Render organized developer tools panel with collapsible sections."""
         st.markdown("### 🛠️ Developer Tools")
         
-        # Prompt testing tools
-        if 'processed_df' in st.session_state:
-            df = st.session_state['processed_df']
-            
-            try:
-                from src.core.kpi_registry import kpi_registry
-                # Fix format detection for prompt testing too
-                force_format = config.get('force_format')
-                if force_format and force_format != "None":
-                    format_name = force_format
-                else:
-                    format_name = "T12_Monthly_Financial"  # Use default when "None" selected
+        # AI Prompt Testing (collapsible)
+        with st.expander("🧪 AI Prompt Testing & Debugging", expanded=config.get('enable_prompt_testing', False)):
+            if 'processed_df' in st.session_state:
+                df = st.session_state['processed_df']
+                
+                try:
+                    from src.core.kpi_registry import kpi_registry
+                    # Fix format detection for prompt testing too
+                    force_format = config.get('force_format')
+                    if force_format and force_format != "None":
+                        format_name = force_format
+                    else:
+                        format_name = "T12_Monthly_Financial"  # Use default when "None" selected
+                        
+                    kpi_summary = kpi_registry.calculate_kpis(df, format_name)
                     
-                kpi_summary = kpi_registry.calculate_kpis(df, format_name)
-                
-                st.markdown("#### 🧪 Prompt Testing & AI Debugging")
-                st.info("💡 **View OpenAI Prompts:** See the exact prompts sent to OpenAI for both Standard and Enhanced Analysis modes.")
-                
-                from src.ui.data_analysis import display_prompt_testing_section
-                display_prompt_testing_section(kpi_summary, df)
-                
-            except Exception as e:
-                st.error(f"Error loading prompt testing: {str(e)}")
-        else:
-            # Show message when no data is uploaded
-            st.markdown("#### 🧪 Prompt Testing & AI Debugging")
-            st.info("💡 **Upload a T12 file** to see the exact prompts sent to OpenAI for analysis.")
+                    st.info("💡 **View OpenAI Prompts:** See the exact prompts sent to OpenAI for both Standard and Enhanced Analysis modes.")
+                    
+                    from src.ui.data_analysis import display_prompt_testing_section
+                    display_prompt_testing_section(kpi_summary, df)
+                    
+                except Exception as e:
+                    st.error(f"Error loading prompt testing: {str(e)}")
+            else:
+                st.info("💡 **Upload a T12 file** to see the exact prompts sent to OpenAI for analysis.")
         
-        # Format registry info
-        st.markdown("#### 📋 Format Registry")
-        self._render_format_registry()
+        # Format Management (collapsible)
+        with st.expander("📋 Format Registry & Management", expanded=False):
+            self._render_format_registry()
         
-        # System tools
-        st.markdown("#### ⚙️ System Tools")
-        self._render_system_tools()
+        # System Tools (collapsible)
+        with st.expander("⚙️ System Tools & Diagnostics", expanded=False):
+            self._render_system_tools()
+        
+        # Performance Analytics (collapsible)
+        if config.get('show_performance', False):
+            with st.expander("📊 Performance Analytics", expanded=False):
+                self._render_performance_analytics()
+        
+        # Session State Manager (collapsible)
+        with st.expander("🗃️ Session State Manager", expanded=False):
+            self._render_session_state_manager()
         
         # Enhanced Analysis Validation
         st.markdown("#### 🔍 Enhanced Analysis Validation")
@@ -189,3 +196,51 @@ class DeveloperToolsPanel:
         }
         
         return validation_checks
+    
+    def _render_performance_analytics(self):
+        """Render performance analytics section."""
+        st.write("**Performance Tracking:**")
+        
+        # Check for any performance data in session state
+        if 'performance_metrics' in st.session_state:
+            metrics = st.session_state['performance_metrics']
+            st.json(metrics)
+        else:
+            st.info("No performance data available. Run an analysis to see metrics.")
+        
+        # Performance controls
+        if st.button("🧹 Clear Performance History"):
+            if 'performance_metrics' in st.session_state:
+                del st.session_state['performance_metrics']
+                st.success("✅ Performance history cleared")
+    
+    def _render_session_state_manager(self):
+        """Render session state management tools."""
+        st.write("**Session State Overview:**")
+        
+        # Show key session state variables
+        key_vars = ['processed_df', 'uploaded_file', 'kpi_summary', 'last_analysis_data']
+        for var in key_vars:
+            if var in st.session_state:
+                if var == 'processed_df':
+                    st.success(f"✅ {var}: {st.session_state[var].shape} DataFrame")
+                elif var == 'uploaded_file':
+                    st.success(f"✅ {var}: {st.session_state[var].name}")
+                else:
+                    st.success(f"✅ {var}: Available")
+            else:
+                st.info(f"ℹ️ {var}: Not set")
+        
+        # Session management controls
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🧹 Clear All Data"):
+                for key in list(st.session_state.keys()):
+                    if key.startswith(('processed_', 'uploaded_', 'kpi_', 'last_')):
+                        del st.session_state[key]
+                st.success("✅ Session data cleared")
+        
+        with col2:
+            if st.button("📋 Export Session Info"):
+                session_info = {key: str(type(value)) for key, value in st.session_state.items()}
+                st.json(session_info)

@@ -98,61 +98,80 @@ class ProductionMode(BaseUIMode):
             uploaded_file: Uploaded file object (if any)
             config: Configuration dictionary from sidebar
         """
-        # Clean header
+        # Clean, minimal header
         st.title("🏢 Property Analysis Dashboard")
+        
+        # Check if we have processed data to determine layout
+        if 'processed_df' in st.session_state and st.session_state['processed_df'] is not None:
+            # Results-first layout: show results prominently, upload section minimized
+            self._render_results_first_layout(uploaded_file, config)
+        else:
+            # Upload-first layout: show upload section prominently when no data
+            self._render_upload_first_layout(uploaded_file, config)
+    
+    def _render_upload_first_layout(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
+        """Render layout when no data is processed - focus on upload."""
         st.markdown("Upload your T12 Excel file for AI-powered property performance analysis")
         
-        # Two-column layout optimized for production
-        col1, col2 = st.columns([1, 2.5])  # More space for results
-        
-        with col1:
-            self._render_upload_section(uploaded_file, config)
-        
+        # Center the upload section
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            self._render_results_section(uploaded_file, config)
+            self._render_upload_section(uploaded_file, config)
     
+    def _render_results_first_layout(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
+        """Render layout when data is processed - focus on results."""
+        # Compact file status at top
+        with st.container():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                if 'uploaded_file' in st.session_state:
+                    file_name = st.session_state['uploaded_file'].name
+                    df = st.session_state['processed_df']
+                    st.success(f"✅ **{file_name}** - {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
+            with col2:
+                if st.button("🔄 Upload New File", help="Upload a different T12 file"):
+                    # Clear session state to return to upload mode
+                    for key in ['processed_df', 'uploaded_file', 'current_uploaded_file']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        # Results take up main content area
+        self._render_results_section(uploaded_file, config)
+
     def _render_upload_section(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
-        """Render the file upload section."""
-        st.markdown("### 📁 Upload Data")
+        """Render the file upload section - streamlined for production."""
+        st.markdown("### 📁 Upload T12 Data")
         
         # Use session state to persist uploaded file
         if 'current_uploaded_file' not in st.session_state:
             st.session_state['current_uploaded_file'] = None
         
         uploaded_file = st.file_uploader(
-            "T12 Excel File",
+            "Choose your T12 Excel file",
             type=['xlsx', 'xls'],
-            help="Upload your T12 property financial data",
-            label_visibility="collapsed",
+            help="Upload your T12 property financial data for AI analysis",
             key="production_file_uploader"
         )
         
         # Update session state when file changes
         if uploaded_file is not None:
             st.session_state['current_uploaded_file'] = uploaded_file
-        elif st.session_state['current_uploaded_file'] is not None:
-            uploaded_file = st.session_state['current_uploaded_file']
-        
-        if uploaded_file is not None:
-            # Process file with minimal UI
-            df = self.handle_file_upload(uploaded_file)
-            
-            if df is not None:
-                # Show basic file info
-                st.success(f"✅ File processed: {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
+            # Process file immediately
+            with st.spinner("📊 Processing file..."):
+                df = self.handle_file_upload(uploaded_file)
                 
-                # Store in session state for results section
-                st.session_state['processed_df'] = df
-                st.session_state['uploaded_file'] = uploaded_file
-                
-                # Show data preview (compact)
-                with st.expander("📋 Data Preview"):
-                    st.dataframe(df.head(10), use_container_width=True)
+                if df is not None:
+                    # Store in session state
+                    st.session_state['processed_df'] = df
+                    st.session_state['uploaded_file'] = uploaded_file
+                    st.success("✅ File processed successfully!")
+                    st.rerun()  # Refresh to show results layout
     
     def _render_results_section(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
-        """Render the analysis results section."""
-        st.markdown("### 📈 Analysis Results")
-        
+        """Render the analysis results section - production focused."""
         # Check if we have processed data
         if 'processed_df' not in st.session_state:
             st.info("👆 Upload a T12 file to begin analysis")
@@ -173,20 +192,22 @@ class ProductionMode(BaseUIMode):
             from src.core.kpi_registry import kpi_registry
             
             # Get format processor info (we already processed the file)
-            # For now, assume T12 format - in future we can store format info in session
             format_name = "T12_Monthly_Financial"
             
-            # Generate KPI Summary
-            with st.spinner("📊 Generating KPI analysis..."):
-                kpi_summary = kpi_registry.calculate_kpis(df, format_name)
+            # Generate KPI Summary (only if not cached)
+            if 'kpi_summary' not in st.session_state:
+                with st.spinner("📊 Generating KPI analysis..."):
+                    kpi_summary = kpi_registry.calculate_kpis(df, format_name)
+                    st.session_state['kpi_summary'] = kpi_summary
+            else:
+                kpi_summary = st.session_state['kpi_summary']
             
-            # Show KPI Summary (production-focused, collapsed by default, no separate expander for KPI summary)
-            with st.expander("📋 Financial Summary", expanded=False):
-                st.text_area("KPI Summary", kpi_summary, height=300, label_visibility="collapsed")
+            # Minimal KPI display - only show if user wants detail
+            with st.expander("📋 View Financial Summary", expanded=False):
+                st.text_area("KPI Summary", kpi_summary, height=250, label_visibility="collapsed")
 
-            # Add vertical space to ensure separation
-            st.markdown("<div style='margin-top: 2em'></div>", unsafe_allow_html=True)
-            # AI-Powered Analysis section below Financial Summary (no redundant header)
+            # Main focus: AI Analysis
+            st.markdown("## 🤖 AI Analysis")
             self._render_ai_analysis(df, kpi_summary, config)
             
         except Exception as e:
@@ -194,10 +215,10 @@ class ProductionMode(BaseUIMode):
             st.info("💡 Please check your data and API key, then try again")
     
     def _render_ai_analysis(self, df: pd.DataFrame, kpi_summary: str, config: Dict[str, Any]):
-        """Render AI analysis section (production-focused)."""
+        """Render AI analysis section - production focused."""
         from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options
         
-        # Streamlined AI analysis (no redundant header)
+        # Streamlined AI analysis interface
         processed_output = display_ai_analysis_section(
             df, 
             kpi_summary, 
@@ -205,12 +226,16 @@ class ProductionMode(BaseUIMode):
             config['property_name'], 
             config['property_address']
         )
+        
         if processed_output:
-            # Display results with focus on export
-            st.markdown("#### 📄 Analysis Report")
+            # Results take center stage
+            st.markdown("---")
+            st.markdown("## � Analysis Report")
             display_analysis_results(processed_output)
-            # Prominent export options
-            st.markdown("#### 💾 Export Report")
+            
+            # Prominent export section at bottom
+            st.markdown("---")
+            st.markdown("## 💾 Export Report")
             display_export_options(processed_output, config['property_name'])
     
     def get_layout_config(self) -> Dict[str, Any]:

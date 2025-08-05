@@ -12,8 +12,8 @@ class DeveloperUploadSection:
     """Enhanced file upload section with developer tools."""
     
     def render(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
-        """Render enhanced file upload section with developer tools."""
-        st.markdown("### 📁 Upload & Processing")
+        """Render enhanced file upload section with collapsible developer tools."""
+        st.markdown("### 📁 File Upload & Processing")
         
         # Use session state to persist uploaded file
         if 'dev_uploaded_file' not in st.session_state:
@@ -33,35 +33,40 @@ class DeveloperUploadSection:
             uploaded_file = st.session_state['dev_uploaded_file']
             
         if uploaded_file is not None:
-            # Enhanced file analysis
-            st.markdown("#### 🔍 File Analysis")
+            # Basic file info (always visible)
+            st.success(f"✅ **{uploaded_file.name}** ({uploaded_file.size:,} bytes)")
             
-            # Show file details
-            st.info(f"**File:** {uploaded_file.name}")
-            st.info(f"**Size:** {uploaded_file.size:,} bytes")
-            st.info(f"**Type:** {uploaded_file.type}")
-            
-            # Format detection
-            if config.get('auto_detect_format', True):
-                self._perform_format_detection(uploaded_file)
+            # File Analysis (collapsible)
+            with st.expander("🔍 File Analysis & Validation", expanded=config.get('show_format_details', False)):
+                st.info(f"**Type:** {uploaded_file.type}")
+                
+                # Format detection
+                if config.get('auto_detect_format', True):
+                    self._perform_format_detection(uploaded_file, config)
+                
+                # File validation details
+                self._show_validation_results(uploaded_file)
             
             # Process file with detailed feedback
             df = self._process_file_with_debug(uploaded_file, config)
             
             if df is not None:
-                st.success(f"✅ Processing complete")
-                st.info(f"**Shape:** {df.shape[0]} rows × {df.shape[1]} columns")
-                st.info(f"**Metrics:** {df['Metric'].nunique()} unique")
+                st.success(f"✅ **Processing complete:** {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
                 
                 # Store in session state
                 st.session_state['processed_df'] = df
                 st.session_state['uploaded_file'] = uploaded_file
                 
-                # Raw data viewer (developer mode)
+                # Data Quality Checks (collapsible)
+                with st.expander("📊 Data Quality & Structure", expanded=False):
+                    self._render_data_quality_analysis(df)
+                
+                # Raw Data Viewer (collapsible)
                 if config.get('show_raw_data', True):
-                    self._render_raw_data_viewer(df)
+                    with st.expander("👁️ Raw Data Preview", expanded=False):
+                        self._render_raw_data_viewer(df)
     
-    def _perform_format_detection(self, uploaded_file):
+    def _perform_format_detection(self, uploaded_file, config: Dict[str, Any]):
         """Perform format detection with detailed feedback."""
         with st.spinner("Detecting format..."):
             try:
@@ -75,9 +80,11 @@ class DeveloperUploadSection:
                 
                 processor = format_registry.detect_format(tmp_file_path)
                 if processor:
-                    st.success(f"✅ Detected: {processor.format_name}")
+                    st.success(f"✅ **Detected Format:** {processor.format_name}")
+                    if config.get('show_format_details', False):
+                        st.info(f"**Processor:** {processor.__class__.__name__}")
                 else:
-                    st.warning("⚠️ Format not detected")
+                    st.warning("⚠️ Format not auto-detected, using default T12 processor")
                 
                 # Clean up temp file with better error handling
                 try:
@@ -86,10 +93,46 @@ class DeveloperUploadSection:
                 except PermissionError:
                     pass  # File might still be in use, skip cleanup
                 except Exception as cleanup_error:
-                    st.warning(f"⚠️ Cleanup warning: {str(cleanup_error)}")
+                    if config.get('debug_mode', False):
+                        st.warning(f"⚠️ Cleanup warning: {str(cleanup_error)}")
                     
             except Exception as e:
                 st.error(f"❌ Format detection error: {str(e)}")
+    
+    def _show_validation_results(self, uploaded_file):
+        """Show file validation results."""
+        try:
+            validation = validate_uploaded_file(uploaded_file)
+            if validation['valid']:
+                st.success("✅ File validation passed")
+            else:
+                st.error(f"❌ Validation failed: {validation.get('error', 'Unknown error')}")
+        except Exception as e:
+            st.warning(f"⚠️ Validation check failed: {str(e)}")
+    
+    def _render_data_quality_analysis(self, df):
+        """Render data quality analysis section."""
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Total Rows", df.shape[0])
+            st.metric("Total Columns", df.shape[1])
+            st.metric("Unique Metrics", df['Metric'].nunique() if 'Metric' in df.columns else 0)
+        
+        with col2:
+            # Missing data analysis
+            missing_data = df.isnull().sum().sum()
+            st.metric("Missing Values", missing_data)
+            
+            # Date range analysis
+            if 'MonthParsed' in df.columns:
+                valid_dates = df['MonthParsed'].notna().sum()
+                st.metric("Valid Dates", valid_dates)
+        
+        # Data types summary
+        if st.checkbox("Show Column Types", value=False):
+            st.write("**Column Types:**")
+            st.dataframe(df.dtypes.to_frame('Type'), use_container_width=True)
     
     def _process_file_with_debug(self, uploaded_file, config: Dict[str, Any]):
         """Process file with debugging information."""

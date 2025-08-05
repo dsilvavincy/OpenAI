@@ -18,18 +18,31 @@ def build_prompt(kpi_summary):
 
 Your task is to analyze the provided T12 property financial data and generate actionable insights for property management and investment decisions.
 
+IMPORTANT DATA STRUCTURE NOTES:
+- The data contains both MONTHLY and YEAR-TO-DATE (YTD) figures
+- YTD figures are CUMULATIVE totals from January 1st to the most recent month (NOT monthly amounts)
+- YTD IS NOT A MONTH NAME - it indicates cumulative data, not a time period
+- When you see "YTD" in the data, treat it as cumulative totals, never as monthly figures
+- When analyzing trends, use monthly data for month-to-month comparisons
+- Use YTD data to understand overall annual performance and compare to annual budgets/targets
+- YTD revenue should be compared to total annual rent roll potential
+- YTD expenses should be analyzed as percentage of YTD revenue for expense ratios
+- NEVER compare YTD figures to monthly figures directly - they represent different time scales
+
 ANALYSIS FRAMEWORK:
 1. FINANCIAL PERFORMANCE: Assess revenue trends, collection rates, and income stability
 2. OPERATIONAL EFFICIENCY: Evaluate vacancy rates, concessions, and delinquency patterns  
 3. MARKET POSITIONING: Analyze asking rents vs. effective rents and loss-to-lease
 4. RISK ASSESSMENT: Identify red flags and potential concerns
 5. IMPROVEMENT OPPORTUNITIES: Suggest specific actionable recommendations
+6. YTD PERFORMANCE: Compare YTD actuals to typical annual benchmarks and identify if property is on track
 
 OUTPUT REQUIREMENTS:
 - Generate exactly 5 strategic management questions that should be investigated
 - Provide 3-5 specific actionable recommendations to improve NOI
 - Highlight any concerning trends that require immediate attention
 - Include industry context and benchmarking where relevant
+- When referencing YTD figures, clearly state they are cumulative totals, not monthly amounts
 
 Be concise, specific, and focus on actionable insights that can drive real business decisions."""
 

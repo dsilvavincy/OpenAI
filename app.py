@@ -5,11 +5,19 @@ import streamlit as st
 import pandas as pd
 import io
 import os
+import time
 from datetime import datetime
 from src.preprocess import tidy_sheet_all
 from src.kpi_summary import generate_kpi_summary
 from src.prompt import build_prompt, call_openai, validate_response
 from src.output_quality import post_process_output
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from docx import Document
+from docx.shared import Inches
 
 # Page configuration
 st.set_page_config(
@@ -32,8 +40,8 @@ def validate_uploaded_file(uploaded_file):
         return validation_results
     
     # Check file size (max 50MB)
-    file_size = len(uploaded_file.read())
-    uploaded_file.seek(0)  # Reset file pointer
+    file_content = uploaded_file.getvalue()  # Get file content without moving file pointer
+    file_size = len(file_content)
     
     if file_size > 50 * 1024 * 1024:  # 50MB
         validation_results["messages"].append("❌ File too large. Maximum size is 50MB")
@@ -88,6 +96,173 @@ def display_progress():
             st.success(f"{step_label} ✓")
         else:
             st.info(f"{step_label} ⏳")
+
+def generate_pdf_report(processed_output):
+    """Generate a professional PDF report from processed output"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=1  # Center alignment
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=20,
+        textColor=colors.darkblue
+    )
+    
+    # Build content
+    story = []
+    
+    # Title
+    story.append(Paragraph("T12 PROPERTY ANALYSIS REPORT", title_style))
+    story.append(Spacer(1, 20))
+    
+    # Property Information
+    property_info = processed_output["property_info"]
+    story.append(Paragraph("PROPERTY INFORMATION", heading_style))
+    property_data = [
+        ["Property Name:", property_info.get('name', 'N/A')],
+        ["Property Address:", property_info.get('address', 'N/A')],
+        ["Report Generated:", datetime.fromisoformat(processed_output["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")]
+    ]
+    property_table = Table(property_data, colWidths=[2*inch, 4*inch])
+    property_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+    ]))
+    story.append(property_table)
+    story.append(Spacer(1, 20))
+    
+    # Analysis Summary
+    quality = processed_output["quality_metrics"]
+    analysis = processed_output["analysis"]
+    
+    story.append(Paragraph("ANALYSIS SUMMARY", heading_style))
+    summary_data = [
+        ["Quality Score:", f"{quality['overall_score']}/100 ({quality['quality_level']})"],
+        ["Strategic Questions:", str(len(analysis['strategic_questions']))],
+        ["Recommendations:", str(len(analysis['recommendations']))],
+        ["Concerning Trends:", str(len(analysis['concerning_trends']))]
+    ]
+    summary_table = Table(summary_data, colWidths=[2*inch, 4*inch])
+    summary_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 20))
+    
+    # Strategic Questions
+    story.append(Paragraph("STRATEGIC MANAGEMENT QUESTIONS", heading_style))
+    for i, question in enumerate(analysis["strategic_questions"], 1):
+        story.append(Paragraph(f"{i}. {question}", styles['Normal']))
+        story.append(Spacer(1, 10))
+    
+    story.append(Spacer(1, 20))
+    
+    # Recommendations
+    story.append(Paragraph("ACTIONABLE RECOMMENDATIONS", heading_style))
+    for i, rec in enumerate(analysis["recommendations"], 1):
+        story.append(Paragraph(f"{i}. {rec}", styles['Normal']))
+        story.append(Spacer(1, 10))
+    
+    story.append(Spacer(1, 20))
+    
+    # Concerning Trends
+    story.append(Paragraph("CONCERNING TRENDS", heading_style))
+    for i, concern in enumerate(analysis["concerning_trends"], 1):
+        story.append(Paragraph(f"{i}. {concern}", styles['Normal']))
+        story.append(Spacer(1, 10))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+def generate_word_report(processed_output):
+    """Generate a professional Word document report from processed output"""
+    doc = Document()
+    
+    # Title
+    title = doc.add_heading('T12 PROPERTY ANALYSIS REPORT', 0)
+    title.alignment = 1  # Center alignment
+    
+    # Property Information
+    doc.add_heading('PROPERTY INFORMATION', level=1)
+    property_info = processed_output["property_info"]
+    
+    table = doc.add_table(rows=3, cols=2)
+    table.style = 'Table Grid'
+    
+    cells = table.rows[0].cells
+    cells[0].text = 'Property Name:'
+    cells[1].text = property_info.get('name', 'N/A')
+    
+    cells = table.rows[1].cells
+    cells[0].text = 'Property Address:'
+    cells[1].text = property_info.get('address', 'N/A')
+    
+    cells = table.rows[2].cells
+    cells[0].text = 'Report Generated:'
+    cells[1].text = datetime.fromisoformat(processed_output["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+    
+    doc.add_paragraph()
+    
+    # Analysis Summary
+    doc.add_heading('ANALYSIS SUMMARY', level=1)
+    quality = processed_output["quality_metrics"]
+    analysis = processed_output["analysis"]
+    
+    summary_table = doc.add_table(rows=4, cols=2)
+    summary_table.style = 'Table Grid'
+    
+    summary_data = [
+        ['Quality Score:', f"{quality['overall_score']}/100 ({quality['quality_level']})"],
+        ['Strategic Questions:', str(len(analysis['strategic_questions']))],
+        ['Recommendations:', str(len(analysis['recommendations']))],
+        ['Concerning Trends:', str(len(analysis['concerning_trends']))]
+    ]
+    
+    for i, (key, value) in enumerate(summary_data):
+        cells = summary_table.rows[i].cells
+        cells[0].text = key
+        cells[1].text = value
+    
+    doc.add_paragraph()
+    
+    # Strategic Questions
+    doc.add_heading('STRATEGIC MANAGEMENT QUESTIONS', level=1)
+    for i, question in enumerate(analysis["strategic_questions"], 1):
+        doc.add_paragraph(f"{i}. {question}")
+    
+    # Recommendations
+    doc.add_heading('ACTIONABLE RECOMMENDATIONS', level=1)
+    for i, rec in enumerate(analysis["recommendations"], 1):
+        doc.add_paragraph(f"{i}. {rec}")
+    
+    # Concerning Trends
+    doc.add_heading('CONCERNING TRENDS', level=1)
+    for i, concern in enumerate(analysis["concerning_trends"], 1):
+        doc.add_paragraph(f"{i}. {concern}")
+    
+    # Save to BytesIO
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 def main():
     st.title("🏢 AI-Driven T12 Property Analysis Tool")
@@ -160,9 +335,9 @@ def main():
             
             try:
                 # Show file details
-                st.info(f"📄 **File:** {uploaded_file.name}")
-                st.info(f"📏 **Size:** {len(uploaded_file.read())/1024:.1f} KB")
-                uploaded_file.seek(0)  # Reset file pointer
+                file_size = len(uploaded_file.getvalue())
+                st.info(f"� **File:** {uploaded_file.name}")
+                st.info(f"📏 **Size:** {file_size/1024:.1f} KB")
                 
                 # Process the file with progress indicator
                 progress_bar = st.progress(0)
@@ -171,23 +346,16 @@ def main():
                 status_text.text("📂 Reading Excel file...")
                 progress_bar.progress(20)
                 
-                # Save uploaded file temporarily
-                temp_path = f"temp_{uploaded_file.name}"
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                
+                # Read Excel file directly from memory (no temp file)
                 status_text.text("⚙️ Processing T12 data...")
                 progress_bar.progress(50)
                 
-                # Process the data
-                df = tidy_sheet_all(temp_path)
+                # Use BytesIO to pass file-like object to tidy_sheet_all
+                excel_buffer = io.BytesIO(uploaded_file.getvalue())
+                df = tidy_sheet_all(excel_buffer)
                 
                 status_text.text("✅ Data processing complete!")
                 progress_bar.progress(100)
-                
-                # Clean up temp file
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
                 
                 update_progress('data_processing', True)
                 
@@ -197,6 +365,81 @@ def main():
                 with st.expander("📊 View Data Preview", expanded=False):
                     st.dataframe(df.head(10), use_container_width=True)
                     st.info(f"Showing first 10 rows of {len(df):,} total rows")
+
+                # Show rows with invalid MonthParsed for debugging
+                if 'MonthParsed' in df.columns and 'IsYTD' in df.columns:
+                    # Only check non-YTD rows for invalid MonthParsed
+                    non_ytd_df = df[df['IsYTD'] == False]
+                    invalid_month_rows = non_ytd_df[non_ytd_df['MonthParsed'].isnull()]
+                    
+                    with st.expander(f"🚨 Invalid MonthParsed (Non-YTD): {len(invalid_month_rows)}", expanded=False):
+                        if len(invalid_month_rows) > 0:
+                            st.dataframe(invalid_month_rows, use_container_width=True)
+                            st.error(f"❌ {len(invalid_month_rows)} non-YTD rows have invalid MonthParsed")
+                            
+                            # Show unique Month values that failed to parse
+                            unique_failed_months = invalid_month_rows['Month'].unique()
+                            st.write("**Failed to parse these Month values:**")
+                            for month in unique_failed_months[:10]:  # Show first 10
+                                st.write(f"- '{month}'")
+                            if len(unique_failed_months) > 10:
+                                st.write(f"... and {len(unique_failed_months) - 10} more")
+                        else:
+                            st.success("✅ All non-YTD MonthParsed values are valid!")
+                    
+                    # Show YTD summary separately
+                    ytd_df = df[df['IsYTD'] == True]
+                    with st.expander(f"📅 YTD Rows Summary: {len(ytd_df)}", expanded=False):
+                        if len(ytd_df) > 0:
+                            st.info(f"✅ {len(ytd_df)} YTD rows found (MonthParsed is expected to be null)")
+                            st.dataframe(ytd_df[['Metric', 'Month', 'Value']].head(10), use_container_width=True)
+                        else:
+                            st.warning("⚠️ No YTD rows found in data")
+                
+                # Show DataFrame structure and statistics
+                with st.expander("📊 DataFrame Analysis", expanded=False):
+                    col_info1, col_info2 = st.columns(2)
+                    
+                    with col_info1:
+                        st.write("**Shape:**", df.shape)
+                        st.write("**Columns:**", list(df.columns))
+                        st.write("**Data Types:**")
+                        st.dataframe(pd.DataFrame(df.dtypes).rename(columns={0: 'Type'}), use_container_width=True)
+                    
+                    with col_info2:
+                        st.write("**Key Statistics:**")
+                        if 'IsYTD' in df.columns:
+                            ytd_count = df[df['IsYTD'] == True].shape[0]
+                            non_ytd_count = df[df['IsYTD'] == False].shape[0]
+                            st.write(f"- YTD rows: {ytd_count}")
+                            st.write(f"- Monthly rows: {non_ytd_count}")
+                        
+                        if 'Metric' in df.columns:
+                            st.write(f"- Unique metrics: {df['Metric'].nunique()}")
+                            st.write("**Top 10 Metrics:**")
+                            top_metrics = df['Metric'].value_counts().head(10)
+                            for metric, count in top_metrics.items():
+                                st.write(f"  • {metric}: {count} rows")
+                        
+                        if 'Value' in df.columns:
+                            st.write(f"- Total values: {df['Value'].count()}")
+                            st.write(f"- Missing values: {df['Value'].isna().sum()}")
+                
+                # Test KPI Summary Generation
+                with st.expander("🧪 Test KPI Summary Generation", expanded=False):
+                    if st.button("Generate Test KPI Summary", key="test_kpi"):
+                        try:
+                            test_kpi_summary = generate_kpi_summary(df)
+                            st.text_area("Generated KPI Summary:", test_kpi_summary, height=400)
+                            st.success("✅ KPI Summary generated successfully!")
+                        except Exception as e:
+                            st.error(f"❌ Error generating KPI Summary: {str(e)}")
+                            st.write("**DataFrame info for debugging:**")
+                            st.write(f"Shape: {df.shape}")
+                            st.write(f"Columns: {list(df.columns)}")
+                            if not df.empty:
+                                st.write("**Sample data:**")
+                                st.dataframe(df.head(), use_container_width=True)
                 
             except Exception as e:
                 st.error(f"❌ Error processing file: {str(e)}")
@@ -229,6 +472,25 @@ def main():
                 st.subheader("📋 KPI Summary")
                 with st.expander("View KPI Summary", expanded=True):
                     st.text_area("", kpi_summary, height=300, disabled=True)
+                
+                # Test OpenAI Prompt Generation
+                with st.expander("🧪 Test OpenAI Prompt", expanded=False):
+                    if st.button("Generate Test Prompt", key="test_prompt"):
+                        try:
+                            system_prompt, user_prompt = build_prompt(kpi_summary)
+                            st.write("**System Prompt:**")
+                            st.text_area("", system_prompt, height=200, disabled=True, key="sys_prompt")
+                            st.write("**User Prompt:**")
+                            st.text_area("", user_prompt, height=300, disabled=True, key="user_prompt")
+                            st.success("✅ Prompts generated successfully!")
+                            
+                            # Show token count estimation
+                            total_chars = len(system_prompt) + len(user_prompt)
+                            estimated_tokens = total_chars // 4  # Rough estimation
+                            st.info(f"📊 Estimated tokens: ~{estimated_tokens:,} (Character count: {total_chars:,})")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error generating prompts: {str(e)}")
                 
                 # AI Analysis Section
                 st.subheader("🤖 AI-Powered Analysis")
@@ -277,6 +539,24 @@ def main():
                             st.markdown("### 📊 Analysis Results")
                             st.markdown(processed_output["display_text"])
                             
+                            # Show detailed AI analysis sections
+                            analysis = processed_output["analysis"]
+                            
+                            # Strategic Questions Section
+                            with st.expander("🎯 Strategic Management Questions", expanded=True):
+                                for i, question in enumerate(analysis["strategic_questions"], 1):
+                                    st.markdown(f"**{i}.** {question}")
+                            
+                            # Recommendations Section
+                            with st.expander("💡 Actionable Recommendations", expanded=True):
+                                for i, rec in enumerate(analysis["recommendations"], 1):
+                                    st.markdown(f"**{i}.** {rec}")
+                            
+                            # Concerning Trends Section
+                            with st.expander("⚠️ Concerning Trends", expanded=True):
+                                for i, concern in enumerate(analysis["concerning_trends"], 1):
+                                    st.markdown(f"**{i}.** {concern}")
+                            
                             # Show quality metrics
                             quality = processed_output["quality_metrics"]
                             col_q1, col_q2, col_q3 = st.columns(3)
@@ -291,25 +571,48 @@ def main():
                             # Export options
                             st.subheader("📄 Export Options")
                             
-                            # Generate enhanced report
+                            # Generate enhanced report content
                             report_content = generate_enhanced_report(processed_output)
+                            pdf_content = generate_pdf_report(processed_output)
+                            word_content = generate_word_report(processed_output)
                             
-                            col_export1, col_export2 = st.columns(2)
+                            # Create filename base
+                            filename_base = f"T12_Analysis_{property_name.replace(' ', '_') if property_name else 'Property'}_{datetime.now().strftime('%Y%m%d_%H%M')}"
+                            
+                            col_export1, col_export2, col_export3, col_export4 = st.columns(4)
                             
                             with col_export1:
                                 st.download_button(
-                                    label="📄 Download Text Report",
-                                    data=report_content,
-                                    file_name=f"T12_Analysis_{property_name.replace(' ', '_') if property_name else 'Property'}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
-                                    mime="text/plain",
+                                    label="📄 Download PDF Report",
+                                    data=pdf_content,
+                                    file_name=f"{filename_base}.pdf",
+                                    mime="application/pdf",
                                     use_container_width=True
                                 )
                             
                             with col_export2:
                                 st.download_button(
+                                    label="📝 Download Word Report",
+                                    data=word_content,
+                                    file_name=f"{filename_base}.docx",
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    use_container_width=True
+                                )
+                            
+                            with col_export3:
+                                st.download_button(
+                                    label="📄 Download Text Report",
+                                    data=report_content,
+                                    file_name=f"{filename_base}.txt",
+                                    mime="text/plain",
+                                    use_container_width=True
+                                )
+                            
+                            with col_export4:
+                                st.download_button(
                                     label="� Download JSON Data",
                                     data=str(processed_output),
-                                    file_name=f"T12_Data_{property_name.replace(' ', '_') if property_name else 'Property'}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                                    file_name=f"{filename_base}.json",
                                     mime="application/json",
                                     use_container_width=True
                                 )

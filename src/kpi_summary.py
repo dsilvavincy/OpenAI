@@ -75,11 +75,46 @@ def generate_kpi_summary(df):
         # YTD Summary if available
         ytd_data = df[df["IsYTD"]]
         if not ytd_data.empty:
-            summary_parts.append("\n=== YEAR-TO-DATE SUMMARY ===")
+            summary_parts.append("\n=== YEAR-TO-DATE (YTD) CUMULATIVE TOTALS ===")
+            summary_parts.append("CRITICAL: YTD = Year-To-Date CUMULATIVE totals from January 1st to present.")
+            summary_parts.append("YTD IS NOT A MONTH - it represents accumulated totals, not monthly amounts.")
+            summary_parts.append("Use YTD for annual performance analysis, NOT for month-to-month trending.")
+            summary_parts.append("")
+            
+            # Group YTD metrics by category for better context
+            ytd_revenue_metrics = []
+            ytd_expense_metrics = []
+            ytd_other_metrics = []
+            
             for metric in ytd_data["Metric"].unique():
                 value = get_metric_value(ytd_data, metric)
                 if value is not None:
-                    summary_parts.append(f"• YTD {metric}: ${value:,.2f}")
+                    formatted_line = f"• {metric} (CUMULATIVE YTD): ${value:,.2f}"
+                    
+                    # Categorize YTD metrics
+                    metric_lower = metric.lower()
+                    if any(word in metric_lower for word in ['income', 'rent', 'revenue']):
+                        ytd_revenue_metrics.append(formatted_line)
+                    elif any(word in metric_lower for word in ['expense', 'cost', 'fee', 'tax', 'payroll']):
+                        ytd_expense_metrics.append(formatted_line)
+                    else:
+                        ytd_other_metrics.append(formatted_line)
+            
+            # Display categorized YTD metrics
+            if ytd_revenue_metrics:
+                summary_parts.append("CUMULATIVE YTD REVENUE & INCOME (Jan 1st to present):")
+                summary_parts.extend(ytd_revenue_metrics)
+                summary_parts.append("")
+            
+            if ytd_expense_metrics:
+                summary_parts.append("CUMULATIVE YTD EXPENSES (Jan 1st to present):")
+                summary_parts.extend(ytd_expense_metrics)
+                summary_parts.append("")
+            
+            if ytd_other_metrics:
+                summary_parts.append("CUMULATIVE YTD OTHER METRICS (Jan 1st to present):")
+                summary_parts.extend(ytd_other_metrics)
+                summary_parts.append("")
 
         return "\n".join(summary_parts)
     except Exception as e:

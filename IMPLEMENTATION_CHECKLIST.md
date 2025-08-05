@@ -72,15 +72,36 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Test UI for usability and error handling
 **✅ VALIDATION REQUIRED**: Complete UI workflow, no console dependencies, professional interface, proper error handling
 
-### 9. Report Generation & Export
-- [ ] Display all AI-generated output in the application UI
-- [ ] Implement export to PDF with professional formatting
-- [ ] Add Word document export option
-- [ ] Create standardized report template
-- [ ] Add date/timestamp and property information to reports
+### 9. **PRIORITY: AI Analysis Quality & Output Validation**
+- [x] **Test with real T12 data**: Upload actual T12 file and validate DataFrame structure
+- [x] **Debug data quality issues**: Fix MonthParsed and other data parsing problems
+- [ ] **Validate KPI calculations**: Ensure accurate financial metrics (Revenue, NOI, Occupancy)
+- [ ] **Test OpenAI API calls**: Send KPI summary to OpenAI and validate response quality
+- [ ] **Analyze AI output quality**: Review strategic questions, recommendations, and trends
+- [ ] **Iterate on prompts**: Improve prompts based on actual AI responses
+- [ ] **Test multiple T12 files**: Validate consistency across different property data
+- [ ] **Display analysis results**: Ensure all AI output is properly shown in UI
+
+### 10. **Hybrid Assistants API Implementation** 
+- [ ] **HYBRID ARCHITECTURE**: Keep local preprocessing AND send raw data to OpenAI
+- [ ] Refactor workflow to use OpenAI Assistants API with code_interpreter tool
+- [ ] Upload processed CSV/Excel to OpenAI and manage file_ids
+- [ ] Send BOTH KPI summary (from local preprocessing) AND raw dataset to OpenAI
+- [ ] Design enhanced prompts that leverage both structured summary and raw data access
+- [ ] Handle multi-part outputs (text, plots, downloadable files)
+- [ ] Validate LLM Python analysis and outputs for accuracy and completeness
+- [ ] Update UI to support file upload and display of code_interpreter results
+- [ ] Test with large and multi-property datasets
+
+### 11. Report Generation & Export
+- [x] Display all AI-generated output in the application UI
+- [x] Implement export to PDF with professional formatting
+- [x] Add Word document export option
+- [x] Create standardized report template
+- [x] Add date/timestamp and property information to reports
 - [ ] Test export functionality across different formats
 
-### 10. Weekly Automation & Standardization
+### 12. Weekly Automation & Standardization
 - [ ] Create template system for consistent weekly reports
 - [ ] Add property metadata tracking (name, address, portfolio info)
 - [ ] Implement historical comparison features
@@ -88,24 +109,13 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [ ] Create standardized naming conventions for files and reports
 - [ ] Test weekly workflow simulation
 
-### 11. Desktop Application Packaging
+### 13. Desktop Application Packaging
 - [ ] Package Streamlit app as a standalone desktop executable using PyInstaller
 - [ ] Include all dependencies and assets in executable
 - [ ] Test packaged app on target desktop environment
 - [ ] Create installer with proper file associations
 - [ ] Document installation and usage instructions
 - [ ] Test offline functionality (except OpenAI API calls)
-
-
-### 13. Assistants API & Code Interpreter Integration
-- [ ] Refactor workflow to use OpenAI Assistants API with code_interpreter tool
-- [ ] Implement file upload (CSV/Excel) to OpenAI and manage file_ids
-- [ ] Design prompts for code_interpreter (instruct LLM to analyze uploaded file)
-- [ ] Handle multi-part outputs (text, plots, downloadable files)
-- [ ] Validate LLM Python analysis and outputs for accuracy and completeness
-- [ ] Update UI to support file upload and display of code_interpreter results
-- [ ] Test with large and multi-property datasets
-- [ ] Document new workflow and update user instructions
 
 **✅ VALIDATION REQUIRED**: LLM can analyze full dataset via code_interpreter, outputs are accurate, and UI supports new workflow
 

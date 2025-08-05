@@ -71,7 +71,15 @@ def tidy_sheet_all(excel_path, sheet_name=None):
 
         # 6. Separate YTD as flag and parse dates
         df_long["IsYTD"] = df_long["Month"].astype(str).str.upper() == "YTD"
-        df_long["MonthParsed"] = pd.to_datetime(df_long["Month"], format="%b %Y", errors="coerce")
+        
+        # Only parse MonthParsed for non-YTD rows
+        df_long["MonthParsed"] = pd.NaT  # Initialize with NaT (Not a Time)
+        non_ytd_mask = ~df_long["IsYTD"]
+        df_long.loc[non_ytd_mask, "MonthParsed"] = pd.to_datetime(
+            df_long.loc[non_ytd_mask, "Month"], 
+            format="%b %Y", 
+            errors="coerce"
+        )
 
         # 7. Add sheet name for traceability
         df_long["Sheet"] = sheet_name
@@ -80,6 +88,7 @@ def tidy_sheet_all(excel_path, sheet_name=None):
         df_long = df_long.dropna(subset=["Value"]).reset_index(drop=True)
 
         # 9. Add additional helpful columns for analysis
+        # Only extract Year and Month_Name for non-YTD rows
         df_long["Year"] = df_long["MonthParsed"].dt.year
         df_long["Month_Name"] = df_long["MonthParsed"].dt.strftime("%b")
         df_long["Is_Negative"] = df_long["Value"] < 0
@@ -97,10 +106,16 @@ def tidy_sheet_all(excel_path, sheet_name=None):
         if missing_values > 0:
             quality_issues.append(f"Missing Value entries: {missing_values}")
 
-        # Check for invalid dates
-        invalid_dates = df_long["MonthParsed"].isna().sum()
+        # Check for invalid dates (excluding YTD rows)
+        non_ytd_rows = df_long[~df_long["IsYTD"]]
+        invalid_dates = non_ytd_rows["MonthParsed"].isna().sum()
         if invalid_dates > 0:
-            quality_issues.append(f"Invalid MonthParsed dates: {invalid_dates}")
+            quality_issues.append(f"Invalid MonthParsed dates (non-YTD): {invalid_dates}")
+        
+        # Report YTD rows separately for info
+        ytd_count = df_long["IsYTD"].sum()
+        if ytd_count > 0:
+            quality_issues.append(f"YTD rows (expected to have null MonthParsed): {ytd_count}")
 
         # Optionally, print or log quality issues
         if quality_issues:

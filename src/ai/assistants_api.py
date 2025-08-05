@@ -147,8 +147,8 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             logger.error(f"Error creating thread: {str(e)}")
             raise
     
-    def run_analysis(self, progress_callback=None):
-        """Run the analysis and get response"""
+    def run_analysis(self, progress_callback=None, streaming_callback=None):
+        """Run the analysis and get response using streaming (stream=True)"""
         try:
             if not self.assistant_id or not self.thread_id:
                 raise ValueError("Assistant and thread must be created first")
@@ -156,93 +156,87 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             if progress_callback:
                 progress_callback("🚀 Starting analysis run...", 55)
 
-            # Create and run the analysis without token limits (for testing)
-            run = self.client.beta.threads.runs.create(
+            # Create and run the analysis with streaming enabled
+            stream = self.client.beta.threads.runs.create(
                 thread_id=self.thread_id,
-                assistant_id=self.assistant_id
-                # Removed token limits for testing
+                assistant_id=self.assistant_id,
+                stream=True
             )
             
             if progress_callback:
-                progress_callback("🔄 Analysis in progress...", 60)
+                progress_callback("🔄 Streaming analysis in progress...", 60)
 
-            # Wait for completion with extended timeout (no token limits)
-            max_polls = 60  # Increased from 30 for unlimited analysis
-            poll_count = 0
+            # Accumulate streamed deltas
+            full_response = ""
+            event_count = 0
             
-            while run.status in ['queued', 'in_progress', 'cancelling'] and poll_count < max_polls:
-                time.sleep(2)  # Wait 2 seconds between polls
-                run = self.client.beta.threads.runs.retrieve(
-                    thread_id=self.thread_id,
-                    run_id=run.id
-                )
-                poll_count += 1
-                logger.info(f"Run status: {run.status} (poll {poll_count}/{max_polls})")
+            for event in stream:
+                event_count += 1
+                logger.info(f"Received event {event_count}: {type(event)} - {getattr(event, 'event', 'no event attr')}")
                 
-                # Update progress during polling
-                if progress_callback:
-                    progress_pct = min(95, 60 + (poll_count / max_polls) * 35)  # 60% to 95%
-                    if run.status == 'queued':
-                        progress_callback(f"⏳ Analysis queued... (poll {poll_count}/{max_polls})", progress_pct)
-                    elif run.status == 'in_progress':
-                        progress_callback(f"🧠 AI analyzing your data... (poll {poll_count}/{max_polls})", progress_pct)
-                    elif run.status == 'cancelling':
-                        progress_callback(f"⚠️ Analysis cancelling... (poll {poll_count}/{max_polls})", progress_pct)
+                # Handle different event types from OpenAI streaming
+                new_text = ""
                 
+                # Check if this is a message delta event
+                if hasattr(event, 'event') and event.event == 'thread.message.delta':
+                    if hasattr(event, 'data') and hasattr(event.data, 'delta'):
+                        delta = event.data.delta
+                        if hasattr(delta, 'content') and delta.content:
+                            for content_block in delta.content:
+                                if hasattr(content_block, 'text') and hasattr(content_block.text, 'value'):
+                                    new_text += content_block.text.value
+                                elif hasattr(content_block, 'text') and isinstance(content_block.text, str):
+                                    new_text += content_block.text
+                
+                # Alternative event structure
+                elif hasattr(event, 'data') and hasattr(event.data, 'delta'):
+                    delta = event.data.delta
+                    if hasattr(delta, 'content') and delta.content:
+                        for block in delta.content:
+                            if hasattr(block, 'text') and block.text:
+                                if hasattr(block.text, 'value'):
+                                    new_text += block.text.value
+                                else:
+                                    new_text += str(block.text)
+                    elif hasattr(delta, 'text'):
+                        if hasattr(delta.text, 'value'):
+                            new_text += delta.text.value
+                        else:
+                            new_text += str(delta.text)
+                
+                # Handle completion-style events (fallback)
+                elif hasattr(event, 'choices'):
+                    for choice in event.choices:
+                        if hasattr(choice, 'delta') and hasattr(choice.delta, 'content') and choice.delta.content:
+                            new_text += choice.delta.content
+
+                # If we got new text, add it and notify callbacks
+                if new_text:
+                    full_response += new_text
+                    logger.info(f"Added text chunk: '{new_text[:50]}...' (total length: {len(full_response)})")
+                    
+                    # Call streaming callback to update UI live
+                    if streaming_callback:
+                        streaming_callback(full_response)
+                    
+                    # Update progress based on content length
+                    if progress_callback:
+                        progress_pct = min(95, 60 + len(full_response) // 100)
+                        progress_callback(f"🧠 AI streaming... ({len(full_response)} chars)", progress_pct)
+
             if progress_callback:
-                progress_callback("📄 Retrieving results...", 98)
-                
-            if run.status == 'completed':
-                # Get the messages
-                messages = self.client.beta.threads.messages.list(
-                    thread_id=self.thread_id
-                )
-                
-                # Return the assistant's response
-                for message in messages.data:
-                    if message.role == 'assistant':
-                        if progress_callback:
-                            progress_callback("✅ Analysis complete!", 100)
-                        return message.content[0].text.value
-                        
-            elif run.status == 'incomplete':
-                # Handle incomplete runs (usually due to token limits)
-                logger.warning(f"Run incomplete. Reason: {getattr(run, 'incomplete_details', 'Token limit likely exceeded')}")
-                
-                # Try to get partial response
-                messages = self.client.beta.threads.messages.list(
-                    thread_id=self.thread_id
-                )
-                
-                partial_response = None
-                for message in messages.data:
-                    if message.role == 'assistant':
-                        partial_response = message.content[0].text.value
-                        break
-                
-                if partial_response and len(partial_response.strip()) > 100:
-                    return f"Enhanced analysis (partial due to length): {partial_response}"
-                else:
-                    return "Enhanced analysis incomplete: Analysis exceeded token limits. Try with a smaller dataset or use Standard Analysis."
-                
-            elif run.status == 'failed':
-                # Get detailed error information
-                logger.error(f"Run failed. Last error: {getattr(run, 'last_error', 'No error details available')}")
-                return f"Enhanced analysis failed: {getattr(run, 'last_error', {}).get('message', 'Unknown error occurred during processing')}"
-                
-            elif poll_count >= max_polls:
-                logger.error("Run timed out after maximum polling attempts")
-                return "Enhanced analysis timed out. The analysis was taking too long to complete."
-                
-            else:
-                logger.error(f"Run ended with unexpected status: {run.status}")
-                return f"Enhanced analysis ended with status: {run.status}. Please try Standard Analysis instead."
-                
+                progress_callback("✅ Analysis complete!", 100)
+
+            logger.info(f"Streaming completed. Total events: {event_count}, Response length: {len(full_response)}")
+            return full_response
+
         except Exception as e:
-            logger.error(f"Error running analysis: {str(e)}")
+            logger.error(f"Error running analysis (streaming): {str(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return f"Error running analysis: {str(e)}"
     
-    def analyze_property_data(self, df, kpi_summary, progress_callback=None, format_name="t12_monthly_financial", model_config=None):
+    def analyze_property_data(self, df, kpi_summary, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None):
         """Complete property analysis workflow with format-specific instructions"""
         try:
             # Default model configuration
@@ -260,10 +254,10 @@ Please provide a comprehensive analysis with strategic recommendations based on 
                 progress_callback("📤 Uploading data to OpenAI...", 30)
             self.create_thread_with_data(df, kpi_summary, format_name)
             
-            # Run analysis
+            # Run analysis with streaming
             if progress_callback:
                 progress_callback("🧠 Starting AI analysis...", 50)
-            result = self.run_analysis(progress_callback)
+            result = self.run_analysis(progress_callback, streaming_callback)
             
             return result
             
@@ -280,10 +274,10 @@ Please provide a comprehensive analysis with strategic recommendations based on 
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None, format_name="t12_monthly_financial", model_config=None):
+def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None):
     """Convenience function for property analysis using Assistants API"""
     analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_property_data(df, kpi_summary, progress_callback, format_name, model_config)
+        return analyzer.analyze_property_data(df, kpi_summary, progress_callback, streaming_callback, format_name, model_config)
     finally:
         analyzer.cleanup()

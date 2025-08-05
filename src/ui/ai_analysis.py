@@ -107,10 +107,25 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, f
             progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
             ai_progress.progress(progress_decimal)
         
+        # Create streaming display area
+        streaming_container = st.empty()
+        
+        # Create streaming callback function
+        def update_streaming(response_so_far):
+            with streaming_container.container():
+                st.markdown("### 🔄 AI Analysis (Live Stream)")
+                # Show the response as it comes in
+                st.markdown(response_so_far)
+                # Add a small debug indicator
+                st.caption(f"📊 Characters received: {len(response_so_far)}")
+        
         try:
-            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, format_name, model_config)
+            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, update_streaming, format_name, model_config)
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
+            
+            # Clear the streaming container and show final result
+            streaming_container.empty()
             
             # Store analysis result for validation
             st.session_state['last_enhanced_analysis_result'] = ai_response

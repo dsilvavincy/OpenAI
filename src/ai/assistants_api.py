@@ -141,35 +141,21 @@ RAW CSV DATA: Use the attached CSV file to perform your analysis - this contains
 MY LOCAL SUMMARY (for reference only): 
 {kpi_summary}
 
-🚨 ABSOLUTE REQUIREMENTS (MUST COMPLY):
-1. FIRST LINE MUST BE: import pandas as pd; df = pd.read_csv('filename')
-2. SECOND LINE MUST BE: print("Data Shape:", df.shape)  
-3. THIRD LINE MUST BE: print("Columns:", df.columns.tolist())
-4. FOURTH LINE MUST BE: df.head()
-5. SHOW ALL PYTHON CODE IN ```python code blocks
-6. Calculate month-over-month trends using Python (show the code)
-7. Validate 3+ key numbers from my summary using df calculations
-8. Display percentage changes with actual Python calculations
+ANALYSIS REQUIREMENTS:
+1. Load and examine the CSV data structure
+2. Perform detailed month-over-month trend analysis on key metrics
+3. Validate key numbers from my summary using the raw data
+4. Calculate percentage changes and identify patterns
+5. Provide actionable insights based on your data analysis
 
-PYTHON CODE REQUIREMENTS:
-- Use pd.read_csv() to load data
-- Show df.head(), df.shape, df.columns in code blocks
-- Calculate trends using df.pct_change() or manual calculations
-- Validate numbers using df.groupby() or filtering
-- Display all code in ```python blocks
+FOCUS AREAS:
+- Month-over-month Revenue trends with percentage changes
+- NOI performance and concerning patterns  
+- Occupancy/vacancy trends over time
+- Validate my Revenue, NOI, and expense calculations against raw data
+- Identify any data quality issues or anomalies
 
-RESPONSE FORMAT:
-```python
-import pandas as pd
-df = pd.read_csv('your_file.csv')
-print("Data Shape:", df.shape)
-print("Columns:", df.columns.tolist())
-df.head()
-```
-
-[Analysis continues with more Python code blocks]
-
-🚨 CRITICAL: If you don't show Python code blocks, your response is INVALID."""
+Please provide a comprehensive analysis with strategic recommendations based on your examination of the raw data."""
             
             # Log the exact prompt being sent
             logger.info("=== ENHANCED ANALYSIS PROMPT ===")

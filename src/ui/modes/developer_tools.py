@@ -143,11 +143,11 @@ class DeveloperToolsPanel:
         # Manual validation tools
         with st.expander("🧪 Manual Validation Tools"):
             st.markdown("**Check for these indicators in Enhanced Analysis output:**")
-            st.markdown("- `df.head()`, `df.shape`, `df.columns` output")
-            st.markdown("- Python code blocks with actual calculations")
-            st.markdown("- Month-over-month percentage changes")
-            st.markdown("- Validation of specific numbers from KPI summary")
-            st.markdown("- Trend analysis with actual data points")
+            st.markdown("- 📊 Detailed trend tables with month-over-month percentages")
+            st.markdown("- 🔍 Validation of specific numbers from your KPI summary")
+            st.markdown("- 📈 Strategic insights based on raw data patterns")
+            st.markdown("- 🎯 Actionable recommendations for management")
+            st.markdown("- 💡 Analysis that goes beyond your local summary")
     
     def _validate_enhanced_analysis(self, analysis_result: str) -> dict:
         """
@@ -162,21 +162,21 @@ class DeveloperToolsPanel:
         result_lower = analysis_result.lower()
         
         validation_checks = {
-            "Shows DataFrame structure (df.head/shape/columns)": any(
+            "Shows detailed trend analysis": any(
                 indicator in result_lower for indicator in 
-                ["df.head", "df.shape", "df.columns", "print(\"data shape\"", "print(\"columns\""]
+                ["trend", "month-over-month", "percentage", "change", "%", "increase", "decrease", "table"]
             ),
-            "Contains Python code blocks": any(
-                indicator in analysis_result for indicator in 
-                ["```python", "```\npython", "import pandas", "pd.read_csv", "df ="]
-            ),
-            "Shows trend calculations": any(
+            "Uses raw data analysis": any(
                 indicator in result_lower for indicator in 
-                ["trend", "month-over-month", "percentage", "change", "%", "increase", "decrease"]
+                ["csv", "raw data", "examining", "loading", "structure", "data analysis"]
             ),
             "Validates specific numbers": any(
                 indicator in result_lower for indicator in 
-                ["validation", "calculated", "verified", "matches", "differs"]
+                ["validation", "calculated", "verified", "matches", "differs", "aligning", "corroborating"]
+            ),
+            "Contains strategic insights": any(
+                indicator in result_lower for indicator in 
+                ["strategic questions", "recommendations", "actionable", "management", "investment"]
             ),
             "Contains data analysis insights": any(
                 indicator in result_lower for indicator in 

@@ -13,6 +13,154 @@ from typing import Optional, Dict, Any
 
 class ProductionResults:
     """Production mode results display with side-by-side capabilities."""
+
+    @staticmethod
+    def format_response_for_streamlit(raw_response: str) -> str:
+        """
+        Enhanced formatter for Streamlit HTML rendering with proper handling of:
+        - Currencies ($, £, €, etc.)
+        - Percentages (%)
+        - Mathematical expressions (÷, /, vs, etc.)
+        - Bold/italic markdown formatting
+        - Metric lists and structured content
+        """
+        import re
+        
+        # Convert markdown formatting to HTML
+        def convert_markdown_to_html(text):
+            # Handle bold text (**text** or __text__)
+            text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+            text = re.sub(r'__(.*?)__', r'<b>\1</b>', text)
+            
+            # Handle italic text (*text* or _text_)
+            text = re.sub(r'(?<!\*)\*(?!\*)([^*]+?)\*(?!\*)', r'<i>\1</i>', text)
+            text = re.sub(r'(?<!_)_(?!_)([^_]+?)_(?!_)', r'<i>\1</i>', text)
+            
+            return text
+        
+        # Process mathematical expressions and comparisons
+        def format_math_expressions(text):
+            # Format division operations (÷ or /)
+            text = re.sub(r'(\$?[\d,.-]+)\s*([÷/])\s*(\$?[\d,.-]+)', r'<code>\1 \2 \3</code>', text)
+            
+            # Format "vs" comparisons
+            text = re.sub(r'(\$?[\d,.-]+%?)\s+vs\s+(\$?[\d,.-]+%?)', r'\1 <em>vs</em> \2', text)
+            
+            # Format parenthetical calculations
+            text = re.sub(r'\(([^)]*÷[^)]*)\)', r'<i>(\1)</i>', text)
+            text = re.sub(r'\(([^)]*vs[^)]*)\)', r'<i>(\1)</i>', text)
+            
+            return text
+        
+        # Process each line with better bullet point and colon handling
+        def process_line(line_text):
+            stripped = line_text.strip()
+            
+            # Handle markdown headers
+            if stripped.startswith('#'):
+                level = len(stripped) - len(stripped.lstrip('#'))
+                header_text = stripped.lstrip('# ').strip()
+                return f'<h{min(level, 6)}>{convert_markdown_to_html(header_text)}</h{min(level, 6)}>'
+            
+            # Handle bullet points (-, •, or leading dash)
+            bullet_match = re.match(r'^[-•]\s*(.+)$', stripped)
+            if bullet_match:
+                content = bullet_match.group(1).strip()
+                
+                # Check if it's a metric line (contains colon)
+                colon_match = re.match(r'^(.+?):\s*(.+)$', content)
+                if colon_match:
+                    metric_name = colon_match.group(1).strip()
+                    metric_value = colon_match.group(2).strip()
+                    
+                    # Clean up metric name - handle incomplete bold formatting
+                    # Remove any standalone ** at the end
+                    metric_name = re.sub(r'\*\*\s*$', '', metric_name)
+                    # Convert complete bold formatting
+                    metric_name = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', metric_name)
+                    # Handle incomplete bold at start (remove leading **)
+                    metric_name = re.sub(r'^\*\*', '', metric_name)
+                    
+                    # Clean up metric value - remove leading **
+                    metric_value = re.sub(r'^\*\*\s*', '', metric_value)
+                    # Format the value
+                    metric_value = convert_markdown_to_html(metric_value)
+                    metric_value = format_math_expressions(metric_value)
+                    
+                    return f'<li><b>{metric_name}:</b> {metric_value}</li>'
+                else:
+                    # Regular bullet point
+                    formatted_content = convert_markdown_to_html(content)
+                    formatted_content = format_math_expressions(formatted_content)
+                    return f'<li>{formatted_content}</li>'
+            
+            # Handle regular colon lines (not bullets)
+            colon_match = re.match(r'^(.+?):\s*(.+)$', stripped)
+            if colon_match:
+                metric_name = colon_match.group(1).strip()
+                metric_value = colon_match.group(2).strip()
+                
+                # Clean up metric name - handle incomplete bold formatting
+                metric_name = re.sub(r'\*\*\s*$', '', metric_name)
+                metric_name = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', metric_name)
+                metric_name = re.sub(r'^\*\*', '', metric_name)
+                
+                # Clean up metric value - remove leading **
+                metric_value = re.sub(r'^\*\*\s*', '', metric_value)
+                # Format the value
+                metric_value = convert_markdown_to_html(metric_value)
+                metric_value = format_math_expressions(metric_value)
+                
+                return f'<p><b>{metric_name}:</b> {metric_value}</p>'
+            
+            # Regular paragraph
+            if stripped:
+                formatted_line = convert_markdown_to_html(stripped)
+                formatted_line = format_math_expressions(formatted_line)
+                return f'<p>{formatted_line}</p>'
+            
+            return '<br>'
+        
+        # Split into lines and process
+        lines = raw_response.strip().splitlines()
+        html_content = []
+        in_list = False
+        current_list_items = []
+        
+        for line in lines:
+            processed = process_line(line)
+            
+            if processed == '<br>':
+                # Empty line - close any open list
+                if in_list and current_list_items:
+                    html_content.append('<ul>' + '\n'.join(current_list_items) + '</ul>')
+                    current_list_items = []
+                    in_list = False
+                html_content.append('<br>')
+            elif processed.startswith('<li>'):
+                # List item
+                current_list_items.append(processed)
+                in_list = True
+            else:
+                # Non-list item - close any open list first
+                if in_list and current_list_items:
+                    html_content.append('<ul>' + '\n'.join(current_list_items) + '</ul>')
+                    current_list_items = []
+                    in_list = False
+                html_content.append(processed)
+        
+        # Close any remaining list
+        if in_list and current_list_items:
+            html_content.append('<ul>' + '\n'.join(current_list_items) + '</ul>')
+        
+        # Join all content
+        final_html = '\n'.join(html_content)
+        
+        # If no formatting was applied, use a simple pre-formatted fallback
+        if not final_html or final_html.strip() == '':
+            return f"<div style='white-space: pre-wrap; font-family: inherit; line-height: 1.6;'>{convert_markdown_to_html(format_math_expressions(raw_response))}</div>"
+        
+        return final_html
     
     def render(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """
@@ -106,25 +254,41 @@ class ProductionResults:
         self._display_raw_response_as_main_report(output)
     
     def _display_raw_response_as_main_report(self, output: Dict[str, Any]):
-        """Display the raw AI response as the main report content."""
+        """Display the raw AI response as the main report content, using enhanced HTML formatting."""
         if "raw_response" in output:
             raw_response = output["raw_response"]
             
-            # Show a clean, full-width display of the raw response
-            with st.container():
-                st.markdown(raw_response)
+            # Add a refresh formatting button
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                if st.button("🎨 Refresh Formatting", help="Re-apply formatting to the current response"):
+                    st.rerun()
             
-            # Optional: Show character count for reference
+            formatted_html_response = self.format_response_for_streamlit(raw_response)
+            
+            with st.container():
+                st.markdown(formatted_html_response, unsafe_allow_html=True)
+            
             st.caption(f"Response length: {len(raw_response):,} characters")
             
-            # Download option for raw response
-            st.download_button(
-                label="💾 Download Raw Response",
-                data=raw_response,
-                file_name="raw_ai_response.txt",
-                mime="text/plain",
-                help="Download the complete raw AI response"
-            )
+            # Download options
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(
+                    label="💾 Download Raw Response",
+                    data=raw_response,
+                    file_name="raw_ai_response.txt",
+                    mime="text/plain",
+                    help="Download the original raw AI response"
+                )
+            with col2:
+                st.download_button(
+                    label="📄 Download Formatted HTML",
+                    data=formatted_html_response,
+                    file_name="formatted_analysis.html",
+                    mime="text/html",
+                    help="Download the formatted HTML version"
+                )
         else:
             st.warning("No raw response available")
     

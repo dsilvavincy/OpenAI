@@ -32,8 +32,8 @@ def clear_analysis_results():
     if 'analysis_data_hash' in st.session_state:
         del st.session_state['analysis_data_hash']
 
-def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address):
-    """Display AI analysis section using Enhanced Analysis only"""
+def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial"):
+    """Display AI analysis section using Enhanced Analysis with format-specific prompts"""
     from src.ui.shared_file_manager import SharedFileManager
     
     if not api_key:
@@ -60,7 +60,7 @@ def display_ai_analysis_section(df, kpi_summary, api_key, property_name, propert
     
     # Show generate button for new analysis
     if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
-        processed_output = run_ai_analysis(df, kpi_summary, api_key, property_name, property_address)
+        processed_output = run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name)
         
         if processed_output:
             # Store results in session state for mode switching
@@ -71,8 +71,8 @@ def display_ai_analysis_section(df, kpi_summary, api_key, property_name, propert
     
     return None
 
-def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address):
-    """Execute Enhanced AI analysis using Assistants API"""
+def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial"):
+    """Execute Enhanced AI analysis using Assistants API with format-specific prompts"""
     
     # AI Analysis with detailed progress
     ai_progress = st.progress(0)
@@ -91,7 +91,7 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address):
             ai_progress.progress(progress_decimal)
         
         try:
-            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress)
+            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, format_name)
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
             
@@ -106,8 +106,8 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address):
                 ai_status.text("🔄 Falling back to standard analysis...")
                 ai_progress.progress(0.6)
                 
-                # Fallback to standard analysis
-                system_prompt, user_prompt = build_prompt(kpi_summary)
+                # Fallback to standard analysis with format-specific prompts
+                system_prompt, user_prompt = build_prompt(kpi_summary, format_name)
                 ai_response = call_openai(system_prompt, user_prompt, api_key)
                 
         except Exception as e:
@@ -116,8 +116,8 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address):
             ai_status.text("🔄 Falling back to standard analysis...")
             ai_progress.progress(0.6)
             
-            # Fallback to standard analysis
-            system_prompt, user_prompt = build_prompt(kpi_summary)
+            # Fallback to standard analysis with format-specific prompts
+            system_prompt, user_prompt = build_prompt(kpi_summary, format_name)
             ai_response = call_openai(system_prompt, user_prompt, api_key)
         
         ai_status.text("✨ Processing AI response...")

@@ -62,7 +62,10 @@ class SharedFileManager:
             # Clear analysis results when file changes
             'ai_analysis_result',
             'ai_analysis_raw_response',
-            'data_hash'
+            'data_hash',
+            # Clear format detection results
+            'detected_format',
+            'format_display_name'
         ]
         
         for key in keys_to_clear:

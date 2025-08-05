@@ -193,10 +193,10 @@ def display_prompt_testing_section(kpi_summary, df=None):
                         st.warning("⚠️ Enhanced Analysis requires uploaded data. Please upload a T12 file first.")
                         return
                         
-                    from src.ai.assistants_api import T12AssistantAnalyzer
+                    from src.ai.assistants_api import PropertyAssistantAnalyzer
                     
                     # Get the Enhanced Analysis prompts
-                    analyzer = T12AssistantAnalyzer()
+                    analyzer = PropertyAssistantAnalyzer()
                     system_instructions = analyzer.get_assistant_instructions()
                     
                     # Build the user prompt
@@ -337,10 +337,31 @@ def display_file_processing_section(uploaded_file):
         excel_buffer = io.BytesIO(uploaded_file.getvalue())
         df = tidy_sheet_all(excel_buffer)
         
+        # Detect and store format for analysis pipeline
+        status_text.text("🔍 Detecting data format...")
+        progress_bar.progress(80)
+        
+        from src.utils.format_detection import detect_format_from_dataframe, detect_format_from_file_path, store_detected_format
+        
+        # Try format detection from both file name and data structure
+        format_from_filename = detect_format_from_file_path(uploaded_file.name)
+        format_from_data = detect_format_from_dataframe(df)
+        
+        # Use data structure detection if available, otherwise use filename detection
+        detected_format = format_from_data if format_from_data != "t12_monthly_financial" else format_from_filename
+        
+        # Store format for use throughout the application
+        store_detected_format(detected_format)
+        
         status_text.text("✅ Data processing complete!")
         progress_bar.progress(100)
         
         st.success(f"✅ Successfully processed {len(df):,} data points")
+        
+        # Show detected format to user
+        from src.utils.format_detection import get_format_display_name
+        format_display = get_format_display_name(detected_format)
+        st.info(f"📊 **Detected Format**: {format_display}")
         
         return df
         

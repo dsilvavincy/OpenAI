@@ -6,78 +6,45 @@ import os
 import logging
 from openai import OpenAI
 from dotenv import load_dotenv
+from .prompt_manager import prompt_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def build_prompt(kpi_summary):
-    """Build standardized prompt for T12 property analysis"""
+def build_prompt(kpi_summary, format_name="t12_monthly_financial"):
+    """Build standardized prompt for property analysis based on format type"""
     
-    system_instructions = """You are a senior real estate investment analyst specializing in multifamily property performance analysis. You have extensive experience in reviewing T12 (Trailing 12-month) financial statements and identifying key trends, risks, and opportunities.
-
-Your task is to analyze the provided T12 property financial data and generate actionable insights for property management and investment decisions.
-
-IMPORTANT DATA STRUCTURE NOTES:
-- The data contains both MONTHLY and YEAR-TO-DATE (YTD) figures
-- YTD figures are CUMULATIVE totals from January 1st to the most recent month (NOT monthly amounts)
-- YTD IS NOT A MONTH NAME - it indicates cumulative data, not a time period
-- When you see "YTD" in the data, treat it as cumulative totals, never as monthly figures
-- When analyzing trends, use monthly data for month-to-month comparisons
-- Use YTD data to understand overall annual performance and compare to annual budgets/targets
-- YTD revenue should be compared to total annual rent roll potential
-- YTD expenses should be analyzed as percentage of YTD revenue for expense ratios
-- NEVER compare YTD figures to monthly figures directly - they represent different time scales
-
-ANALYSIS FRAMEWORK:
-1. FINANCIAL PERFORMANCE: Assess revenue trends, collection rates, and income stability
-2. OPERATIONAL EFFICIENCY: Evaluate vacancy rates, concessions, and delinquency patterns  
-3. MARKET POSITIONING: Analyze asking rents vs. effective rents and loss-to-lease
-4. RISK ASSESSMENT: Identify red flags and potential concerns
-5. IMPROVEMENT OPPORTUNITIES: Suggest specific actionable recommendations
-6. YTD PERFORMANCE: Compare YTD actuals to typical annual benchmarks and identify if property is on track
-
-OUTPUT REQUIREMENTS:
-- Generate exactly 5 strategic management questions that should be investigated
-- Provide 3-5 specific actionable recommendations to improve NOI
-- Highlight any concerning trends that require immediate attention
-- Include industry context and benchmarking where relevant
-- When referencing YTD figures, clearly state they are cumulative totals, not monthly amounts
-
-Be concise, specific, and focus on actionable insights that can drive real business decisions."""
-
-    user_content = f"""Please analyze the following T12 property financial data:
-
-{kpi_summary}
-
-Based on this data, provide your analysis following the framework outlined in your instructions."""
-
+    # Use the dynamic prompt manager to build format-specific prompts
+    system_instructions, user_content = prompt_manager.build_prompts(
+        format_name=format_name,
+        data_content=kpi_summary,
+        analysis_type="standard"
+    )
+    
     return system_instructions, user_content
 
-def build_fallback_prompt(kpi_summary):
+def build_fallback_prompt(kpi_summary, format_name="t12_monthly_financial"):
     """Build simplified fallback prompt for edge cases or API issues"""
     
-    system_instructions = """You are a real estate analyst. Analyze the provided T12 data and provide:
-1. Key performance observations
-2. Top 3 concerns or red flags
-3. Top 3 recommendations for improvement
-
-Keep responses concise and actionable."""
-
-    user_content = f"""Analyze this T12 data and provide key insights:
-
-{kpi_summary}"""
-
+    # Use the dynamic prompt manager for fallback prompts
+    system_instructions, user_content = prompt_manager.build_prompts(
+        format_name=format_name,
+        data_content=kpi_summary,
+        analysis_type="fallback"
+    )
+    
     return system_instructions, user_content
 
-def build_minimal_prompt(data_snippet):
+def build_minimal_prompt(data_snippet, format_name="t12_monthly_financial"):
     """Build minimal prompt for severely limited data or emergency fallback"""
     
-    system_instructions = """Provide basic real estate financial analysis. Focus on actionable insights."""
-    
-    user_content = f"""Review this financial data and suggest improvements:
-
-{data_snippet}"""
+    # Use the dynamic prompt manager for minimal prompts
+    system_instructions, user_content = prompt_manager.build_prompts(
+        format_name=format_name,
+        data_content=data_snippet,
+        analysis_type="minimal"
+    )
     
     return system_instructions, user_content
 
@@ -125,34 +92,40 @@ def call_openai(system_prompt, user_prompt, api_key=None):
             logger.error(f"Unexpected OpenAI API error: {str(e)}")
             return f"Error calling OpenAI API: {str(e)}"
 
-def validate_response(response, analysis_type="standard"):
+def validate_response(response, analysis_type="standard", format_name="t12_monthly_financial"):
     """Validate OpenAI API response for completeness and structure"""
     if not response or len(response.strip()) < 50:
         return False, "Response too short or empty"
     
+    # Get format-specific validation keywords
+    validation_keywords = prompt_manager.get_validation_keywords(format_name, analysis_type)
+    
     # More flexible validation for Enhanced Analysis (Assistants API)
-    if analysis_type == "enhanced":
-        # For Assistants API, just check if we have substantial content
-        # and some basic analysis indicators
+    if analysis_type == "enhanced" or analysis_type == "assistants":
+        # Check for required content indicators
         response_upper = response.upper()
-        has_content_indicators = any(word in response_upper for word in [
-            "PROPERTY", "REVENUE", "INCOME", "EXPENSE", "OCCUPANCY", 
-            "ANALYSIS", "PERFORMANCE", "TREND", "RECOMMENDATION", "SUGGEST",
-            "DATA", "FINANCIAL", "CASH", "NOI", "RENTAL"
-        ])
+        required_content = validation_keywords.get("required_content", [])
+        min_length = validation_keywords.get("min_length", 100)
         
-        if has_content_indicators and len(response.strip()) > 100:
+        has_content_indicators = any(word.upper() in response_upper for word in required_content)
+        
+        if has_content_indicators and len(response.strip()) > min_length:
             return True, "Enhanced analysis validation passed"
         else:
-            return False, "Enhanced analysis lacks sufficient real estate content"
+            return False, f"Enhanced analysis lacks sufficient relevant content for {format_name} format"
     
-    # Original validation for Standard Analysis
+    # Standard validation using format-specific keywords
     response_upper = response.upper()
-    has_questions = any(word in response_upper for word in ["QUESTION", "INVESTIGATE", "WHAT", "HOW", "WHY"])
-    has_recommendations = any(word in response_upper for word in ["RECOMMEND", "SUGGEST", "IMPROVE", "ACTION"])
-    has_analysis = any(word in response_upper for word in ["TREND", "PERFORMANCE", "CONCERN", "RISK"])
+    
+    questions_keywords = validation_keywords.get("questions", ["question", "what", "how", "why"])
+    recommendations_keywords = validation_keywords.get("recommendations", ["recommend", "suggest", "improve"])
+    analysis_keywords = validation_keywords.get("analysis", ["trend", "performance", "concern"])
+    
+    has_questions = any(word.upper() in response_upper for word in questions_keywords)
+    has_recommendations = any(word.upper() in response_upper for word in recommendations_keywords)
+    has_analysis = any(word.upper() in response_upper for word in analysis_keywords)
     
     if not (has_questions and has_recommendations and has_analysis):
-        return False, "Response missing key sections (questions, recommendations, or analysis)"
+        return False, f"Response missing key sections for {format_name} format (questions, recommendations, or analysis)"
     
     return True, "Response validation passed"

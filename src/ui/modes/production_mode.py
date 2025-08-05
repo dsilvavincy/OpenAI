@@ -211,15 +211,43 @@ class ProductionMode(BaseUIMode):
     
     def _render_ai_analysis(self, df: pd.DataFrame, kpi_summary: str, config: Dict[str, Any]):
         """Render AI analysis section - production focused."""
-        from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options
+        from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options, get_existing_analysis_results
+        from src.utils.format_detection import get_stored_format
         
-        # Streamlined AI analysis interface
+        # Check for existing analysis results first
+        existing_output = get_existing_analysis_results()
+        
+        if existing_output:
+            # Display existing results immediately - production view
+            st.markdown("## 📊 Analysis Report")
+            display_analysis_results(existing_output)
+            
+            # Export section
+            st.markdown("---")
+            st.markdown("## 💾 Export Report")
+            st.markdown("Download your analysis in multiple professional formats:")
+            display_export_options(existing_output, config['property_name'], export_type="full")
+            
+            # Option to regenerate analysis
+            st.markdown("---")
+            if st.button("🔄 Generate New Analysis", type="secondary", use_container_width=True):
+                from src.ui.ai_analysis import clear_analysis_results
+                clear_analysis_results()
+                st.rerun()
+            return
+        
+        # No existing results - show analysis generation interface
+        # Get the detected format for this analysis
+        detected_format = get_stored_format()
+        
+        # Streamlined AI analysis interface with format-specific prompts
         processed_output = display_ai_analysis_section(
             df, 
             kpi_summary, 
             config['api_key'], 
             config['property_name'], 
-            config['property_address']
+            config['property_address'],
+            detected_format
         )
         
         if processed_output:

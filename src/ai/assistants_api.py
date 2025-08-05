@@ -1,5 +1,5 @@
 """
-OpenAI Assistants API implementation for T12 analysis
+OpenAI Assistants API implementation for multi-format property analysis
 Enables AI to analyze raw data directly using code_interpreter
 """
 
@@ -11,13 +11,14 @@ from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 import pandas as pd
+from .prompt_manager import prompt_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class T12AssistantAnalyzer:
-    """OpenAI Assistant for T12 data analysis with code_interpreter"""
+class PropertyAssistantAnalyzer:
+    """OpenAI Assistant for property data analysis with code_interpreter"""
     
     def __init__(self, api_key=None):
         """Initialize the assistant with OpenAI API key"""
@@ -34,8 +35,9 @@ class T12AssistantAnalyzer:
         self.assistant_id = None
         self.thread_id = None
         
-    def get_assistant_instructions(self):
-        """Get the assistant instructions for logging purposes"""
+    def get_assistant_instructions(self, format_name="t12_monthly_financial"):
+        """Get format-specific assistant instructions"""
+        return prompt_manager.build_system_instructions(format_name, "assistants")
         return """You are a senior real estate investment analyst specializing in multifamily property T12 (Trailing 12-month) financial analysis.
 
 CRITICAL DATA STRUCTURE NOTES:
@@ -81,18 +83,18 @@ FORMAT YOUR RESPONSE AS:
 
 CRITICAL: Always show the Python code and calculations you performed."""
         
-    def create_assistant(self):
-        """Create a specialized T12 analysis assistant"""
+    def create_assistant(self, format_name="t12_monthly_financial"):
+        """Create a specialized property analysis assistant for the given format"""
         try:
             assistant = self.client.beta.assistants.create(
-                name="T12 Property Analysis Expert",
-                instructions=self.get_assistant_instructions(),
+                name=f"Property Analysis Expert - {format_name.upper()}",
+                instructions=self.get_assistant_instructions(format_name),
                 model="gpt-4o",
                 tools=[{"type": "code_interpreter"}]
             )
             
             self.assistant_id = assistant.id
-            logger.info(f"Created assistant with ID: {self.assistant_id}")
+            logger.info(f"Created assistant with ID: {self.assistant_id} for format: {format_name}")
             return assistant
             
         except Exception as e:
@@ -127,23 +129,24 @@ CRITICAL: Always show the Python code and calculations you performed."""
                 os.unlink(temp_path)
             raise
     
-    def create_thread_with_data(self, df, kpi_summary):
+    def create_thread_with_data(self, df, kpi_summary, format_name="t12_monthly_financial"):
         """Create a conversation thread with both raw data and KPI summary"""
         try:
             # Upload the DataFrame
             file_id = self.upload_dataframe(df)
             
-            # Build the prompt content
-            prompt_content = f"""Analyze this T12 property financial data by directly examining the raw CSV data:
+            # Build format-specific prompt content
+            format_upper = format_name.upper().replace("_", " ")
+            prompt_content = f"""Analyze this {format_upper} property financial data by directly examining the raw CSV data:
 
-RAW CSV DATA: Use the attached CSV file to perform your analysis - this contains complete T12 data with monthly and YTD figures.
+RAW CSV DATA: Use the attached CSV file to perform your analysis - this contains complete property data.
 
 MY LOCAL SUMMARY (for reference only): 
 {kpi_summary}
 
 ANALYSIS REQUIREMENTS:
 1. Load and examine the CSV data structure
-2. Perform detailed month-over-month trend analysis on key metrics
+2. Perform detailed trend analysis on key metrics based on the format type
 3. Validate key numbers from my summary using the raw data
 4. Calculate percentage changes and identify patterns
 5. Provide actionable insights based on your data analysis
@@ -283,19 +286,19 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             logger.error(f"Error running analysis: {str(e)}")
             return f"Error running analysis: {str(e)}"
     
-    def analyze_t12_data(self, df, kpi_summary, progress_callback=None):
-        """Complete T12 analysis workflow"""
+    def analyze_property_data(self, df, kpi_summary, progress_callback=None, format_name="t12_monthly_financial"):
+        """Complete property analysis workflow with format-specific instructions"""
         try:
             # Create assistant if not exists
             if not self.assistant_id:
                 if progress_callback:
                     progress_callback("🤖 Creating AI assistant...", 10)
-                self.create_assistant()
+                self.create_assistant(format_name)
             
             # Create thread with data
             if progress_callback:
                 progress_callback("📤 Uploading data to OpenAI...", 30)
-            self.create_thread_with_data(df, kpi_summary)
+            self.create_thread_with_data(df, kpi_summary, format_name)
             
             # Run analysis
             if progress_callback:
@@ -317,10 +320,10 @@ Please provide a comprehensive analysis with strategic recommendations based on 
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None):
-    """Convenience function for T12 analysis using Assistants API"""
-    analyzer = T12AssistantAnalyzer(api_key)
+def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None, format_name="t12_monthly_financial"):
+    """Convenience function for property analysis using Assistants API"""
+    analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_t12_data(df, kpi_summary, progress_callback)
+        return analyzer.analyze_property_data(df, kpi_summary, progress_callback, format_name)
     finally:
         analyzer.cleanup()

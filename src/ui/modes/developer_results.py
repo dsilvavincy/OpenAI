@@ -191,13 +191,17 @@ class DeveloperResultsSection:
                 clear_analysis_results()
                 st.rerun()
         else:
-            # No existing results, show analysis interface
+            # No existing results, show analysis interface with format detection
+            from src.utils.format_detection import get_stored_format
+            detected_format = get_stored_format()
+            
             processed_output = display_ai_analysis_section(
                 df, 
                 kpi_summary, 
                 config['api_key'], 
                 config['property_name'], 
-                config['property_address']
+                config['property_address'],
+                detected_format
             )
             
             if processed_output:

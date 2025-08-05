@@ -98,11 +98,12 @@ class UIModeManager:
             "🏭 Production"
         )
         
-        selected_label = st.selectbox(
+        selected_label = st.radio(
             "Interface Mode",
             options=list(mode_options.keys()),
             index=list(mode_options.values()).index(current_mode),
-            help="Choose between Production (clean) or Developer (advanced) interface"
+            help="Choose between Production (clean) or Developer (advanced) interface",
+            horizontal=True
         )
         
         selected_mode = mode_options[selected_label]

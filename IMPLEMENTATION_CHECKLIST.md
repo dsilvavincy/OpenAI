@@ -62,7 +62,7 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Test output consistency across multiple runs
 **✅ VALIDATION REQUIRED**: Consistent output format, quality validation working, professional presentation
 
-### 8. User Interface (UI) Development
+### 8. User Interface (UI) Development - Dual Mode System
 - [x] Add Streamlit to requirements
 - [x] Build Streamlit UI for Excel file upload, processing, output display, and export
 - [x] Add progress indicators for long-running processes
@@ -70,7 +70,15 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Add OpenAI API key input field (secure)
 - [x] Ensure all user interactions and outputs are handled via the UI (no console interaction)
 - [x] Test UI for usability and error handling
-**✅ VALIDATION REQUIRED**: Complete UI workflow, no console dependencies, professional interface, proper error handling
+- [ ] **Production Mode**: Clean, minimal UI focused on upload → progress → results → export workflow
+- [ ] **Developer Mode**: Toggle to show advanced features (prompt testing, raw data, debug info, settings)
+- [ ] **Mode Toggle**: Easy switch between Production and Developer modes in sidebar
+- [ ] **Settings Panel**: Developer mode includes prompt templates, model settings, validation controls
+- [ ] **Layout Optimization**: Production mode maximizes space for analysis results and export options
+- [ ] **User Preference**: Remember last selected mode in session state
+- [ ] **Project Structure**: Create `src/ui/modes/` folder with `production_mode.py` and `developer_mode.py` components
+- [ ] **UI Components**: Organize mode-specific UI elements in respective files with clear imports
+**✅ VALIDATION REQUIRED**: Both modes work seamlessly, production mode is clean and professional, developer mode has all debugging tools
 
 ### 9. **PRIORITY: AI Analysis Quality & Output Validation**
 - [x] **Test with real T12 data**: Upload actual T12 file and validate DataFrame structure
@@ -102,6 +110,9 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Create standardized report template
 - [x] Add date/timestamp and property information to reports
 - [ ] Test export functionality across different formats
+- [ ] **Project Structure**: Create `src/export/` folder with `pdf_generator.py`, `word_generator.py`, and `report_templates.py`
+- [ ] **Template Storage**: Create `templates/` folder with customizable report templates (HTML, CSS, Word styles)
+- [ ] **Output Management**: Create `outputs/` folder structure for generated reports with proper naming conventions
 
 ### 12. Weekly Automation & Standardization
 - [ ] Create template system for consistent weekly reports
@@ -110,8 +121,27 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [ ] Add batch processing for multiple properties
 - [ ] Create standardized naming conventions for files and reports
 - [ ] Test weekly workflow simulation
+- [ ] **Project Structure**: Create `src/automation/` folder with `weekly_processor.py`, `batch_handler.py`, and `historical_tracker.py`
+- [ ] **Data Storage**: Create `data/historical/` and `data/templates/` folders for storing past analyses and templates
+- [ ] **Configuration Files**: Create `config/` folder with property profiles, naming conventions, and automation settings
 
-### 13. Desktop Application Packaging
+### 13. Advanced Settings & Template Management (Developer Mode)
+- [ ] **Prompt Template Editor**: UI to customize system and user prompts for both Standard and Enhanced analysis
+- [ ] **Model Configuration**: Settings for OpenAI model selection, temperature, max tokens, etc.
+- [ ] **Validation Rules**: Customizable validation criteria for AI responses
+- [ ] **KPI Template System**: Editable templates for different property types or analysis focuses
+- [ ] **Export Templates**: Customizable PDF/Word report templates with branding options
+- [ ] **Debug Console**: Real-time logging and API call monitoring in developer mode
+- [ ] **A/B Testing**: Compare different prompt versions and track performance metrics
+- [ ] **Backup/Restore**: Save and load custom settings and templates
+- [ ] **Performance Metrics**: Track token usage, response times, and analysis quality scores
+- [ ] **Advanced Filters**: Developer controls for data preprocessing and analysis scope
+- [ ] **Project Structure**: Create `src/settings/` folder with `template_manager.py`, `config_editor.py`, and `performance_tracker.py`
+- [ ] **Settings Storage**: Create `settings/` folder with JSON files for user preferences, templates, and configurations
+- [ ] **Backup System**: Create `backups/` folder with versioned settings and template snapshots
+**✅ VALIDATION REQUIRED**: All settings persist correctly, templates are editable and apply properly, performance tracking works
+
+### 14. Desktop Application Packaging
 - [ ] Package Streamlit app as a standalone desktop executable using PyInstaller
 - [ ] Include all dependencies and assets in executable
 - [ ] Test packaged app on target desktop environment
@@ -149,3 +179,5 @@ Use this checklist to track progress through each stage. Mark each box as you co
 4. Apply consistent AI prompts for analysis
 5. Produce formatted report with insights and recommendations
 6. Export professional PDF/Word report with timestamp and property details
+
+**📁 For complete project structure details, see `PROJECT_STRUCTURE.md`**

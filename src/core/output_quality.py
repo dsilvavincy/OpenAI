@@ -70,30 +70,46 @@ class OutputFormatter:
             if not line:
                 continue
                 
-            # Check for section headers
+            # Check for section headers (comprehensive pattern matching)
             line_upper = line.upper()
-            if 'QUESTION' in line_upper and ('STRATEGIC' in line_upper or 'MANAGEMENT' in line_upper):
+            
+            # Check for section headers (comprehensive pattern matching)
+            line_upper = line.upper()
+            
+            # Strategic Questions
+            if ('QUESTION' in line_upper and ('STRATEGIC' in line_upper or 'MANAGEMENT' in line_upper)) or '4️⃣' in line:
                 current_section = 'questions'
                 continue
-            elif 'RECOMMENDATION' in line_upper or 'ACTIONABLE' in line_upper:
+            # Recommendations  
+            elif ('RECOMMENDATION' in line_upper or 'ACTIONABLE' in line_upper) or '5️⃣' in line:
                 current_section = 'recommendations'
                 continue
-            elif 'CONCERN' in line_upper or 'TREND' in line_upper:
+            # Concerning Trends / Red Flags
+            elif ('CONCERN' in line_upper or 'TREND' in line_upper or 'RED FLAG' in line_upper or 'IMMEDIATE ATTENTION' in line_upper) or '6️⃣' in line or '⚠️' in line:
                 current_section = 'concerns'
                 continue
-            elif 'INSIGHT' in line_upper or 'PERFORMANCE' in line_upper:
+            # Key Observations
+            elif ('OBSERVATION' in line_upper or 'KEY' in line_upper) or '3️⃣' in line:
                 current_section = 'insights'
                 continue
-            elif 'RISK' in line_upper:
-                current_section = 'risks'
+            # Reset current_section for untracked sections (but only for ## headers we don't recognize)
+            elif line.startswith('##') and not any(emoji in line for emoji in ['3️⃣', '4️⃣', '5️⃣', '6️⃣']):
+                current_section = None
                 continue
             
-            # Extract list items
-            if current_section and (line.startswith(('1.', '2.', '3.', '4.', '5.', '-', '*', '•'))):
-                # Clean the line
-                cleaned = re.sub(r'^[\d\.\-\*\•\s]+', '', line).strip()
-                if cleaned:
-                    sections[current_section].append(cleaned)
+            # Extract list items (handle both numbered lists and bullet points)
+            if current_section:
+                # Check for numbered items (1., 2., etc.) OR bullet points (-, *, •)
+                if re.match(r'^\d+\.\s+', line) or re.match(r'^[-\*\•]\s+', line):
+                    # Clean the line - remove prefixes and extra spaces
+                    cleaned = re.sub(r'^\d+\.\s*', '', line).strip()  # Remove "1. " prefix
+                    cleaned = re.sub(r'^[-\*\•]\s*', '', cleaned).strip()  # Remove bullet points
+                    
+                    # Further clean markdown formatting (remove **bold** markers)
+                    cleaned = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned)  # Remove **text** -> text
+                    
+                    if cleaned:
+                        sections[current_section].append(cleaned)
         
         return sections
     

@@ -32,8 +32,8 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Implement `generate_kpi_summary()` to extract and summarize KPIs
 - [x] Define standard KPI calculations (Revenue, NOI, Occupancy, etc.)
 - [x] Add trend analysis (month-over-month, year-over-year)
-- [ ] Test summary output for accuracy and clarity
-- [ ] Validate bullet-point formatting for LLM input
+- [x] Test summary output for accuracy and clarity
+- [x] Validate bullet-point formatting for LLM input
 **✅ VALIDATION REQUIRED**: Accurate KPI calculations, professional summary format, proper trend analysis
 
 ### 5. Standardized AI Prompt Engineering
@@ -41,35 +41,35 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Define standard analysis categories (financial performance, trends, red flags)
 - [x] Implement prompt templates for consistent question generation
 - [x] Add context about real estate industry standards and benchmarks
-- [ ] Test prompt variations for output quality and consistency
-- [ ] Create fallback prompts for edge cases
+- [x] Test prompt variations for output quality and consistency
+- [x] Create fallback prompts for edge cases
 **✅ VALIDATION REQUIRED**: Consistent AI outputs, professional analysis quality, standardized question format
 
 ### 6. OpenAI API Integration
 - [x] Implement `call_openai()` to send prompt and receive response
 - [x] Add retry logic and rate limiting for API calls
 - [x] Implement response validation and quality checks
-- [ ] Test with sample data and check API output consistency
-- [ ] Handle API errors and edge cases gracefully
-- [ ] Add logging for API calls and responses
+- [x] Test with sample data and check API output consistency
+- [x] Handle API errors and edge cases gracefully
+- [x] Add logging for API calls and responses
 **✅ VALIDATION REQUIRED**: Successful API calls, proper error handling, consistent response quality
 
 ### 7. Output Standardization & Quality Control
-- [ ] Define standard output format for AI-generated insights
-- [ ] Implement output validation (structure, completeness, relevance)
-- [ ] Create quality scoring system for AI responses
-- [ ] Add output post-processing and formatting
-- [ ] Test output consistency across multiple runs
+- [x] Define standard output format for AI-generated insights
+- [x] Implement output validation (structure, completeness, relevance)
+- [x] Create quality scoring system for AI responses
+- [x] Add output post-processing and formatting
+- [x] Test output consistency across multiple runs
 **✅ VALIDATION REQUIRED**: Consistent output format, quality validation working, professional presentation
 
 ### 8. User Interface (UI) Development
 - [x] Add Streamlit to requirements
 - [x] Build Streamlit UI for Excel file upload, processing, output display, and export
-- [ ] Add progress indicators for long-running processes
-- [ ] Implement file validation feedback in UI
-- [ ] Add OpenAI API key input field (secure)
-- [ ] Ensure all user interactions and outputs are handled via the UI (no console interaction)
-- [ ] Test UI for usability and error handling
+- [x] Add progress indicators for long-running processes
+- [x] Implement file validation feedback in UI
+- [x] Add OpenAI API key input field (secure)
+- [x] Ensure all user interactions and outputs are handled via the UI (no console interaction)
+- [x] Test UI for usability and error handling
 **✅ VALIDATION REQUIRED**: Complete UI workflow, no console dependencies, professional interface, proper error handling
 
 ### 9. Report Generation & Export
@@ -96,13 +96,18 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [ ] Document installation and usage instructions
 - [ ] Test offline functionality (except OpenAI API calls)
 
-### 12. End-to-End Validation
-- [ ] Run full workflow with real T12 data from multiple properties
-- [ ] Validate AI-generated questions and insights for relevance and accuracy
-- [ ] Test consistency across multiple weeks of data
-- [ ] Conduct user acceptance testing
-- [ ] Review and refine based on feedback
-- [ ] Performance testing with large datasets
+
+### 13. Assistants API & Code Interpreter Integration
+- [ ] Refactor workflow to use OpenAI Assistants API with code_interpreter tool
+- [ ] Implement file upload (CSV/Excel) to OpenAI and manage file_ids
+- [ ] Design prompts for code_interpreter (instruct LLM to analyze uploaded file)
+- [ ] Handle multi-part outputs (text, plots, downloadable files)
+- [ ] Validate LLM Python analysis and outputs for accuracy and completeness
+- [ ] Update UI to support file upload and display of code_interpreter results
+- [ ] Test with large and multi-property datasets
+- [ ] Document new workflow and update user instructions
+
+**✅ VALIDATION REQUIRED**: LLM can analyze full dataset via code_interpreter, outputs are accurate, and UI supports new workflow
 
 ---
 

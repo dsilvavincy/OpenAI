@@ -3,9 +3,9 @@ AI analysis UI components with enhanced and standard options
 """
 import streamlit as st
 from datetime import datetime
-from src.prompt import build_prompt, call_openai, validate_response
-from src.assistants_api import analyze_with_assistants_api
-from src.output_quality import post_process_output
+from src.ai.prompt import build_prompt, call_openai, validate_response
+from src.ai.assistants_api import analyze_with_assistants_api
+from src.core.output_quality import post_process_output
 
 def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address):
     """Display AI analysis section with method selection"""
@@ -155,7 +155,7 @@ def display_export_options(processed_output, property_name):
     if not processed_output:
         return
     
-    from src.ui_reports import generate_enhanced_report, generate_pdf_report, generate_word_report
+    from src.ui.reports import generate_enhanced_report, generate_pdf_report, generate_word_report
     
     st.subheader("📄 Export Options")
     

@@ -9,11 +9,11 @@ import time
 from datetime import datetime
 
 # Import our modular components
-from src.ui_validation import validate_uploaded_file
-from src.ui_progress import create_progress_tracker, update_progress, display_progress
-from src.ui_data_analysis import display_data_analysis_section, display_kpi_testing_section, display_prompt_testing_section, display_file_processing_section
-from src.ui_ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options
-from src.kpi_summary import generate_kpi_summary
+from src.ui.validation import validate_uploaded_file
+from src.ui.progress import create_progress_tracker, update_progress, display_progress
+from src.ui.data_analysis import display_data_analysis_section, display_kpi_testing_section, display_prompt_testing_section, display_file_processing_section
+from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options
+from src.core.kpi_summary import generate_kpi_summary
 
 # Page configuration
 st.set_page_config(

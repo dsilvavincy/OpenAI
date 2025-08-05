@@ -4,8 +4,8 @@ Data analysis and debugging UI components
 import streamlit as st
 import pandas as pd
 import io
-from src.kpi_summary import generate_kpi_summary
-from src.prompt import build_prompt
+from src.core.kpi_summary import generate_kpi_summary
+from src.ai.prompt import build_prompt
 
 def display_data_analysis_section(df):
     """Display comprehensive data analysis and debugging tools"""
@@ -131,7 +131,7 @@ def display_file_processing_section(uploaded_file):
         progress_bar.progress(50)
         
         # Use BytesIO to pass file-like object to tidy_sheet_all
-        from src.preprocess import tidy_sheet_all
+        from src.core.preprocess import tidy_sheet_all
         excel_buffer = io.BytesIO(uploaded_file.getvalue())
         df = tidy_sheet_all(excel_buffer)
         

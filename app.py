@@ -31,31 +31,27 @@ def main():
     
     # Sidebar for configuration
     with st.sidebar:
-        st.header("⚙️ Configuration")
-        
-        # OpenAI API Key input with validation
+        st.markdown("**⚙️ Configuration**")
+        # Get default API key from environment if available
+        default_api_key = os.getenv("OPENAI_API_KEY", "")
         api_key = st.text_input(
-            "OpenAI API Key", 
+            "API Key", 
+            value=default_api_key,
             type="password",
-            help="Enter your OpenAI API key to enable AI analysis"
+            help="OpenAI API key (auto-filled from .env if available)"
         )
-        
         if api_key:
             if api_key.startswith('sk-') and len(api_key) > 20:
-                st.success("✅ API key format looks valid")
+                st.caption("✅ API key format looks valid")
             else:
-                st.warning("⚠️ API key format may be incorrect")
-        
-        st.divider()
-        
-        # Property information
-        st.header("🏢 Property Information")
-        property_name = st.text_input("Property Name", placeholder="e.g., Sunset Apartments")
-        property_address = st.text_input("Property Address", placeholder="e.g., 123 Main St, City, State")
-        
-        st.divider()
-        
-        # Display progress
+                st.caption(":warning: API key format may be incorrect")
+
+        st.markdown("**🏢 Property Info**")
+        property_name = st.text_input("Name", placeholder="e.g., Sunset Apartments")
+        property_address = st.text_input("Address", placeholder="e.g., 123 Main St, City, State")
+
+        # Display progress (smaller font)
+        st.markdown("<div style='margin-top:8px; margin-bottom:2px; font-size: 0.9em; color: #888;'>Progress</div>", unsafe_allow_html=True)
         display_progress()
         
     # Main content area

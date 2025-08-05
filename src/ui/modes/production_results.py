@@ -103,63 +103,21 @@ class ProductionResults:
             self._display_export_section(processed_output, config)
     
     def _display_analysis_with_options(self, output: Dict[str, Any], config: Dict[str, Any]):
-        """Display analysis with side-by-side option based on configuration."""
-        from src.ui.ai_analysis import display_analysis_results
-        
-        if config.get('show_side_by_side', False):
-            # Parse layout ratio
-            layout_ratio = config.get('layout_ratio', '2:1')
-            if layout_ratio == "1:1":
-                col_ratios = [1, 1]
-            elif layout_ratio == "2:1":
-                col_ratios = [2, 1]
-            elif layout_ratio == "3:1":
-                col_ratios = [3, 1]
-            elif layout_ratio == "1:2":
-                col_ratios = [1, 2]
-            else:
-                col_ratios = [2, 1]  # Default
-            
-            # Create side-by-side layout
-            col1, col2 = st.columns(col_ratios)
-            
-            with col1:
-                st.markdown("### 📋 Structured Analysis")
-                display_analysis_results(output, display_mode="structured")
-            
-            with col2:
-                st.markdown("### 🔧 Raw Response")
-                self._display_raw_response(output)
-        else:
-            # Standard single-column display
-            display_analysis_results(output, display_mode="structured")
+        """Display only the raw response as the main content."""
+        # Always display just the raw response
+        self._display_raw_response_as_main_report(output)
     
-    def _display_raw_response(self, output: Dict[str, Any]):
-        """Display the raw AI response in a clean format."""
+    def _display_raw_response_as_main_report(self, output: Dict[str, Any]):
+        """Display the raw AI response as the main report content."""
         if "raw_response" in output:
             raw_response = output["raw_response"]
             
-            # Show response statistics
-            st.markdown(f"**Length:** {len(raw_response):,} characters")
+            # Show a clean, full-width display of the raw response
+            with st.container():
+                st.markdown(raw_response)
             
-            # Detect content type and render appropriately
-            if "<html>" in raw_response.lower() or any(tag in raw_response.lower() for tag in ["<div>", "<p>", "<br>", "<h1>", "<h2>", "<h3>"]):
-                st.markdown("**Content Type:** HTML detected")
-                with st.container():
-                    st.components.v1.html(raw_response, height=600, scrolling=True)
-            else:
-                st.markdown("**Content Type:** Text/Markdown")
-                with st.container():
-                    # Use a scrollable text area for long content
-                    if len(raw_response) > 10000:
-                        st.text_area(
-                            "Raw Response",
-                            value=raw_response,
-                            height=600,
-                            label_visibility="collapsed"
-                        )
-                    else:
-                        st.markdown(raw_response)
+            # Optional: Show character count for reference
+            st.caption(f"Response length: {len(raw_response):,} characters")
             
             # Download option for raw response
             st.download_button(

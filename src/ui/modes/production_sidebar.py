@@ -90,24 +90,6 @@ class ProductionSidebar:
             
             st.info(f"💡 **Current:** {model_selection} | Temp: {temperature} | Unlimited Tokens")
         
-        # Display Options (collapsible)
-        with st.expander("📋 Display Options", expanded=False):
-            show_side_by_side = st.checkbox(
-                "Show Raw Response Side-by-Side",
-                value=False,
-                help="Display the raw AI response alongside the structured analysis"
-            )
-            
-            if show_side_by_side:
-                layout_ratio = st.select_slider(
-                    "Layout Ratio (Structured : Raw)",
-                    options=["1:1", "2:1", "3:1", "1:2"],
-                    value="2:1",
-                    help="Adjust the space allocation between structured and raw views"
-                )
-            else:
-                layout_ratio = "2:1"  # Default when not side-by-side
-        
         # Progress tracking (compact)
         st.markdown("### 📊 Progress")
         self._display_progress_tracking()
@@ -117,10 +99,8 @@ class ProductionSidebar:
             "property_name": updated_property_name,
             "property_address": updated_property_address,
             "model_selection": model_selection,
-            "temperature": temperature,
+            "temperature": temperature
             # No max_tokens - allowing unlimited response length
-            "show_side_by_side": show_side_by_side,
-            "layout_ratio": layout_ratio
         }
     
     def _display_progress_tracking(self):

@@ -47,25 +47,39 @@ CRITICAL DATA STRUCTURE NOTES:
 - NEVER compare YTD figures to monthly figures directly - they represent different time scales
 
 ANALYSIS APPROACH:
-1. First examine the data structure to understand available columns and time periods
-2. Validate a few key calculations from the provided summary (spot checks only)
-3. Focus on identifying concerning trends and actionable recommendations
-4. Keep code analysis minimal - only essential validations
-5. Provide strategic insights for property management decisions
+1. FIRST: Load and examine the CSV data structure - show me the columns and data shape
+2. SECOND: Validate key calculations from my summary using actual data calculations 
+3. THIRD: Perform month-over-month trend analysis on key metrics (Revenue, NOI, Occupancy)
+4. FOURTH: Calculate percentage changes and identify concerning patterns
+5. SHOW YOUR WORK: Display Python code and calculations you used
+6. Provide strategic insights based on your data analysis
+
+MANDATORY REQUIREMENTS:
+- ALWAYS show the Python code you write to analyze the data
+- ALWAYS display month-over-month trend calculations with actual numbers
+- ALWAYS validate at least 3 key metrics from my summary against raw data
+- ALWAYS show data structure (df.head(), df.shape, df.columns)
+- Focus on actionable insights from your raw data analysis
 
 FORMAT YOUR RESPONSE AS:
 ## T12 Property Analysis Report
 
+### Data Validation & Structure
+[Show data loading, structure, and validation of key calculations]
+
+### Month-over-Month Trend Analysis  
+[Show trend calculations with actual percentage changes]
+
 ### Key Findings
-[Brief validation of provided summary + concerning trends]
+[Insights from your raw data analysis]
 
 ### Strategic Questions for Management
-[5 strategic questions based on the data]
+[5 strategic questions based on your data analysis]
 
-### Actionable Recommendations  
-[3-5 specific recommendations to improve NOI]
+### Actionable Recommendations
+[3-5 specific recommendations based on trend analysis]
 
-Be concise, professional, and focus on actionable business insights."""
+CRITICAL: Always show the Python code and calculations you performed."""
         
     def create_assistant(self):
         """Create a specialized T12 analysis assistant"""
@@ -120,20 +134,42 @@ Be concise, professional, and focus on actionable business insights."""
             file_id = self.upload_dataframe(df)
             
             # Build the prompt content
-            prompt_content = f"""Analyze this T12 property financial data efficiently:
+            prompt_content = f"""Analyze this T12 property financial data by directly examining the raw CSV data:
 
-RAW DATA: Attached CSV file with complete T12 data (monthly + YTD figures)
+RAW CSV DATA: Use the attached CSV file to perform your analysis - this contains complete T12 data with monthly and YTD figures.
 
-LOCAL SUMMARY: 
+MY LOCAL SUMMARY (for reference only): 
 {kpi_summary}
 
-FOCUSED ANALYSIS NEEDED:
-1. Validate key calculations in my summary (spot check only)
-2. Identify top 3 concerning trends
-3. Generate 5 strategic management questions
-4. Provide 3-5 actionable recommendations to improve NOI
+🚨 ABSOLUTE REQUIREMENTS (MUST COMPLY):
+1. FIRST LINE MUST BE: import pandas as pd; df = pd.read_csv('filename')
+2. SECOND LINE MUST BE: print("Data Shape:", df.shape)  
+3. THIRD LINE MUST BE: print("Columns:", df.columns.tolist())
+4. FOURTH LINE MUST BE: df.head()
+5. SHOW ALL PYTHON CODE IN ```python code blocks
+6. Calculate month-over-month trends using Python (show the code)
+7. Validate 3+ key numbers from my summary using df calculations
+8. Display percentage changes with actual Python calculations
 
-Please be concise and focus on actionable insights for property management decisions. Limit code analysis to essential validations only."""
+PYTHON CODE REQUIREMENTS:
+- Use pd.read_csv() to load data
+- Show df.head(), df.shape, df.columns in code blocks
+- Calculate trends using df.pct_change() or manual calculations
+- Validate numbers using df.groupby() or filtering
+- Display all code in ```python blocks
+
+RESPONSE FORMAT:
+```python
+import pandas as pd
+df = pd.read_csv('your_file.csv')
+print("Data Shape:", df.shape)
+print("Columns:", df.columns.tolist())
+df.head()
+```
+
+[Analysis continues with more Python code blocks]
+
+🚨 CRITICAL: If you don't show Python code blocks, your response is INVALID."""
             
             # Log the exact prompt being sent
             logger.info("=== ENHANCED ANALYSIS PROMPT ===")
@@ -166,12 +202,15 @@ Please be concise and focus on actionable insights for property management decis
             logger.error(f"Error creating thread: {str(e)}")
             raise
     
-    def run_analysis(self):
+    def run_analysis(self, progress_callback=None):
         """Run the analysis and get response"""
         try:
             if not self.assistant_id or not self.thread_id:
                 raise ValueError("Assistant and thread must be created first")
-            
+
+            if progress_callback:
+                progress_callback("🚀 Starting analysis run...", 55)
+
             # Create and run the analysis without token limits (for testing)
             run = self.client.beta.threads.runs.create(
                 thread_id=self.thread_id,
@@ -179,6 +218,9 @@ Please be concise and focus on actionable insights for property management decis
                 # Removed token limits for testing
             )
             
+            if progress_callback:
+                progress_callback("🔄 Analysis in progress...", 60)
+
             # Wait for completion with extended timeout (no token limits)
             max_polls = 60  # Increased from 30 for unlimited analysis
             poll_count = 0
@@ -192,6 +234,19 @@ Please be concise and focus on actionable insights for property management decis
                 poll_count += 1
                 logger.info(f"Run status: {run.status} (poll {poll_count}/{max_polls})")
                 
+                # Update progress during polling
+                if progress_callback:
+                    progress_pct = min(95, 60 + (poll_count / max_polls) * 35)  # 60% to 95%
+                    if run.status == 'queued':
+                        progress_callback(f"⏳ Analysis queued... (poll {poll_count}/{max_polls})", progress_pct)
+                    elif run.status == 'in_progress':
+                        progress_callback(f"🧠 AI analyzing your data... (poll {poll_count}/{max_polls})", progress_pct)
+                    elif run.status == 'cancelling':
+                        progress_callback(f"⚠️ Analysis cancelling... (poll {poll_count}/{max_polls})", progress_pct)
+                
+            if progress_callback:
+                progress_callback("📄 Retrieving results...", 98)
+                
             if run.status == 'completed':
                 # Get the messages
                 messages = self.client.beta.threads.messages.list(
@@ -201,6 +256,8 @@ Please be concise and focus on actionable insights for property management decis
                 # Return the assistant's response
                 for message in messages.data:
                     if message.role == 'assistant':
+                        if progress_callback:
+                            progress_callback("✅ Analysis complete!", 100)
                         return message.content[0].text.value
                         
             elif run.status == 'incomplete':
@@ -240,18 +297,24 @@ Please be concise and focus on actionable insights for property management decis
             logger.error(f"Error running analysis: {str(e)}")
             return f"Error running analysis: {str(e)}"
     
-    def analyze_t12_data(self, df, kpi_summary):
+    def analyze_t12_data(self, df, kpi_summary, progress_callback=None):
         """Complete T12 analysis workflow"""
         try:
             # Create assistant if not exists
             if not self.assistant_id:
+                if progress_callback:
+                    progress_callback("🤖 Creating AI assistant...", 10)
                 self.create_assistant()
             
             # Create thread with data
+            if progress_callback:
+                progress_callback("📤 Uploading data to OpenAI...", 30)
             self.create_thread_with_data(df, kpi_summary)
             
             # Run analysis
-            result = self.run_analysis()
+            if progress_callback:
+                progress_callback("🧠 Starting AI analysis...", 50)
+            result = self.run_analysis(progress_callback)
             
             return result
             
@@ -268,10 +331,10 @@ Please be concise and focus on actionable insights for property management decis
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(df, kpi_summary, api_key=None):
+def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None):
     """Convenience function for T12 analysis using Assistants API"""
     analyzer = T12AssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_t12_data(df, kpi_summary)
+        return analyzer.analyze_t12_data(df, kpi_summary, progress_callback)
     finally:
         analyzer.cleanup()

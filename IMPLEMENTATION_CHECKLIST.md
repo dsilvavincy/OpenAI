@@ -94,7 +94,7 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Test UI for usability and error handling
 - [ ] **Production Mode**: Clean, minimal UI focused on upload → progress → results → export workflow
 - [ ] **Developer Mode**: Toggle to show advanced features (prompt testing, raw data, debug info, settings)
-- [ ] **Mode Toggle**: Easy switch between Production and Developer modes in sidebar
+- [x] **Mode Toggle**: Easy switch between Production and Developer modes in sidebar
 - [ ] **Settings Panel**: Developer mode includes prompt templates, model settings, validation controls
 - [ ] **Layout Optimization**: Production mode maximizes space for analysis results and export options
 - [ ] **User Preference**: Remember last selected mode in session state

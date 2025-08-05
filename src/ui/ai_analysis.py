@@ -37,29 +37,37 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
     ai_status = st.empty()
     
     ai_status.text("🔧 Building analysis prompt...")
-    ai_progress.progress(25)
+    ai_progress.progress(0.25)
     
     try:
         # Choose analysis method based on user selection  
         if analysis_method.startswith("🚀 Enhanced"):
             # Enhanced Analysis with Assistants API
             ai_status.text("🚀 Initializing Enhanced AI Analysis...")
-            ai_progress.progress(30)
+            ai_progress.progress(0.25)
             
-            ai_status.text("📊 Uploading raw data to OpenAI...")
-            ai_progress.progress(50)
+            # Create progress callback function
+            def update_progress(message, progress_pct):
+                ai_status.text(message)
+                # Convert percentage to decimal (0-100 -> 0.0-1.0)
+                progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
+                ai_progress.progress(progress_decimal)
             
             try:
-                ai_response = analyze_with_assistants_api(df, kpi_summary, api_key)
+                ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress)
                 ai_status.text("✨ Enhanced analysis complete!")
-                ai_progress.progress(100)
+                ai_progress.progress(1.0)
+                
+                # Store Enhanced Analysis result for validation
+                st.session_state['last_enhanced_analysis_result'] = ai_response
+                st.session_state['last_analysis_method'] = "Enhanced Analysis (Assistants API)"
                 
                 # Check if Enhanced Analysis actually succeeded
                 if ai_response.startswith("Enhanced analysis incomplete") or ai_response.startswith("Enhanced analysis ended"):
                     st.warning(f"⚠️ {ai_response}")
                     st.info("🔄 **AUTO-FALLBACK**: Switching to Standard Analysis...")
                     ai_status.text("🔄 Falling back to standard analysis...")
-                    ai_progress.progress(60)
+                    ai_progress.progress(0.6)
                     
                     # Update analysis method for proper validation
                     analysis_method = "Standard Analysis (Fallback from Enhanced)"
@@ -72,7 +80,7 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
                 st.error(f"Enhanced analysis failed: {str(e)}")
                 st.info("🔄 **FALLBACK**: Switching to Standard Analysis...")
                 ai_status.text("🔄 Falling back to standard analysis...")
-                ai_progress.progress(60)
+                ai_progress.progress(0.6)
                 
                 # Update analysis method for proper validation
                 analysis_method = "Standard Analysis (Fallback from Enhanced)"
@@ -85,11 +93,11 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
             # Standard Analysis (Text Summary Only)
             system_prompt, user_prompt = build_prompt(kpi_summary)
             ai_status.text("🤖 Calling OpenAI API...")
-            ai_progress.progress(50)
+            ai_progress.progress(0.5)
             ai_response = call_openai(system_prompt, user_prompt, api_key)
         
         ai_status.text("✨ Processing AI response...")
-        ai_progress.progress(75)
+        ai_progress.progress(0.75)
         
         # Validate and post-process response
         if not ai_response.startswith("Error:"):
@@ -117,7 +125,7 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
                 processed_output = post_process_output(ai_response, property_info)
                 
                 ai_status.text("✅ Analysis complete!")
-                ai_progress.progress(100)
+                ai_progress.progress(1.0)
                 
                 return processed_output
             
@@ -136,7 +144,7 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
                     processed_output = post_process_output(ai_response, property_info)
                     
                     ai_status.text("✅ Analysis complete!")
-                    ai_progress.progress(100)
+                    ai_progress.progress(1.0)
                     
                     return processed_output
                 else:

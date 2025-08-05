@@ -47,6 +47,10 @@ class DeveloperToolsPanel:
         st.markdown("#### ⚙️ System Tools")
         self._render_system_tools()
         
+        # Enhanced Analysis Validation
+        st.markdown("#### 🔍 Enhanced Analysis Validation")
+        self._render_enhanced_analysis_validation()
+        
         # Performance monitoring
         if config.get('show_performance', False):
             st.markdown("#### 📊 Performance Monitor")
@@ -101,3 +105,87 @@ class DeveloperToolsPanel:
                     st.text(f"{key}: {type(value).__name__}")
                 else:
                     st.text(f"{key}: {str(value)[:100]}{'...' if len(str(value)) > 100 else ''}")
+    
+    def _render_enhanced_analysis_validation(self):
+        """Render Enhanced Analysis validation tools."""
+        st.info("🔍 **Validation Tools**: Verify that Enhanced Analysis is using raw data")
+        
+        # Last analysis results checker
+        if 'last_enhanced_analysis_result' in st.session_state:
+            result = st.session_state['last_enhanced_analysis_result']
+            
+            # Check for evidence of raw data usage
+            validation_checks = self._validate_enhanced_analysis(result)
+            
+            st.write("**Validation Results:**")
+            for check, status in validation_checks.items():
+                icon = "✅" if status else "❌"
+                st.write(f"{icon} {check}")
+            
+            # Overall validation score
+            passed_checks = sum(validation_checks.values())
+            total_checks = len(validation_checks)
+            score = (passed_checks / total_checks) * 100
+            
+            if score >= 80:
+                st.success(f"🎯 **Validation Score: {score:.0f}%** - Enhanced Analysis is working properly!")
+            elif score >= 60:
+                st.warning(f"⚠️ **Validation Score: {score:.0f}%** - Some issues detected")
+            else:
+                st.error(f"❌ **Validation Score: {score:.0f}%** - Enhanced Analysis may not be using raw data")
+                
+            # Raw response inspector
+            with st.expander("🔍 Raw Response Inspector"):
+                st.text_area("Last Enhanced Analysis Response", result, height=300)
+        else:
+            st.info("💡 Run an Enhanced Analysis first to see validation results")
+            
+        # Manual validation tools
+        with st.expander("🧪 Manual Validation Tools"):
+            st.markdown("**Check for these indicators in Enhanced Analysis output:**")
+            st.markdown("- `df.head()`, `df.shape`, `df.columns` output")
+            st.markdown("- Python code blocks with actual calculations")
+            st.markdown("- Month-over-month percentage changes")
+            st.markdown("- Validation of specific numbers from KPI summary")
+            st.markdown("- Trend analysis with actual data points")
+    
+    def _validate_enhanced_analysis(self, analysis_result: str) -> dict:
+        """
+        Validate that Enhanced Analysis actually used raw data.
+        
+        Returns:
+            dict: Validation check results
+        """
+        if not analysis_result:
+            return {}
+            
+        result_lower = analysis_result.lower()
+        
+        validation_checks = {
+            "Shows DataFrame structure (df.head/shape/columns)": any(
+                indicator in result_lower for indicator in 
+                ["df.head", "df.shape", "df.columns", "print(\"data shape\"", "print(\"columns\""]
+            ),
+            "Contains Python code blocks": any(
+                indicator in analysis_result for indicator in 
+                ["```python", "```\npython", "import pandas", "pd.read_csv", "df ="]
+            ),
+            "Shows trend calculations": any(
+                indicator in result_lower for indicator in 
+                ["trend", "month-over-month", "percentage", "change", "%", "increase", "decrease"]
+            ),
+            "Validates specific numbers": any(
+                indicator in result_lower for indicator in 
+                ["validation", "calculated", "verified", "matches", "differs"]
+            ),
+            "Contains data analysis insights": any(
+                indicator in result_lower for indicator in 
+                ["analysis", "pattern", "concerning", "improvement", "recommendation"]
+            ),
+            "Shows raw data examination": any(
+                indicator in result_lower for indicator in 
+                ["csv", "data", "examining", "loading", "structure"]
+            )
+        }
+        
+        return validation_checks

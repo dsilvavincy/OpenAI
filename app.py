@@ -7,6 +7,10 @@ import io
 import os
 import time
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import our dual-mode UI system
 from src.ui.modes.mode_manager import render_current_mode, get_current_mode
@@ -34,18 +38,8 @@ def main():
     # Initialize progress tracking for backward compatibility
     create_progress_tracker()
     
-    # Main app header
-    st.title("🏢 AI-Driven T12 Property Analysis Tool")
-    
-    # File uploader in main content area
-    uploaded_file = st.file_uploader(
-        "📁 Upload your T12 Excel file to generate AI-powered property performance insights",
-        type=['xlsx', 'xls'],
-        help="Upload your T12 property financial data in Excel format"
-    )
-    
-    # Render the appropriate UI mode
-    render_current_mode(uploaded_file)
+    # Render the appropriate UI mode (no duplicate file uploader)
+    render_current_mode()
 
 if __name__ == "__main__":
     main()

@@ -114,12 +114,9 @@ class UIModeManager:
         
         return selected_mode
     
-    def render_current_mode(self, uploaded_file: Optional[Any] = None) -> None:
+    def render_current_mode(self) -> None:
         """
         Render the currently active UI mode.
-        
-        Args:
-            uploaded_file: Optional uploaded file object
         """
         current_mode_name = self.get_current_mode()
         mode = self._modes.get(current_mode_name)
@@ -152,8 +149,8 @@ class UIModeManager:
             # Save configuration to session state
             self._save_config_to_session(config)
         
-        # Render main content
-        mode.render_main_content(uploaded_file, config)
+        # Render main content (uploaded_file handled inside mode)
+        mode.render_main_content(None, config)
         
         # Display mode footer if available
         mode.display_mode_footer()
@@ -253,9 +250,9 @@ def get_current_mode() -> str:
     """Get current UI mode using global manager."""
     return ui_mode_manager.get_current_mode()
 
-def render_current_mode(uploaded_file: Optional[Any] = None) -> None:
+def render_current_mode() -> None:
     """Render current UI mode using global manager."""
-    return ui_mode_manager.render_current_mode(uploaded_file)
+    return ui_mode_manager.render_current_mode()
 
 def should_show_feature(feature_name: str) -> bool:
     """Check if feature should be shown using global manager."""

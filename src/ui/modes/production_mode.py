@@ -46,12 +46,14 @@ class ProductionMode(BaseUIMode):
         st.markdown("### ⚙️ Configuration")
         
         # API Key input (streamlined)
-        default_api_key = os.getenv("OPENAI_API_KEY", api_key)
+        # Priority: session state → environment → current value
+        current_api_key = st.session_state.get('api_key', '') or os.getenv("OPENAI_API_KEY", '') or api_key
+        
         updated_api_key = st.text_input(
             "OpenAI API Key", 
-            value=default_api_key,
+            value=current_api_key,
             type="password",
-            help="Your OpenAI API key for AI analysis"
+            help="Your OpenAI API key for AI analysis (auto-loaded from .env)"
         )
         
         # Simple validation feedback
@@ -113,12 +115,23 @@ class ProductionMode(BaseUIMode):
         """Render the file upload section."""
         st.markdown("### 📁 Upload Data")
         
+        # Use session state to persist uploaded file
+        if 'current_uploaded_file' not in st.session_state:
+            st.session_state['current_uploaded_file'] = None
+        
         uploaded_file = st.file_uploader(
             "T12 Excel File",
             type=['xlsx', 'xls'],
             help="Upload your T12 property financial data",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key="production_file_uploader"
         )
+        
+        # Update session state when file changes
+        if uploaded_file is not None:
+            st.session_state['current_uploaded_file'] = uploaded_file
+        elif st.session_state['current_uploaded_file'] is not None:
+            uploaded_file = st.session_state['current_uploaded_file']
         
         if uploaded_file is not None:
             # Process file with minimal UI

@@ -80,6 +80,21 @@ class ProductionMode(BaseUIMode):
         
         st.markdown("---")
         
+        # Display Options (collapsible)
+        with st.expander("📋 Display Options", expanded=False):
+            show_raw_data = st.checkbox(
+                "Show Raw Data Side-by-Side",
+                value=False,
+                help="Display the raw CSV data alongside the analysis to see all parameters"
+            )
+            
+            display_mode = st.radio(
+                "Analysis View",
+                ["Structured", "Report", "Both"],
+                index=0,  # Default to Structured
+                help="Structured: Collapsible sections | Report: Full markdown view | Both: Tabs with all views"
+            )
+        
         # Progress tracking (compact)
         st.markdown("### 📊 Progress")
         self.display_progress_tracking()
@@ -87,7 +102,9 @@ class ProductionMode(BaseUIMode):
         return {
             "api_key": updated_api_key,
             "property_name": updated_property_name,
-            "property_address": updated_property_address
+            "property_address": updated_property_address,
+            "show_raw_data": show_raw_data,
+            "display_mode": display_mode.lower()
         }
     
     def render_main_content(self, uploaded_file: Optional[Any], config: Dict[str, Any]) -> None:
@@ -220,7 +237,57 @@ class ProductionMode(BaseUIMode):
         if existing_output:
             # Display existing results immediately - production view
             st.markdown("## 📊 Analysis Report")
-            display_analysis_results(existing_output)
+            
+            # Check if user wants raw data side-by-side
+            if config.get('show_raw_data', False):
+                # Create side-by-side layout
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.markdown("### 📊 Analysis Results")
+                    display_analysis_results(existing_output, display_mode=config.get('display_mode', 'structured'))
+                
+                with col2:
+                    st.markdown("### 📋 Raw Data")
+                    if 'processed_df' in st.session_state and st.session_state['processed_df'] is not None:
+                        raw_df = st.session_state['processed_df']
+                        st.markdown(f"**Total Rows:** {len(raw_df):,}")
+                        ytd_count = len(raw_df[raw_df['IsYTD'] == True])
+                        monthly_count = len(raw_df[raw_df['IsYTD'] == False])
+                        st.markdown(f"**YTD Rows:** {ytd_count:,}")
+                        st.markdown(f"**Monthly Rows:** {monthly_count:,}")
+                        st.markdown("---")
+                        
+                        # Show raw data with filters
+                        show_ytd = st.checkbox("Show YTD rows", value=True, key="existing_ytd")
+                        show_monthly = st.checkbox("Show Monthly rows", value=True, key="existing_monthly")
+                        
+                        filtered_df = raw_df.copy()
+                        if not show_ytd:
+                            filtered_df = filtered_df[filtered_df['IsYTD'] == False]
+                        if not show_monthly:
+                            filtered_df = filtered_df[filtered_df['IsYTD'] == True]
+                        
+                        st.dataframe(
+                            filtered_df,
+                            use_container_width=True,
+                            height=400
+                        )
+                        
+                        # Show download option for raw data
+                        if st.button("💾 Download Raw CSV", key="download_raw_existing"):
+                            csv = filtered_df.to_csv(index=False)
+                            st.download_button(
+                                label="📁 Download Filtered Data as CSV",
+                                data=csv,
+                                file_name=f"{config.get('property_name', 'property')}_raw_data.csv",
+                                mime='text/csv'
+                            )
+                    else:
+                        st.warning("No raw data available")
+            else:
+                # Standard single-column display
+                display_analysis_results(existing_output, display_mode=config.get('display_mode', 'structured'))
             
             # Export section
             st.markdown("---")
@@ -253,8 +320,58 @@ class ProductionMode(BaseUIMode):
         if processed_output:
             # Results take center stage
             st.markdown("---")
-            st.markdown("## � Analysis Report")
-            display_analysis_results(processed_output)
+            st.markdown("## 📊 Analysis Report")
+            
+            # Check if user wants raw data side-by-side
+            if config.get('show_raw_data', False):
+                # Create side-by-side layout
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.markdown("### 📊 Analysis Results")
+                    display_analysis_results(processed_output, display_mode=config.get('display_mode', 'structured'))
+                
+                with col2:
+                    st.markdown("### 📋 Raw Data")
+                    if 'processed_df' in st.session_state and st.session_state['processed_df'] is not None:
+                        raw_df = st.session_state['processed_df']
+                        st.markdown(f"**Total Rows:** {len(raw_df):,}")
+                        ytd_count = len(raw_df[raw_df['IsYTD'] == True])
+                        monthly_count = len(raw_df[raw_df['IsYTD'] == False])
+                        st.markdown(f"**YTD Rows:** {ytd_count:,}")
+                        st.markdown(f"**Monthly Rows:** {monthly_count:,}")
+                        st.markdown("---")
+                        
+                        # Show raw data with filters
+                        show_ytd = st.checkbox("Show YTD rows", value=True, key="new_ytd")
+                        show_monthly = st.checkbox("Show Monthly rows", value=True, key="new_monthly")
+                        
+                        filtered_df = raw_df.copy()
+                        if not show_ytd:
+                            filtered_df = filtered_df[filtered_df['IsYTD'] == False]
+                        if not show_monthly:
+                            filtered_df = filtered_df[filtered_df['IsYTD'] == True]
+                        
+                        st.dataframe(
+                            filtered_df,
+                            use_container_width=True,
+                            height=400
+                        )
+                        
+                        # Show download option for raw data
+                        if st.button("💾 Download Raw CSV", key="download_raw_new"):
+                            csv = filtered_df.to_csv(index=False)
+                            st.download_button(
+                                label="📁 Download Filtered Data as CSV",
+                                data=csv,
+                                file_name=f"{config.get('property_name', 'property')}_raw_data.csv",
+                                mime='text/csv'
+                            )
+                    else:
+                        st.warning("No raw data available")
+            else:
+                # Standard single-column display
+                display_analysis_results(processed_output, display_mode=config.get('display_mode', 'structured'))
             
             # Prominent export section at bottom
             st.markdown("---")
@@ -273,7 +390,7 @@ class ProductionMode(BaseUIMode):
             "columns": [1, 2.5],  # More space for results
             "sidebar_width": "narrow",
             "show_debug": False,
-            "show_raw_data": False,
+            "show_raw_data": True,  # Now available in production
             "show_advanced_settings": False,
             "compact_mode": True
         }

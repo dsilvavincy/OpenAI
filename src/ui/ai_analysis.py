@@ -32,13 +32,21 @@ def clear_analysis_results():
     if 'analysis_data_hash' in st.session_state:
         del st.session_state['analysis_data_hash']
 
-def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial"):
+def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
     """Display AI analysis section using Enhanced Analysis with format-specific prompts"""
     from src.ui.shared_file_manager import SharedFileManager
     
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate analysis")
         return None
+    
+    # Default model configuration
+    if model_config is None:
+        model_config = {
+            "model_selection": "gpt-4o",
+            "temperature": 0.2,
+            "max_tokens": 2500
+        }
     
     # Use shared file manager data if df is None
     if df is None:
@@ -60,7 +68,7 @@ def display_ai_analysis_section(df, kpi_summary, api_key, property_name, propert
     
     # Show generate button for new analysis
     if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
-        processed_output = run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name)
+        processed_output = run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name, model_config)
         
         if processed_output:
             # Store results in session state for mode switching
@@ -71,8 +79,19 @@ def display_ai_analysis_section(df, kpi_summary, api_key, property_name, propert
     
     return None
 
-def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial"):
+def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
     """Execute Enhanced AI analysis using Assistants API with format-specific prompts"""
+    
+    # Default model configuration
+    if model_config is None:
+        model_config = {
+            "model_selection": "gpt-4o",
+            "temperature": 0.2,
+            "max_tokens": 2500
+        }
+    
+    # Display current AI model settings
+    st.info(f"🤖 **AI Model:** {model_config['model_selection']} | **Temperature:** {model_config['temperature']} | **Max Tokens:** {model_config['max_tokens']}")
     
     # AI Analysis with detailed progress
     ai_progress = st.progress(0)
@@ -91,7 +110,7 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, f
             ai_progress.progress(progress_decimal)
         
         try:
-            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, format_name)
+            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, format_name, model_config)
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
             

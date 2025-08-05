@@ -38,63 +38,19 @@ class PropertyAssistantAnalyzer:
     def get_assistant_instructions(self, format_name="t12_monthly_financial"):
         """Get format-specific assistant instructions"""
         return prompt_manager.build_system_instructions(format_name, "assistants")
-        return """You are a senior real estate investment analyst specializing in multifamily property T12 (Trailing 12-month) financial analysis.
-
-CRITICAL DATA STRUCTURE NOTES:
-- The data contains both MONTHLY and YEAR-TO-DATE (YTD) figures
-- YTD figures are CUMULATIVE totals from January 1st to the most recent month (NOT monthly amounts)
-- YTD IS NOT A MONTH NAME - it indicates cumulative data, not a time period
-- When analyzing trends, use monthly data for month-to-month comparisons
-- Use YTD data to understand overall annual performance and compare to annual budgets/targets
-- NEVER compare YTD figures to monthly figures directly - they represent different time scales
-
-ANALYSIS APPROACH:
-1. FIRST: Load and examine the CSV data structure - show me the columns and data shape
-2. SECOND: Validate key calculations from my summary using actual data calculations 
-3. THIRD: Perform month-over-month trend analysis on key metrics (Revenue, NOI, Occupancy)
-4. FOURTH: Calculate percentage changes and identify concerning patterns
-5. SHOW YOUR WORK: Display Python code and calculations you used
-6. Provide strategic insights based on your data analysis
-
-MANDATORY REQUIREMENTS:
-- ALWAYS show the Python code you write to analyze the data
-- ALWAYS display month-over-month trend calculations with actual numbers
-- ALWAYS validate at least 3 key metrics from my summary against raw data
-- ALWAYS show data structure (df.head(), df.shape, df.columns)
-- Focus on actionable insights from your raw data analysis
-
-FORMAT YOUR RESPONSE AS:
-## T12 Property Analysis Report
-
-### Data Validation & Structure
-[Show data loading, structure, and validation of key calculations]
-
-### Month-over-Month Trend Analysis  
-[Show trend calculations with actual percentage changes]
-
-### Key Findings
-[Insights from your raw data analysis]
-
-### Strategic Questions for Management
-[5 strategic questions based on your data analysis]
-
-### Actionable Recommendations
-[3-5 specific recommendations based on trend analysis]
-
-CRITICAL: Always show the Python code and calculations you performed."""
         
-    def create_assistant(self, format_name="t12_monthly_financial"):
+    def create_assistant(self, format_name="t12_monthly_financial", model="gpt-4o"):
         """Create a specialized property analysis assistant for the given format"""
         try:
             assistant = self.client.beta.assistants.create(
                 name=f"Property Analysis Expert - {format_name.upper()}",
                 instructions=self.get_assistant_instructions(format_name),
-                model="gpt-4o",
+                model=model,
                 tools=[{"type": "code_interpreter"}]
             )
             
             self.assistant_id = assistant.id
-            logger.info(f"Created assistant with ID: {self.assistant_id} for format: {format_name}")
+            logger.info(f"Created assistant with ID: {self.assistant_id} for format: {format_name} using model: {model}")
             return assistant
             
         except Exception as e:
@@ -286,14 +242,18 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             logger.error(f"Error running analysis: {str(e)}")
             return f"Error running analysis: {str(e)}"
     
-    def analyze_property_data(self, df, kpi_summary, progress_callback=None, format_name="t12_monthly_financial"):
+    def analyze_property_data(self, df, kpi_summary, progress_callback=None, format_name="t12_monthly_financial", model_config=None):
         """Complete property analysis workflow with format-specific instructions"""
         try:
+            # Default model configuration
+            if model_config is None:
+                model_config = {"model_selection": "gpt-4o"}
+            
             # Create assistant if not exists
             if not self.assistant_id:
                 if progress_callback:
                     progress_callback("🤖 Creating AI assistant...", 10)
-                self.create_assistant(format_name)
+                self.create_assistant(format_name, model_config["model_selection"])
             
             # Create thread with data
             if progress_callback:
@@ -320,10 +280,10 @@ Please provide a comprehensive analysis with strategic recommendations based on 
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None, format_name="t12_monthly_financial"):
+def analyze_with_assistants_api(df, kpi_summary, api_key=None, progress_callback=None, format_name="t12_monthly_financial", model_config=None):
     """Convenience function for property analysis using Assistants API"""
     analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_property_data(df, kpi_summary, progress_callback, format_name)
+        return analyzer.analyze_property_data(df, kpi_summary, progress_callback, format_name, model_config)
     finally:
         analyzer.cleanup()

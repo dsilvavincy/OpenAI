@@ -106,6 +106,28 @@ class PromptManager:
             for i, req in enumerate(instructions_config["requirements"], 1):
                 parts.append(f"{i}. {req}")
         
+        # Mandatory output format for assistants (highest priority)
+        if "MANDATORY_OUTPUT_FORMAT" in instructions_config:
+            parts.append(f"\nMANDATORY OUTPUT FORMAT:")
+            parts.append(instructions_config["MANDATORY_OUTPUT_FORMAT"])
+        
+        # Critical requirements for assistants
+        if "CRITICAL_REQUIREMENTS" in instructions_config:
+            parts.append(f"\nCRITICAL REQUIREMENTS:")
+            for requirement in instructions_config["CRITICAL_REQUIREMENTS"]:
+                parts.append(f"- {requirement}")
+        
+        # Analysis tasks (structured approach)
+        if "analysis_tasks" in instructions_config:
+            parts.append(f"\nANALYSIS TASKS:")
+            for task in instructions_config["analysis_tasks"]:
+                parts.append(f"- {task}")
+        
+        # Data format information
+        if "data_format" in instructions_config:
+            parts.append(f"\nDATA FORMAT:")
+            parts.append(instructions_config["data_format"])
+        
         # Output style
         if "output_style" in instructions_config:
             parts.append(f"\n{instructions_config['output_style']}")

@@ -56,24 +56,7 @@ class DeveloperResultsSection:
                     with col3:
                         st.metric("Summary Length", f"{len(kpi_summary)} chars")
             
-            # Financial Summary (collapsible, organized with tabs)
-            with st.expander("📋 Financial Summary & Analysis", expanded=False):
-                tabs = st.tabs(["📄 Summary", "📊 Analytics", "🔧 Debug Info"])
-                
-                with tabs[0]:
-                    st.text_area("KPI Summary", kpi_summary, height=400, label_visibility="collapsed")
-                
-                with tabs[1]:
-                    self._render_kpi_analytics(df, format_name)
-                
-                with tabs[2]:
-                    if config.get('debug_mode', False):
-                        self._render_kpi_debug(df, format_name, kpi_summary)
-                    else:
-                        st.info("Enable Debug Mode in sidebar to see debug information")
-
-            # Main AI Analysis Section
-            st.markdown("## 🤖 AI Analysis")
+            # Main analysis section
             self._render_enhanced_ai_analysis(df, kpi_summary, config)
             
         except Exception as e:
@@ -136,6 +119,24 @@ class DeveloperResultsSection:
                 
                 if config.get('show_api_logs', False):
                     st.write("**API Call Logs will appear here during analysis**")
+        
+        # KPI Debug Information (collapsible, only in debug mode)
+        if config.get('debug_mode', False):
+            # Get format name for debug
+            force_format = config.get('force_format')
+            if force_format and force_format != "None":
+                debug_format_name = force_format
+            else:
+                debug_format_name = "T12_Monthly_Financial"
+                
+            with st.expander("📊 KPI Analytics & Debug", expanded=False):
+                tabs = st.tabs(["📊 Analytics", "🔧 Debug Info"])
+                
+                with tabs[0]:
+                    self._render_kpi_analytics(df, debug_format_name)
+                
+                with tabs[1]:
+                    self._render_kpi_debug(df, debug_format_name, kpi_summary)
         
         # AI Analysis with enhanced developer options
         processed_output = display_ai_analysis_section(

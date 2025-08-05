@@ -138,21 +138,21 @@ def display_prompt_testing_section(kpi_summary, df=None):
                 else:
                     st.info("No saved prompts found")
         
-        # Prompt type selection
+        # Prompt type selection for developer testing
         prompt_type = st.radio(
             "Select Prompt Type to Preview:",
-            ["📄 Standard Analysis", "🚀 Enhanced Analysis"],
+            ["� Enhanced Analysis (Primary)", "� Fallback Analysis (Standard)"],
             horizontal=True,
-            help="Choose which analysis method's prompt you want to see"
+            help="Primary uses Assistants API, Fallback uses standard chat completion"
         )
         
         if st.button("🔍 Show Me The Prompts!", key="test_prompt", type="primary"):
             try:
-                if prompt_type == "📄 Standard Analysis":
-                    # Standard Analysis Prompt
+                if prompt_type == "📄 Fallback Analysis (Standard)":
+                    # Fallback Analysis Prompt (used when Enhanced fails)
                     system_prompt, user_prompt = build_prompt(kpi_summary)
                     
-                    st.write("**📄 Standard Analysis - System Prompt (Editable):**")
+                    st.write("**📄 Fallback Analysis - System Prompt (Used when Enhanced fails):**")
                     edited_system_prompt = st.text_area(
                         "System Prompt", 
                         system_prompt, 
@@ -161,7 +161,7 @@ def display_prompt_testing_section(kpi_summary, df=None):
                         label_visibility="collapsed"
                     )
                     
-                    st.write("**📄 Standard Analysis - User Prompt (Editable):**")
+                    st.write("**📄 Fallback Analysis - User Prompt:**")
                     edited_user_prompt = st.text_area(
                         "User Prompt", 
                         user_prompt, 
@@ -173,7 +173,7 @@ def display_prompt_testing_section(kpi_summary, df=None):
                     # Show token count estimation
                     total_chars = len(edited_system_prompt) + len(edited_user_prompt)
                     estimated_tokens = total_chars // 4
-                    st.info(f"📊 Standard Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
+                    st.info(f"📊 Fallback Analysis - Estimated tokens: ~{estimated_tokens:,} (Characters: {total_chars:,})")
                     
                     # Test the edited prompts
                     col1, col2 = st.columns(2)
@@ -215,7 +215,7 @@ FOCUSED ANALYSIS NEEDED:
 
 Please be concise and focus on actionable insights for property management decisions. Limit code analysis to essential validations only."""
                     
-                    st.write("**🚀 Enhanced Analysis - System Instructions (Editable):**")
+                    st.write("**System Instructions (Editable):**")
                     edited_system_instructions = st.text_area(
                         "System Instructions", 
                         system_instructions, 
@@ -224,7 +224,7 @@ Please be concise and focus on actionable insights for property management decis
                         label_visibility="collapsed"
                     )
                     
-                    st.write("**🚀 Enhanced Analysis - User Message (Editable):**")
+                    st.write("**User Message (Editable):**")
                     edited_user_content = st.text_area(
                         "User Message", 
                         user_content, 
@@ -233,7 +233,7 @@ Please be concise and focus on actionable insights for property management decis
                         label_visibility="collapsed"
                     )
                     
-                    st.write("**🚀 Enhanced Analysis - Additional Context:**")
+                    st.write("**Additional Context:**")
                     st.info("📁 **Raw Data File**: Complete T12 CSV data is uploaded to OpenAI with code_interpreter access")
                     st.info("🧠 **AI Model**: GPT-4o with code_interpreter tool enabled")
                     st.info("🔍 **Analysis Capability**: AI can run Python code to analyze your raw data directly")

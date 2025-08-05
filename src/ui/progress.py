@@ -31,7 +31,7 @@ def display_progress():
         ('file_validation', '✅ File Validation'),
         ('data_processing', '⚙️ Data Processing'),
         ('kpi_generation', '📊 KPI Generation'),
-        ('ai_analysis', '🤖 AI Analysis')
+        ('ai_analysis', '🤖 Analysis')
     ]
     
     for step_key, step_label in steps:

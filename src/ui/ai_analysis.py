@@ -1,5 +1,19 @@
 """
-AI analysis UI components with enhanced and standard options
+AI analysis UI comp    # Analysis with detailed progress
+    ai_progress = st.progress(0)
+    ai_status = st.empty()
+    
+    ai_status.text("🔄 Initializing analysis...")
+    ai_progress.progress(0.25)
+    
+    try:
+        # Analysis with Assistants API
+        # Create progress callback function
+        def update_progress(message, progress_pct):
+            ai_status.text(message)
+            # Convert percentage to decimal (0-100 -> 0.0-1.0)
+            progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
+            ai_progress.progress(progress_decimal)hanced Analysis (Assistants API) only
 """
 import streamlit as st
 from datetime import datetime
@@ -8,92 +22,64 @@ from src.ai.assistants_api import analyze_with_assistants_api
 from src.core.output_quality import post_process_output
 
 def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address):
-    """Display AI analysis section with method selection"""
-    
-    st.subheader("🤖 AI-Powered Analysis")
-    
-    # Analysis method selection
-    analysis_method = st.radio(
-        "Choose Analysis Method:",
-        ["🚀 Enhanced Analysis (Assistants API + Raw Data)", "📄 Standard Analysis (Text Summary Only)"],
-        help="Enhanced analysis lets AI examine your raw data directly for deeper insights"
-    )
+    """Display AI analysis section using Enhanced Analysis only"""
     
     if not api_key:
-        st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate AI analysis")
-        st.info("💡 Your API key is used securely and is not stored")
+        st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate analysis")
         return None
     
-    if st.button("🎯 Generate AI Analysis", type="primary", use_container_width=True):
-        return run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, property_address)
+    if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
+        return run_ai_analysis(df, kpi_summary, api_key, property_name, property_address)
     
     return None
 
-def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, property_address):
-    """Execute AI analysis based on selected method"""
+def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address):
+    """Execute Enhanced AI analysis using Assistants API"""
     
     # AI Analysis with detailed progress
     ai_progress = st.progress(0)
     ai_status = st.empty()
     
-    ai_status.text("🔧 Building analysis prompt...")
+    ai_status.text("� Initializing Enhanced AI Analysis...")
     ai_progress.progress(0.25)
     
     try:
-        # Choose analysis method based on user selection  
-        if analysis_method.startswith("🚀 Enhanced"):
-            # Enhanced Analysis with Assistants API
-            ai_status.text("🚀 Initializing Enhanced AI Analysis...")
-            ai_progress.progress(0.25)
+        # Enhanced Analysis with Assistants API
+        # Create progress callback function
+        def update_progress(message, progress_pct):
+            ai_status.text(message)
+            # Convert percentage to decimal (0-100 -> 0.0-1.0)
+            progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
+            ai_progress.progress(progress_decimal)
+        
+        try:
+            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress)
+            ai_status.text("✨ Analysis complete!")
+            ai_progress.progress(1.0)
             
-            # Create progress callback function
-            def update_progress(message, progress_pct):
-                ai_status.text(message)
-                # Convert percentage to decimal (0-100 -> 0.0-1.0)
-                progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
-                ai_progress.progress(progress_decimal)
+            # Store analysis result for validation
+            st.session_state['last_enhanced_analysis_result'] = ai_response
+            st.session_state['last_analysis_method'] = "Enhanced Analysis (Assistants API)"
             
-            try:
-                ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress)
-                ai_status.text("✨ Enhanced analysis complete!")
-                ai_progress.progress(1.0)
-                
-                # Store Enhanced Analysis result for validation
-                st.session_state['last_enhanced_analysis_result'] = ai_response
-                st.session_state['last_analysis_method'] = "Enhanced Analysis (Assistants API)"
-                
-                # Check if Enhanced Analysis actually succeeded
-                if ai_response.startswith("Enhanced analysis incomplete") or ai_response.startswith("Enhanced analysis ended"):
-                    st.warning(f"⚠️ {ai_response}")
-                    st.info("🔄 **AUTO-FALLBACK**: Switching to Standard Analysis...")
-                    ai_status.text("🔄 Falling back to standard analysis...")
-                    ai_progress.progress(0.6)
-                    
-                    # Update analysis method for proper validation
-                    analysis_method = "Standard Analysis (Fallback from Enhanced)"
-                    
-                    # Fallback to standard analysis
-                    system_prompt, user_prompt = build_prompt(kpi_summary)
-                    ai_response = call_openai(system_prompt, user_prompt, api_key)
-                
-            except Exception as e:
-                st.error(f"Enhanced analysis failed: {str(e)}")
-                st.info("🔄 **FALLBACK**: Switching to Standard Analysis...")
+            # Check if Enhanced Analysis actually succeeded
+            if ai_response.startswith("Enhanced analysis incomplete") or ai_response.startswith("Enhanced analysis ended"):
+                st.warning(f"⚠️ {ai_response}")
+                st.info("🔄 **AUTO-FALLBACK**: Switching to Standard Analysis...")
                 ai_status.text("🔄 Falling back to standard analysis...")
                 ai_progress.progress(0.6)
-                
-                # Update analysis method for proper validation
-                analysis_method = "Standard Analysis (Fallback from Enhanced)"
                 
                 # Fallback to standard analysis
                 system_prompt, user_prompt = build_prompt(kpi_summary)
                 ai_response = call_openai(system_prompt, user_prompt, api_key)
-        
-        else:
-            # Standard Analysis (Text Summary Only)
+                
+        except Exception as e:
+            st.error(f"Enhanced analysis failed: {str(e)}")
+            st.info("🔄 **FALLBACK**: Switching to Standard Analysis...")
+            ai_status.text("🔄 Falling back to standard analysis...")
+            ai_progress.progress(0.6)
+            
+            # Fallback to standard analysis
             system_prompt, user_prompt = build_prompt(kpi_summary)
-            ai_status.text("🤖 Calling OpenAI API...")
-            ai_progress.progress(0.5)
             ai_response = call_openai(system_prompt, user_prompt, api_key)
         
         ai_status.text("✨ Processing AI response...")
@@ -101,22 +87,13 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
         
         # Validate and post-process response
         if not ai_response.startswith("Error:"):
-            st.write(f"🔍 **ANALYSIS METHOD DETECTED:** {analysis_method}")
+            st.success("🚀 **Enhanced Analysis Complete** - Processing results...")
             
-            # Debug: Show the response content for Enhanced Analysis
-            if analysis_method == "Enhanced (Raw Data Access)":
-                st.success("🎯 **ENHANCED ANALYSIS DETECTED - ACTIVATING DEBUG MODE**")
-                st.info("**Debug - Enhanced Analysis Response:**")
-                st.text_area("Raw Response", ai_response, height=200, key="enhanced_debug")
-                st.info(f"**Response Length:** {len(ai_response)} characters")
-                st.info(f"**Response Preview:** {ai_response[:200]}...")
-                
-                # FORCE BYPASS VALIDATION FOR ENHANCED ANALYSIS
-                st.warning("🧪 **DEBUG MODE ACTIVE**: Completely bypassing validation for Enhanced Analysis")
-                is_valid = True
-                validation_msg = "Validation completely bypassed for Enhanced Analysis debugging"
-                
-                # Skip to processing
+            # Use enhanced validation for Assistants API responses
+            is_valid, validation_msg = validate_response(ai_response, "enhanced")
+            
+            if is_valid:
+                # Post-process the output
                 property_info = {
                     "name": property_name or "Unknown Property",
                     "address": property_address or "No address provided"
@@ -128,29 +105,10 @@ def run_ai_analysis(df, kpi_summary, analysis_method, api_key, property_name, pr
                 ai_progress.progress(1.0)
                 
                 return processed_output
-            
             else:
-                # Standard Analysis validation
-                st.info("📊 **STANDARD ANALYSIS - Using normal validation**")
-                is_valid, validation_msg = validate_response(ai_response, "standard")
-                
-                if is_valid:
-                    # Post-process the output
-                    property_info = {
-                        "name": property_name or "Unknown Property",
-                        "address": property_address or "No address provided"
-                    }
-                    
-                    processed_output = post_process_output(ai_response, property_info)
-                    
-                    ai_status.text("✅ Analysis complete!")
-                    ai_progress.progress(1.0)
-                    
-                    return processed_output
-                else:
-                    st.error(f"❌ Response validation failed: {validation_msg}")
-                    st.warning("🔄 Try regenerating the analysis or check your API key")
-                    return None
+                st.error(f"❌ Response validation failed: {validation_msg}")
+                st.warning("🔄 Try regenerating the analysis or check your API key")
+                return None
         else:
             st.error(f"❌ {ai_response}")
             if "api key" in ai_response.lower():

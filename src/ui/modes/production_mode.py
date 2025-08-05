@@ -202,12 +202,7 @@ class ProductionMode(BaseUIMode):
             else:
                 kpi_summary = st.session_state['kpi_summary']
             
-            # Minimal KPI display - only show if user wants detail
-            with st.expander("📋 View Financial Summary", expanded=False):
-                st.text_area("KPI Summary", kpi_summary, height=250, label_visibility="collapsed")
-
-            # Main focus: AI Analysis
-            st.markdown("## 🤖 AI Analysis")
+            # Main analysis section
             self._render_ai_analysis(df, kpi_summary, config)
             
         except Exception as e:

@@ -97,7 +97,7 @@ Use this checklist to track progress through each stage. Mark each box as you co
 #### 8.1 Production Mode UI - Clean & Results-Focused
 - [x] **Minimal Upload Section**: Simple file drag-drop area with basic validation feedback only
 - [x] **Hide Technical Details**: No raw data preview, file structure details, or processing logs
-- [x] **Streamlined Workflow**: Upload → Analysis Method Selection → Generate → Results → Export
+- [x] **Streamlined Workflow**: Upload → Enhanced AI Analysis → Results → Export
 - [x] **Maximized Results Display**: Analysis results take up majority of screen real estate
 - [x] **Clean Analysis Output**: Professional formatting with clear sections and minimal technical jargon
 - [x] **Prominent Export Options**: Export buttons clearly visible and accessible at bottom of results
@@ -105,6 +105,7 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] **Error Handling**: User-friendly error messages without technical details or debug info
 - [x] **Property Info Focus**: Emphasize property name/address input for report branding
 - [x] **Results-First Layout**: Move analysis results above any technical sections
+- [x] **Enhanced Analysis Only**: Removed analysis method selection, always use Assistants API with smart fallback
 
 #### 8.2 Developer Mode UI - Organized & Collapsible
 - [x] **Collapsible Sections**: Use `st.expander()` for all major sections with meaningful default states
@@ -152,6 +153,7 @@ Use this checklist to track progress through each stage. Mark each box as you co
 - [x] Update UI to support file upload and display of code_interpreter results
 - [x] **Fix Enhanced Analysis validation**: Updated validation logic for Assistants API responses
 - [x] **SUCCESSFULLY TESTED**: Enhanced Analysis with raw data access is working perfectly!
+- [x] **Enhanced Analysis as Primary**: Removed analysis method selection, Enhanced Analysis is now the default with smart fallback
 - [ ] Test with large and multi-property datasets
 
 ### 11. Report Generation & Export

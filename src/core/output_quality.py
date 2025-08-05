@@ -73,29 +73,33 @@ class OutputFormatter:
             # Check for section headers (comprehensive pattern matching)
             line_upper = line.upper()
             
-            # Check for section headers (comprehensive pattern matching)
-            line_upper = line.upper()
-            
-            # Strategic Questions
-            if ('QUESTION' in line_upper and ('STRATEGIC' in line_upper or 'MANAGEMENT' in line_upper)) or '4️⃣' in line:
-                current_section = 'questions'
-                continue
-            # Recommendations  
-            elif ('RECOMMENDATION' in line_upper or 'ACTIONABLE' in line_upper) or '5️⃣' in line:
-                current_section = 'recommendations'
-                continue
-            # Concerning Trends / Red Flags
-            elif ('CONCERN' in line_upper or 'TREND' in line_upper or 'RED FLAG' in line_upper or 'IMMEDIATE ATTENTION' in line_upper) or '6️⃣' in line or '⚠️' in line:
-                current_section = 'concerns'
-                continue
-            # Key Observations
-            elif ('OBSERVATION' in line_upper or 'KEY' in line_upper) or '3️⃣' in line:
-                current_section = 'insights'
-                continue
-            # Reset current_section for untracked sections (but only for ## headers we don't recognize)
-            elif line.startswith('##') and not any(emoji in line for emoji in ['3️⃣', '4️⃣', '5️⃣', '6️⃣']):
-                current_section = None
-                continue
+            # ONLY detect section headers - lines that start with ## or contain emoji headers
+            if line.startswith('##') or any(emoji in line for emoji in ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣']):
+                # Strategic Questions - Enhanced detection
+                if ('4️⃣' in line or 
+                    ('QUESTION' in line_upper and ('STRATEGIC' in line_upper or 'MANAGEMENT' in line_upper))):
+                    current_section = 'questions'
+                    continue
+                # Recommendations - Enhanced detection  
+                elif ('5️⃣' in line or 
+                      ('RECOMMENDATION' in line_upper or 'ACTIONABLE' in line_upper)):
+                    current_section = 'recommendations'
+                    continue
+                # Concerning Trends / Red Flags - Enhanced detection
+                elif ('6️⃣' in line or '⚠️' in line or
+                      ('CONCERN' in line_upper or 'TREND' in line_upper or 'RED FLAG' in line_upper or 
+                       'IMMEDIATE ATTENTION' in line_upper or 'RED FLAGS' in line_upper)):
+                    current_section = 'concerns'
+                    continue
+                # Key Observations
+                elif ('3️⃣' in line or
+                      ('OBSERVATION' in line_upper or ('KEY' in line_upper and 'OBSERVATION' in line_upper))):
+                    current_section = 'insights'
+                    continue
+                # Other section headers we don't recognize - reset section
+                else:
+                    current_section = None
+                    continue
             
             # Extract list items (handle both numbered lists and bullet points)
             if current_section:

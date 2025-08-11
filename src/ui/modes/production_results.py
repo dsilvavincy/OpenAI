@@ -9,6 +9,8 @@ Handles analysis generation and display with options for:
 import streamlit as st
 import pandas as pd
 from typing import Optional, Dict, Any
+from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis
+from src.utils.format_detection import get_stored_format
 
 
 class ProductionResults:
@@ -206,6 +208,9 @@ class ProductionResults:
                 key="selected_property_select"
             )
             st.session_state['selected_property'] = selected_property
+            # If the selected property changed since the last analysis, clear cached output
+            if st.session_state.get('last_analyzed_property') != selected_property:
+                st.session_state.pop('processed_analysis_output', None)
         else:
             selected_property = None
             st.info("No Property column found; analysis will use all rows.")
@@ -217,45 +222,46 @@ class ProductionResults:
     @staticmethod
     def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any], selected_property: Optional[str] = None):
         """Render AI analysis with side-by-side option."""
-        from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options, get_existing_analysis_results
-        from src.utils.format_detection import get_stored_format
-        
         # Check for existing analysis results first
         existing_output = get_existing_analysis_results()
-        
+
         if existing_output:
             # Display existing results
             st.markdown("## 📊 Analysis Report")
             ProductionResults._display_analysis_with_options(existing_output, config)
             ProductionResults._display_regenerate_option()
             return
-        
-        # No existing results - show analysis generation interface
+
+        # No existing results - trigger analysis immediately
         detected_format = get_stored_format()
-        
+
         # Build model configuration
         model_config = {
             "model_selection": config.get('model_selection', 'gpt-4o'),
             "temperature": config.get('temperature', 0.2),
             "max_tokens": config.get('max_tokens', 2500)
         }
-        
-        # Generate new analysis
+
+        # Generate new analysis immediately (no second button)
         property_label = selected_property or config.get('property_name', '')
-        processed_output = display_ai_analysis_section(
-            monthly_df,
-            ytd_df,
-            config['api_key'],
-            property_label,
-            config['property_address'],
-            detected_format,
-            model_config,
-            selected_property=selected_property
-        )
-        
+        with st.spinner('Uploading to LLM and analyzing…'):
+            processed_output = run_ai_analysis(
+                monthly_df,
+                ytd_df,
+                config['api_key'],
+                property_label,
+                config.get('property_address', ''),
+                detected_format,
+                model_config,
+                selected_property=selected_property
+            )
+
         if processed_output:
             st.markdown("---")
             st.markdown("## 📊 Analysis Report")
+            # Persist for subsequent reruns so the UI shows existing results
+            st.session_state['processed_analysis_output'] = processed_output
+            st.session_state['last_analyzed_property'] = selected_property
             ProductionResults._display_analysis_with_options(processed_output, config)
     
     @staticmethod

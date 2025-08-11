@@ -12,6 +12,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import pandas as pd
 from .prompt_manager import prompt_manager
+import streamlit as st
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,13 +37,9 @@ class PropertyAssistantAnalyzer:
         self.thread_id = None
         
     def get_assistant_instructions(self, format_name="t12_monthly_financial", selected_property: str | None = None):
-        """Get format-specific assistant instructions, formatting placeholders where needed."""
+        """Get format-specific assistant instructions. Keep property generic to enable reuse across selections."""
+        # Do not inject a specific property into assistant instructions; rely on the user message to specify it
         instructions = prompt_manager.build_system_instructions(format_name, "assistants")
-        if selected_property:
-            try:
-                instructions = instructions.replace("{selected_property}", selected_property)
-            except Exception:
-                pass
         return instructions
         
     def create_assistant(self, format_name="t12_monthly_financial", model="gpt-4o", selected_property: str | None = None):
@@ -90,38 +87,22 @@ class PropertyAssistantAnalyzer:
     def create_thread_with_data(self, monthly_df, ytd_df, kpi_summary, format_name="t12_monthly_financial", selected_property: str | None = None):
         """Create a conversation thread with both monthly and YTD data and KPI summary"""
         try:
-            # Upload both DataFrames
-            file_id_monthly, label_monthly = self.upload_dataframe(monthly_df, label="Monthly Data")
-            file_id_ytd, label_ytd = self.upload_dataframe(ytd_df, label="YTD Data")
-            # Build format-specific prompt content
+            # Upload both DataFrames (or reuse if available in session_state)
+            file_id_monthly = st.session_state.get('assist_file_id_monthly')
+            file_id_ytd = st.session_state.get('assist_file_id_ytd')
+            label_monthly, label_ytd = "Monthly Data", "YTD Data"
+            if not file_id_monthly:
+                file_id_monthly, label_monthly = self.upload_dataframe(monthly_df, label="Monthly Data")
+                st.session_state['assist_file_id_monthly'] = file_id_monthly
+            if not file_id_ytd:
+                file_id_ytd, label_ytd = self.upload_dataframe(ytd_df, label="YTD Data")
+                st.session_state['assist_file_id_ytd'] = file_id_ytd
+            # Minimal user message; rely on system instructions for all details
             format_upper = format_name.upper().replace("_", " ")
             property_clause = f" for property '{selected_property}'" if selected_property else ""
-            # Optional KPI summary section
-            kpi_section = f"\nMY LOCAL SUMMARY (for reference only):\n{kpi_summary}\n" if kpi_summary else ""
-            validate_bullet = "Validate key numbers from my summary using the raw data" if kpi_summary else "Validate key numbers directly from the raw data (no external summary)"
-            prompt_content = f"""Analyze this {format_upper} property financial data{property_clause} by directly examining the attached CSV files:
-
-RAW CSV DATA: Use both attached CSV files for your analysis. If a Property column exists, filter rows to match the selected property exactly.
-- {label_monthly}: Monthly property financial data
-- {label_ytd}: Year-to-date (YTD) property financial data
-
-{kpi_section}
-
-ANALYSIS REQUIREMENTS:
-1. Load and examine both CSV data structures
-2. Perform detailed trend analysis on key metrics using both monthly and YTD data
-3. {validate_bullet}
-4. Calculate percentage changes and identify patterns
-5. Provide actionable insights based on your data analysis
-
-FOCUS AREAS:
-- Month-over-month Revenue trends with percentage changes
-- NOI performance and concerning patterns
-- Occupancy/vacancy trends over time
-- Validate my Revenue, NOI, and expense calculations against raw data
-- Identify any data quality issues or anomalies
-
-Please provide a comprehensive analysis filtered to the selected property (if provided) with strategic recommendations based on your examination of both raw data files."""
+            prompt_content = (
+                f"Give me the report{property_clause}."
+            )
             # Log the exact prompt being sent
             logger.info("=== ENHANCED ANALYSIS PROMPT ===")
             logger.info(f"Assistant Instructions (system): {self.get_assistant_instructions(format_name, selected_property)}")
@@ -153,6 +134,24 @@ Please provide a comprehensive analysis filtered to the selected property (if pr
         except Exception as e:
             logger.error(f"Error creating thread: {str(e)}")
             raise
+
+    def add_message_to_existing_thread(self, prompt_content: str):
+        """Add a new user message to the existing thread, re-attaching existing files for the code interpreter."""
+        if not self.thread_id:
+            raise ValueError("No existing thread to add a message to")
+        file_id_monthly = st.session_state.get('assist_file_id_monthly')
+        file_id_ytd = st.session_state.get('assist_file_id_ytd')
+        attachments = []
+        if file_id_monthly:
+            attachments.append({"file_id": file_id_monthly, "tools": [{"type": "code_interpreter"}]})
+        if file_id_ytd:
+            attachments.append({"file_id": file_id_ytd, "tools": [{"type": "code_interpreter"}]})
+        self.client.beta.threads.messages.create(
+            thread_id=self.thread_id,
+            role="user",
+            content=prompt_content,
+            attachments=attachments if attachments else None
+        )
     
     def run_analysis(self, progress_callback=None, streaming_callback=None):
         """Run the analysis and get response using streaming (stream=True)"""
@@ -272,19 +271,46 @@ Please provide a comprehensive analysis filtered to the selected property (if pr
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(monthly_df, ytd_df, kpi_summary, api_key=None, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None):
+def analyze_with_assistants_api(monthly_df, ytd_df, kpi_summary, api_key=None, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None, reuse_session: bool = True):
     """Convenience function for property analysis using Assistants API with both monthly and YTD data"""
     analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_property_data(
-            monthly_df,
-            ytd_df,
-            kpi_summary,
-            progress_callback,
-            streaming_callback,
-            format_name,
-            model_config,
-            selected_property,
-        )
+        # Reuse assistant if available
+        if reuse_session:
+            existing_assistant = st.session_state.get('assist_assistant_id')
+            existing_thread = st.session_state.get('assist_thread_id')
+            if existing_assistant:
+                analyzer.assistant_id = existing_assistant
+            if existing_thread:
+                analyzer.thread_id = existing_thread
+
+        # Ensure assistant exists
+        if not analyzer.assistant_id:
+            if progress_callback:
+                progress_callback("🤖 Creating AI assistant...", 10)
+            assistant = analyzer.create_assistant(format_name, (model_config or {}).get("model_selection", "gpt-4o"), selected_property)
+            st.session_state['assist_assistant_id'] = assistant.id
+
+        # Create or reuse thread
+        format_upper = format_name.upper().replace("_", " ")
+        property_clause = f" for property '{selected_property}'" if selected_property else ""
+        prompt_content = f"Give me the report{property_clause}."
+
+        if not analyzer.thread_id:
+            if progress_callback:
+                progress_callback("📤 Preparing data and starting thread...", 30)
+            thread = analyzer.create_thread_with_data(monthly_df, ytd_df, kpi_summary, format_name, selected_property)
+            st.session_state['assist_thread_id'] = thread.id
+        else:
+            if progress_callback:
+                progress_callback("✉️ Adding message to existing thread...", 40)
+            analyzer.add_message_to_existing_thread(prompt_content)
+
+        if progress_callback:
+            progress_callback("🧠 Starting AI analysis...", 50)
+        result = analyzer.run_analysis(progress_callback, streaming_callback)
+        return result
     finally:
-        analyzer.cleanup()
+        # Do not cleanup if reusing session; otherwise, cleanup resources
+        if not reuse_session:
+            analyzer.cleanup()

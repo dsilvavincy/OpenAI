@@ -56,26 +56,17 @@ def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address
                 st.caption(f"📊 Characters received: {len(response_so_far)}")
         # Pass both monthly and YTD data to the analysis function
         try:
-            # Optionally pre-filter dataframes by selected property to reduce tokens
-            if selected_property and 'Property' in monthly_df.columns:
-                filtered_monthly = monthly_df[monthly_df['Property'] == selected_property].copy()
-            else:
-                filtered_monthly = monthly_df
-            if selected_property and 'Property' in ytd_df.columns:
-                filtered_ytd = ytd_df[ytd_df['Property'] == selected_property].copy()
-            else:
-                filtered_ytd = ytd_df
-
             ai_response = analyze_with_assistants_api(
-                filtered_monthly,
-                filtered_ytd,
+                monthly_df,
+                ytd_df,
                 kpi_summary=None,
                 api_key=api_key,
                 progress_callback=update_progress,
                 streaming_callback=update_streaming,
                 format_name=format_name,
                 model_config=model_config,
-                selected_property=selected_property
+                selected_property=selected_property,
+                reuse_session=True
             )
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
@@ -87,9 +78,14 @@ def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address
                 st.info("🔄 **AUTO-FALLBACK**: Switching to Standard Analysis...")
                 ai_status.text("🔄 Falling back to standard analysis...")
                 ai_progress.progress(0.6)
-                # Fallback to standard analysis with format-specific prompts
+                # Fallback to standard analysis with simple user message; keep detailed system instructions
                 from src.ai.prompt import build_prompt, call_openai
-                system_prompt, user_prompt = build_prompt("", format_name)
+                system_prompt, _ = build_prompt("", format_name)
+                fallback_property = selected_property or property_name
+                user_prompt = (
+                    f"Give me the report for '{fallback_property}'"
+                    if fallback_property else "Give me the report"
+                )
                 ai_response = call_openai(system_prompt, user_prompt, api_key)
         except Exception as e:
             st.error(f"Enhanced analysis failed: {str(e)}")
@@ -97,7 +93,12 @@ def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address
             ai_status.text("🔄 Falling back to standard analysis...")
             ai_progress.progress(0.6)
             from src.ai.prompt import build_prompt, call_openai
-            system_prompt, user_prompt = build_prompt("", format_name)
+            system_prompt, _ = build_prompt("", format_name)
+            fallback_property = selected_property or property_name
+            user_prompt = (
+                f"Give me the report for '{fallback_property}'"
+                if fallback_property else "Give me the report"
+            )
             ai_response = call_openai(system_prompt, user_prompt, api_key)
         ai_status.text("✨ Processing AI response...")
         ai_progress.progress(0.75)

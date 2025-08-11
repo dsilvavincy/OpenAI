@@ -56,8 +56,6 @@ class PromptManager:
         
         if analysis_type == "assistants":
             instructions_config = config.get("assistants_api_instructions", {})
-        elif analysis_type == "fallback":
-            instructions_config = config.get("fallback_instructions", {})
         elif analysis_type == "minimal":
             instructions_config = config.get("minimal_instructions", {})
         else:
@@ -139,9 +137,7 @@ class PromptManager:
         config = self.load_format_prompts(format_name)
         
         # Select appropriate prompt template
-        if analysis_type == "fallback":
-            template = config.get("fallback_prompt_template", "Analyze this data:\n\n{data_content}")
-        elif analysis_type == "minimal":
+        if analysis_type == "minimal":
             template = config.get("minimal_prompt_template", "Review this data:\n\n{data_content}")
         else:
             template = config.get("user_prompt_template", "Please analyze the following data:\n\n{data_content}")
@@ -223,7 +219,7 @@ class PromptManager:
                 "output_style": "Be concise, specific, and focus on actionable insights that can drive business decisions."
             },
             "user_prompt_template": "Please analyze the following property financial data:\n\n{data_content}\n\nBased on this data, provide your analysis following the framework outlined in your instructions.",
-            "fallback_prompt_template": "Analyze this property data and provide key insights:\n\n{data_content}",
+            
             "validation_keywords": {
                 "required_content": ["property", "financial", "analysis", "performance", "recommend"],
                 "standard_analysis": {

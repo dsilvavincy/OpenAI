@@ -32,151 +32,84 @@ def clear_analysis_results():
     if 'analysis_data_hash' in st.session_state:
         del st.session_state['analysis_data_hash']
 
-def display_ai_analysis_section(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
+def display_ai_analysis_section(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
     """Display AI analysis section using Enhanced Analysis with format-specific prompts"""
-    from src.ui.shared_file_manager import SharedFileManager
-    
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate analysis")
         return None
-    
-    # Default model configuration
-    if model_config is None:
-        model_config = {
-            "model_selection": "gpt-4o",
-            "temperature": 0.2,
-            # No token limit - allow unlimited response length
-        }
-
-    # Use shared file manager data if df is None
-    if df is None:
-        df = SharedFileManager.get_processed_df()
-        if df is None:
-            st.error("No processed data available for analysis")
-            return None
-    
-    # Check if we already have analysis results in session state
-    if 'processed_analysis_output' in st.session_state:
-        # Check if the current data matches the stored analysis
-        current_data_hash = hash(str(df.values.tobytes()) + kpi_summary + property_name + property_address)
-        stored_hash = st.session_state.get('analysis_data_hash', None)
-        
-        if current_data_hash == stored_hash:
-            # Data hasn't changed, return stored results
-            st.info("📋 **Analysis Results Available** - Using existing analysis from current session")
-            return st.session_state['processed_analysis_output']
-    
-    # Show generate button for new analysis
     if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
-        processed_output = run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name, model_config)
-        
+        # Pass both monthly_df and ytd_df to run_ai_analysis
+        processed_output = run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name, model_config)
         if processed_output:
-            # Store results in session state for mode switching
             st.session_state['processed_analysis_output'] = processed_output
-            st.session_state['analysis_data_hash'] = hash(str(df.values.tobytes()) + kpi_summary + property_name + property_address)
-            
         return processed_output
-    
     return None
 
-def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
-    """Execute Enhanced AI analysis using Assistants API with format-specific prompts"""
-    
-    # Default model configuration
+def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
+    """Execute Enhanced AI analysis using Assistants API with both monthly and YTD data"""
     if model_config is None:
         model_config = {
             "model_selection": "gpt-4o",
             "temperature": 0.2,
-            # No token limit - allow unlimited response length
         }
-
-    # Display current AI model settings
-    st.info(f"🤖 **AI Model:** {model_config['model_selection']} | **Temperature:** {model_config['temperature']} | **Unlimited Tokens**")    # AI Analysis with detailed progress
+    st.info(f"🤖 **AI Model:** {model_config['model_selection']} | **Temperature:** {model_config['temperature']} | **Unlimited Tokens**")
     ai_progress = st.progress(0)
     ai_status = st.empty()
-    
-    ai_status.text("� Initializing Enhanced AI Analysis...")
+    ai_status.text("🔄 Initializing Enhanced AI Analysis...")
     ai_progress.progress(0.25)
-    
     try:
-        # Enhanced Analysis with Assistants API
-        # Create progress callback function
         def update_progress(message, progress_pct):
             ai_status.text(message)
-            # Convert percentage to decimal (0-100 -> 0.0-1.0)
             progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
             ai_progress.progress(progress_decimal)
-        
-        # Create streaming display area
         streaming_container = st.empty()
-        
-        # Create streaming callback function
         def update_streaming(response_so_far):
             with streaming_container.container():
                 st.markdown("### 🔄 AI Analysis (Live Stream)")
-                # Show the response as it comes in
                 st.markdown(response_so_far)
-                # Add a small debug indicator
                 st.caption(f"📊 Characters received: {len(response_so_far)}")
-        
+        # Pass both monthly and YTD data to the analysis function
         try:
-            ai_response = analyze_with_assistants_api(df, kpi_summary, api_key, update_progress, update_streaming, format_name, model_config)
+            # You may need to update analyze_with_assistants_api to accept both DataFrames
+            ai_response = analyze_with_assistants_api(monthly_df, ytd_df, api_key, update_progress, update_streaming, format_name, model_config)
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
-            
-            # Clear the streaming container and show final result
             streaming_container.empty()
-            
-            # Store analysis result for validation
             st.session_state['last_enhanced_analysis_result'] = ai_response
             st.session_state['last_analysis_method'] = "Enhanced Analysis (Assistants API)"
-            
-            # Check if Enhanced Analysis actually succeeded
             if ai_response.startswith("Enhanced analysis incomplete") or ai_response.startswith("Enhanced analysis ended"):
                 st.warning(f"⚠️ {ai_response}")
                 st.info("🔄 **AUTO-FALLBACK**: Switching to Standard Analysis...")
                 ai_status.text("🔄 Falling back to standard analysis...")
                 ai_progress.progress(0.6)
-                
                 # Fallback to standard analysis with format-specific prompts
-                system_prompt, user_prompt = build_prompt(kpi_summary, format_name)
+                from src.ai.prompt import build_prompt, call_openai
+                system_prompt, user_prompt = build_prompt("", format_name)
                 ai_response = call_openai(system_prompt, user_prompt, api_key)
-                
         except Exception as e:
             st.error(f"Enhanced analysis failed: {str(e)}")
             st.info("🔄 **FALLBACK**: Switching to Standard Analysis...")
             ai_status.text("🔄 Falling back to standard analysis...")
             ai_progress.progress(0.6)
-            
-            # Fallback to standard analysis with format-specific prompts
-            system_prompt, user_prompt = build_prompt(kpi_summary, format_name)
+            from src.ai.prompt import build_prompt, call_openai
+            system_prompt, user_prompt = build_prompt("", format_name)
             ai_response = call_openai(system_prompt, user_prompt, api_key)
-        
         ai_status.text("✨ Processing AI response...")
         ai_progress.progress(0.75)
-        
-        # Validate and post-process response
         if not ai_response.startswith("Error:"):
             st.success("🚀 **Enhanced Analysis Complete** - Processing results...")
-            
-            # Use enhanced validation for Assistants API responses
+            from src.ai.prompt import validate_response
             is_valid, validation_msg = validate_response(ai_response, "enhanced")
-            
             if is_valid:
-                # Post-process the output
                 property_info = {
                     "name": property_name or "Unknown Property",
                     "address": property_address or "No address provided"
                 }
-                
+                from src.core.output_quality import post_process_output
                 processed_output = post_process_output(ai_response, property_info)
-                
-                # Store raw response for developer viewing
                 processed_output["raw_response"] = ai_response
-                
                 ai_status.text("✅ Analysis complete!")
                 ai_progress.progress(1.0)
-                
                 return processed_output
             else:
                 st.error(f"❌ Response validation failed: {validation_msg}")
@@ -189,7 +122,6 @@ def run_ai_analysis(df, kpi_summary, api_key, property_name, property_address, f
             elif "rate limit" in ai_response.lower():
                 st.info("💡 Please wait a moment and try again")
             return None
-            
     except Exception as e:
         st.error(f"❌ Error during analysis: {str(e)}")
         st.info("💡 **Troubleshooting tips:**")

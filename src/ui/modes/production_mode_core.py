@@ -43,8 +43,11 @@ class ProductionModeCore(BaseUIMode):
         # Clean, minimal header
         st.title("🏢 Property Analysis Dashboard")
         
-        # Check if we have processed data to determine layout
-        if 'processed_df' in st.session_state and st.session_state['processed_df'] is not None:
+        # Check if we have processed monthly and YTD data to determine layout
+        if (
+            'processed_monthly_df' in st.session_state and st.session_state['processed_monthly_df'] is not None and
+            'processed_ytd_df' in st.session_state and st.session_state['processed_ytd_df'] is not None
+        ):
             # Results-first layout: show results prominently, upload section minimized
             self._render_results_first_layout(uploaded_file, config)
         else:
@@ -70,8 +73,14 @@ class ProductionModeCore(BaseUIMode):
             with col1:
                 if 'uploaded_file' in st.session_state:
                     file_name = st.session_state['uploaded_file'].name
-                    df = st.session_state['processed_df']
-                    st.success(f"✅ **{file_name}** - {df.shape[0]} rows, {df['Metric'].nunique()} metrics")
+                    monthly_df = st.session_state.get('processed_monthly_df')
+                    ytd_df = st.session_state.get('processed_ytd_df')
+                    msg = f"✅ **{file_name}**"
+                    if monthly_df is not None:
+                        msg += f" - {monthly_df.shape[0]} monthly rows, {monthly_df['Metric'].nunique()} metrics"
+                    if ytd_df is not None:
+                        msg += f" | {ytd_df.shape[0]} YTD rows"
+                    st.success(msg)
             with col2:
                 if st.button("🔄 Upload New File", help="Upload a different T12 file"):
                     # Clear session state to return to upload mode

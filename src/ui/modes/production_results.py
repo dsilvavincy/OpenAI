@@ -171,43 +171,25 @@ class ProductionResults:
             config: Configuration from sidebar
         """
         # Check if we have processed data
-        if 'processed_df' not in st.session_state:
+        # Check if we have processed monthly and YTD data
+        if 'processed_monthly_df' not in st.session_state or 'processed_ytd_df' not in st.session_state:
             st.info("👆 Upload a T12 file to begin analysis")
             return
-        
-        df = st.session_state['processed_df']
+        monthly_df = st.session_state['processed_monthly_df']
+        ytd_df = st.session_state['processed_ytd_df']
         api_key = config.get('api_key', '')
         property_name = config.get('property_name', '')
         property_address = config.get('property_address', '')
-        
         if not api_key:
             st.warning("⚠️ Please enter your OpenAI API key in the sidebar")
             return
-        
-        try:
-            # Use new scalable KPI system
-            from src.core.format_registry import format_registry
-            from src.core.kpi_registry import kpi_registry
-            
-            # Get format processor info (we already processed the file)
-            format_name = "T12_Monthly_Financial"
-            
-            # Generate KPI Summary (only if not cached)
-            if 'kpi_summary' not in st.session_state:
-                with st.spinner("📊 Generating KPI analysis..."):
-                    kpi_summary = kpi_registry.calculate_kpis(df, format_name)
-                    st.session_state['kpi_summary'] = kpi_summary
-            else:
-                kpi_summary = st.session_state['kpi_summary']
-            
-            # Main analysis section
-            self._render_ai_analysis(df, kpi_summary, config)
-            
-        except Exception as e:
-            st.error(f"❌ Analysis error: {str(e)}")
-            st.info("💡 Please check your data and API key, then try again")
+        # Add Upload to LLM button
+        show_analyze = st.button("🚀 Upload to LLM & Analyze", type="primary", use_container_width=True)
+        if show_analyze:
+            ProductionResults._render_ai_analysis(monthly_df, ytd_df, config)
     
-    def _render_ai_analysis(self, df: pd.DataFrame, kpi_summary: str, config: Dict[str, Any]):
+    @staticmethod
+    def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any]):
         """Render AI analysis with side-by-side option."""
         from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options, get_existing_analysis_results
         from src.utils.format_detection import get_stored_format
@@ -218,8 +200,8 @@ class ProductionResults:
         if existing_output:
             # Display existing results
             st.markdown("## 📊 Analysis Report")
-            self._display_analysis_with_options(existing_output, config)
-            self._display_regenerate_option()
+            ProductionResults._display_analysis_with_options(existing_output, config)
+            ProductionResults._display_regenerate_option()
             return
         
         # No existing results - show analysis generation interface
@@ -234,10 +216,10 @@ class ProductionResults:
         
         # Generate new analysis
         processed_output = display_ai_analysis_section(
-            df, 
-            kpi_summary, 
-            config['api_key'], 
-            config['property_name'], 
+            monthly_df,
+            ytd_df,
+            config['api_key'],
+            config['property_name'],
             config['property_address'],
             detected_format,
             model_config
@@ -246,14 +228,16 @@ class ProductionResults:
         if processed_output:
             st.markdown("---")
             st.markdown("## 📊 Analysis Report")
-            self._display_analysis_with_options(processed_output, config)
+            ProductionResults._display_analysis_with_options(processed_output, config)
     
-    def _display_analysis_with_options(self, output: Dict[str, Any], config: Dict[str, Any]):
+    @staticmethod
+    def _display_analysis_with_options(output: Dict[str, Any], config: Dict[str, Any]):
         """Display only the raw response as the main content."""
         # Always display just the raw response
-        self._display_raw_response_as_main_report(output)
+        ProductionResults._display_raw_response_as_main_report(output)
     
-    def _display_raw_response_as_main_report(self, output: Dict[str, Any]):
+    @staticmethod
+    def _display_raw_response_as_main_report(output: Dict[str, Any]):
         """Display the raw AI response as the main report content, using enhanced HTML formatting."""
         if "raw_response" in output:
             raw_response = output["raw_response"]
@@ -264,7 +248,7 @@ class ProductionResults:
                 if st.button("🎨 Refresh Formatting", help="Re-apply formatting to the current response"):
                     st.rerun()
             
-            formatted_html_response = self.format_response_for_streamlit(raw_response)
+            formatted_html_response = ProductionResults.format_response_for_streamlit(raw_response)
             
             with st.container():
                 st.markdown(formatted_html_response, unsafe_allow_html=True)
@@ -292,7 +276,8 @@ class ProductionResults:
         else:
             st.warning("No raw response available")
     
-    def _display_regenerate_option(self):
+    @staticmethod
+    def _display_regenerate_option():
         """Display option to regenerate analysis."""
         st.markdown("---")
         if st.button("🔄 Generate New Analysis", type="secondary", use_container_width=True):

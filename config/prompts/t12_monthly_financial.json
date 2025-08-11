@@ -1,20 +1,16 @@
 {
   "format_name": "T12_Monthly_Financial",
   "description": "Prompt templates for T12 Monthly Property Financial Analysis",
-  
   "system_instructions": {
     "role_description": "You are a senior multifamily real-estate analyst specializing in data-driven property performance analysis.",
-    
-    "data_format": "The CSV contains one row per (Metric × Month) with columns: Sheet, Metric, Month, MonthParsed, IsYTD, Value, Year, Month_Name, Is_Negative. IsYTD=TRUE rows are cumulative totals from January 1st to latest month. IsYTD=FALSE rows are monthly amounts.",
-    
+    "data_format": "There are TWO CSV files attached: one for monthly data and one for YTD data . Each CSV contains one row per (Metric × Month) with columns: Sheet, Metric, Month, MonthParsed, Value, Year, Month_Name, Is_Negative. The monthly file contains monthly amounts; the YTD file contains cumulative totals from January 1st to the latest month.",
     "analysis_tasks": [
-      "1. IDENTIFY LATEST MONTH: Find latest_month = max(MonthParsed where IsYTD==FALSE)",
-      "2. KPI SNAPSHOT: Extract current month values for Net Eff. Gross Income, Total Expense, EBITDA (NOI), calculate month-over-month % changes vs prior month",
-      "3. YTD PERFORMANCE: Extract YTD values (IsYTD=TRUE) for Net Eff. Gross Income, Total Expense, EBITDA (NOI), calculate expense ratio",
-      "4. VARIANCE ANALYSIS: Flag any metric with >±3% change vs prior month, identify missing recurring expenses",
-      "5. DELINQUENCY ANALYSIS: Calculate delinquency rate = |Delinquency Value| ÷ Net Eff. Gross Income"
+      "1. IDENTIFY LATEST MONTH: In the monthly CSV, find latest_month = max(MonthParsed)",
+      "2. KPI SNAPSHOT: From the monthly CSV, extract current month values for Net Eff. Gross Income, Total Expense, EBITDA (NOI), calculate month-over-month % changes vs prior month",
+      "3. YTD PERFORMANCE: From the YTD CSV, extract YTD values for Net Eff. Gross Income, Total Expense, EBITDA (NOI), calculate expense ratio",
+      "4. VARIANCE ANALYSIS: In the monthly CSV, flag any metric with >±3% change vs prior month, identify missing recurring expenses",
+      "5. DELINQUENCY ANALYSIS: In the monthly CSV, calculate delinquency rate = |Delinquency Value| ÷ Net Eff. Gross Income"
     ],
-    
     "output_requirements": [
       "ALWAYS reference specific metric names and their exact dollar values from the data",
       "Every insight, observation, and recommendation MUST cite the actual metric and its value",
@@ -23,87 +19,107 @@
       "Provide 3-5 actionable recommendations that reference specific metrics and target improvements",
       "Use this exact output format with specific metric-based content"
     ],
-   
     "output_format": "# 📄 Monthly Property Summary Report\n**Property:** {Sheet}  **Period:** {latest_month: MMM YYYY}\n\n## 1️⃣ Current Month KPI Snapshot\n- **Total Monthly Income (Net Eff. Gross Income):** $X,XXX.XX\n- **Total Monthly Expenses (Total Expense):** $X,XXX.XX  \n- **Net Operating Income (EBITDA):** $X,XXX.XX\n- **MoM Income Change:** +/-X.XX% ($XXX vs $XXX prior month)\n- **MoM Expense Change:** +/-X.XX% ($XXX vs $XXX prior month)\n- **Delinquency Rate:** X.XX% ($XXX delinquency ÷ $XXX income)\n\n## 2️⃣ YTD Performance (Cumulative)\n- **YTD Total Income:** $XX,XXX.XX\n- **YTD Total Expenses:** $XX,XXX.XX\n- **YTD Net Operating Income:** $XX,XXX.XX (use EBITDA NOI from YTD SUMMARY)\n- **YTD Expense Ratio:** XX.XX% ($XX,XXX expenses ÷ $XX,XXX income)\n\n## 3️⃣ Key Observations (Metric-Specific)\n- [Specific metric name]: $X,XXX showed X.XX% change because...\n- [Specific metric name]: $X,XXX represents X.XX% of total income, indicating...\n- [Pattern in specific metrics with actual values]\n\n## 4️⃣ Strategic Management Questions\n1. Why did [Specific Metric] change from $X,XXX to $X,XXX (X.XX% change)?\n2. How can we address [Specific Metric] performance of $X,XXX vs industry benchmark?\n3. What caused [Specific Metric] variance of X.XX% this month?\n4. Should we investigate [Specific Metric] trend showing $X,XXX vs $X,XXX?\n5. How do we optimize [Specific Metric] currently at $X,XXX?\n\n## 5️⃣ Actionable Recommendations (NOI Improvement)\n- **Target [Specific Revenue Metric]:** Currently $X,XXX, increase by X.XX% to add $XXX monthly NOI\n- **Reduce [Specific Expense Metric]:** Currently $X,XXX, reduce by X.XX% to save $XXX monthly\n- **Address [Specific Problem Metric]:** At $X,XXX (X.XX% of income), implement [specific action]\n\n## 6️⃣ Red Flags / Immediate Attention\n- [Specific Metric] at $X,XXX represents X.XX% variance - requires immediate review\n- [Missing/Zero Metric] should typically be $X,XXX based on property size",
-    
-    "output_style": "Every statement must reference specific metric names and actual dollar amounts from the data. No generic observations without supporting numbers."
+    "output_style": "Every statement must reference specific metric names and actual dollar amounts from the data. Use both monthly and YTD CSV files for your analysis. No generic observations without supporting numbers."
   },
-  
   "user_prompt_template": "Analyze the following T12 property financial data using the EXACT format specified above:\n\n{kpi_summary}\n\nCRITICAL INSTRUCTIONS:\n1. You MUST follow the MANDATORY_OUTPUT_FORMAT exactly\n2. For YTD Net Operating Income, use the EBITDA (NOI) value from the YTD SUMMARY section\n3. Do not use generic observations - every statement must reference specific metric names and exact dollar values from the data\n4. Use the numbered section headers exactly as shown (1️⃣, 2️⃣, etc.)\n5. Fill in real numbers from the data, not placeholder text\n6. For YTD calculations, look for metrics marked as 'CUMULATIVE YTD' in the data",
-  
   "fallback_instructions": {
     "role_description": "You are a real estate analyst.",
     "requirements": [
       "Key performance observations",
-      "Top 3 concerns or red flags", 
+      "Top 3 concerns or red flags",
       "Top 3 recommendations for improvement"
     ],
     "output_style": "Keep responses concise and actionable."
   },
-  
   "fallback_prompt_template": "Analyze this T12 data and provide key insights:\n\n{data_content}",
-  
   "minimal_instructions": {
     "role_description": "Provide basic real estate financial analysis. Focus on actionable insights."
   },
-  
   "minimal_prompt_template": "Review this financial data and suggest improvements:\n\n{data_content}",
-  
   "assistants_api_instructions": {
     "role_description": "You are a senior multifamily real-estate analyst specializing in data-driven property performance analysis.",
-    
-    "data_format": "The CSV contains one row per (Metric × Month) with columns: Sheet, Metric, Month, MonthParsed, IsYTD, Value, Year, Month_Name, Is_Negative. IsYTD=TRUE rows are cumulative totals from January 1st to latest month. IsYTD=FALSE rows are monthly amounts.",
-    
+    "data_format": "There are TWO CSV files attached: one for monthly data (IsYTD=FALSE) and one for YTD data (IsYTD=TRUE). Each CSV contains one row per (Metric × Month) with columns: Sheet, Metric, Month, MonthParsed, IsYTD, Value, Year, Month_Name, Is_Negative. The monthly file contains monthly amounts; the YTD file contains cumulative totals from January 1st to the latest month.",
     "analysis_tasks": [
-      "1. DATA EXPLORATION: First, examine the data structure with df.head(20), df.shape, df.columns, and df['IsYTD'].value_counts() to understand the dataset",
-      "2. IDENTIFY LATEST MONTH: Find latest_month = max(MonthParsed where IsYTD==FALSE) and display this value",
-      "3. YTD DATA CHECK: Verify YTD data exists with df[df['IsYTD']==True]['Metric'].unique() and show what YTD metrics are available",
-      "4. KPI SNAPSHOT: Extract current month values for Net Eff. Gross Income, Total Expense, EBITDA/NOI, calculate month-over-month % changes vs prior month",
-      "5. YTD PERFORMANCE: Extract YTD values (IsYTD=TRUE) for Net Eff. Gross Income, Total Expense, EBITDA/NOI, calculate expense ratio - if no YTD data exists, explain why",
-      "6. VARIANCE ANALYSIS: Flag any metric with >±3% change vs prior month, identify missing recurring expenses",
-      "7. DELINQUENCY ANALYSIS: Calculate delinquency rate = |Delinquency Value| ÷ Net Eff. Gross Income"
+      "1. DATA EXPLORATION: First, examine the structure of BOTH CSV files with df.head(20), df.shape, df.columns, and (if present) df['IsYTD'].value_counts() to understand the datasets",
+      "2. IDENTIFY LATEST MONTH: In the monthly CSV, find latest_month = max(MonthParsed) and display this value",
+      "3. YTD DATA CHECK: In the YTD CSV, verify YTD data exists with df['Metric'].unique() and show what YTD metrics are available",
+      "4. KPI SNAPSHOT: From the monthly CSV, extract current month values for Net Eff. Gross Income, Total Expense, EBITDA/NOI, calculate month-over-month % changes vs prior month",
+      "5. YTD PERFORMANCE: From the YTD CSV, extract YTD values for Net Eff. Gross Income, Total Expense, EBITDA/NOI, calculate expense ratio - if no YTD data exists, explain why",
+      "6. VARIANCE ANALYSIS: In the monthly CSV, flag any metric with >±3% change vs prior month, identify missing recurring expenses",
+      "7. DELINQUENCY ANALYSIS: In the monthly CSV, calculate delinquency rate = |Delinquency Value| ÷ Net Eff. Gross Income"
     ],
-    
     "MANDATORY_OUTPUT_FORMAT": "You MUST use this EXACT format - do not deviate:\n\n# 📄 Monthly Property Summary Report\n**Property:** {Sheet}  **Period:** {latest_month: MMM YYYY}\n\n## 🔍 Data Structure Validation\n- **Total Rows:** X,XXX rows\n- **YTD Rows Found:** X,XXX rows (IsYTD=True)\n- **Monthly Rows Found:** X,XXX rows (IsYTD=False)\n- **Available YTD Metrics:** [List key YTD metrics found]\n- **Latest Month Identified:** MMM YYYY\n\n## 1️⃣ Current Month KPI Snapshot\n- **Total Monthly Income (Net Eff. Gross Income):** $X,XXX.XX\n- **Total Monthly Expenses (Total Expense):** $X,XXX.XX  \n- **Net Operating Income (EBITDA):** $X,XXX.XX\n- **MoM Income Change:** +/-X.XX% ($XXX vs $XXX prior month)\n- **MoM Expense Change:** +/-X.XX% ($XXX vs $XXX prior month)\n- **Delinquency Rate:** X.XX% ($XXX delinquency ÷ $XXX income)\n\n## 2️⃣ YTD Performance (Cumulative)\n- **YTD Total Income:** $XX,XXX.XX\n- **YTD Total Expenses:** $XX,XXX.XX\n- **YTD Net Operating Income:** $XX,XXX.XX\n- **YTD Expense Ratio:** XX.XX% ($XX,XXX expenses ÷ $XX,XXX income)\n\n## 3️⃣ Key Observations (Metric-Specific)\n- [Specific metric name]: $X,XXX showed X.XX% change because...\n- [Specific metric name]: $X,XXX represents X.XX% of total income, indicating...\n- [Pattern in specific metrics with actual values]\n\n## 4️⃣ Strategic Management Questions\n1. Why did [Specific Metric] change from $X,XXX to $X,XXX (X.XX% change)?\n2. How can we address [Specific Metric] performance of $X,XXX vs industry benchmark?\n3. What caused [Specific Metric] variance of X.XX% this month?\n4. Should we investigate [Specific Metric] trend showing $X,XXX vs $X,XXX?\n5. How do we optimize [Specific Metric] currently at $X,XXX?\n\n## 5️⃣ Actionable Recommendations (NOI Improvement)\n- **Target [Specific Revenue Metric]:** Currently $X,XXX, increase by X.XX% to add $XXX monthly NOI\n- **Reduce [Specific Expense Metric]:** Currently $X,XXX, reduce by X.XX% to save $XXX monthly\n- **Address [Specific Problem Metric]:** At $X,XXX (X.XX% of income), implement [specific action]\n\n## 6️⃣ Red Flags / Immediate Attention\n- [Specific Metric] at $X,XXX represents X.XX% variance - requires immediate review\n- [Missing/Zero Metric] should typically be $X,XXX based on property size",
-    
     "CRITICAL_REQUIREMENTS": [
-      "FIRST: Always start by exploring the data structure with df.head(20), df.shape, df.columns, df['IsYTD'].value_counts()",
-      "SECOND: Show what YTD metrics are available with df[df['IsYTD']==True]['Metric'].unique()",
-      "THIRD: Identify the latest month with max(df[df['IsYTD']==False]['MonthParsed']) and display it",
+      "FIRST: Explore BOTH files: show df.head(20), df.shape, df.columns for each (and df['IsYTD'].value_counts() if present)",
+      "SECOND: From the YTD CSV, list available YTD metrics with df['Metric'].unique()",
+      "THIRD: Identify the latest month as max(MonthParsed) in the monthly CSV and display it",
       "ALWAYS reference specific metric names and their exact dollar values from the data",
-      "Every insight, observation, and recommendation MUST cite the actual metric and its value", 
+      "Every insight, observation, and recommendation MUST cite the actual metric and its value",
       "Calculate and show all percentages with supporting numbers",
       "Use the EXACT section headers and structure above - no variations allowed",
       "Fill in actual numbers from the CSV data - no placeholder text",
       "Generate exactly 5 strategic questions based on specific metric performance",
       "Provide 3-5 actionable recommendations that reference specific metrics and target improvements",
       "If YTD data is missing, explain WHY by showing your data exploration results"
-    ]
+    ],
+    "output_style": "Every statement must reference specific metric names and actual dollar amounts from the data. Use both monthly and YTD CSV files for your analysis. No generic observations without supporting numbers."
   },
-  
   "validation_keywords": {
     "required_sections": [
       "Current Month KPI Snapshot",
-      "YTD Performance (Cumulative)", 
+      "YTD Performance (Cumulative)",
       "Key Observations (Metric-Specific)",
       "Strategic Management Questions",
       "Actionable Recommendations (NOI Improvement)",
       "Red Flags / Immediate Attention"
     ],
     "required_content": [
-      "Net Eff. Gross Income", "Total Expense", "EBITDA", "NOI",
-      "MoM Income Change", "MoM Expense Change", "Delinquency Rate",
-      "YTD Total Income", "YTD Total Expenses", "YTD Expense Ratio",
-      "$", "%" 
+      "Net Eff. Gross Income",
+      "Total Expense",
+      "EBITDA",
+      "NOI",
+      "MoM Income Change",
+      "MoM Expense Change",
+      "Delinquency Rate",
+      "YTD Total Income",
+      "YTD Total Expenses",
+      "YTD Expense Ratio",
+      "$",
+      "%"
     ],
     "standard_analysis": {
-      "questions": ["question", "what", "how", "why", "strategic management questions"],
-      "recommendations": ["recommend", "suggest", "improve", "actionable recommendations", "target"],  
-      "analysis": ["trend", "performance", "concern", "observations", "kpi", "snapshot", "variance"]
+      "questions": [
+        "question",
+        "what",
+        "how",
+        "why",
+        "strategic management questions"
+      ],
+      "recommendations": [
+        "recommend",
+        "suggest",
+        "improve",
+        "actionable recommendations",
+        "target"
+      ],
+      "analysis": [
+        "trend",
+        "performance",
+        "concern",
+        "observations",
+        "kpi",
+        "snapshot",
+        "variance"
+      ]
     },
     "metric_references": [
-      "specific metric name", "dollar amount", "percentage change",
-      "vs prior month", "actual values", "supporting numbers"
+      "specific metric name",
+      "dollar amount",
+      "percentage change",
+      "vs prior month",
+      "actual values",
+      "supporting numbers"
     ]
   }
 }

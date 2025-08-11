@@ -35,16 +35,23 @@ class PropertyAssistantAnalyzer:
         self.assistant_id = None
         self.thread_id = None
         
-    def get_assistant_instructions(self, format_name="t12_monthly_financial"):
-        """Get format-specific assistant instructions"""
-        return prompt_manager.build_system_instructions(format_name, "assistants")
+    def get_assistant_instructions(self, format_name="t12_monthly_financial", selected_property: str | None = None):
+        """Get format-specific assistant instructions, formatting placeholders where needed."""
+        instructions = prompt_manager.build_system_instructions(format_name, "assistants")
+        if selected_property:
+            try:
+                instructions = instructions.replace("{selected_property}", selected_property)
+            except Exception:
+                pass
+        return instructions
         
-    def create_assistant(self, format_name="t12_monthly_financial", model="gpt-4o"):
+    def create_assistant(self, format_name="t12_monthly_financial", model="gpt-4o", selected_property: str | None = None):
         """Create a specialized property analysis assistant for the given format"""
         try:
+            instructions = self.get_assistant_instructions(format_name, selected_property)
             assistant = self.client.beta.assistants.create(
                 name=f"Property Analysis Expert - {format_name.upper()}",
-                instructions=self.get_assistant_instructions(format_name),
+                instructions=instructions,
                 model=model,
                 tools=[{"type": "code_interpreter"}]
             )
@@ -80,7 +87,7 @@ class PropertyAssistantAnalyzer:
                 os.unlink(temp_path)
             raise
     
-    def create_thread_with_data(self, monthly_df, ytd_df, kpi_summary, format_name="t12_monthly_financial"):
+    def create_thread_with_data(self, monthly_df, ytd_df, kpi_summary, format_name="t12_monthly_financial", selected_property: str | None = None):
         """Create a conversation thread with both monthly and YTD data and KPI summary"""
         try:
             # Upload both DataFrames
@@ -88,19 +95,22 @@ class PropertyAssistantAnalyzer:
             file_id_ytd, label_ytd = self.upload_dataframe(ytd_df, label="YTD Data")
             # Build format-specific prompt content
             format_upper = format_name.upper().replace("_", " ")
-            prompt_content = f"""Analyze this {format_upper} property financial data by directly examining the attached CSV files:
+            property_clause = f" for property '{selected_property}'" if selected_property else ""
+            # Optional KPI summary section
+            kpi_section = f"\nMY LOCAL SUMMARY (for reference only):\n{kpi_summary}\n" if kpi_summary else ""
+            validate_bullet = "Validate key numbers from my summary using the raw data" if kpi_summary else "Validate key numbers directly from the raw data (no external summary)"
+            prompt_content = f"""Analyze this {format_upper} property financial data{property_clause} by directly examining the attached CSV files:
 
-RAW CSV DATA: Use both attached CSV files for your analysis:
+RAW CSV DATA: Use both attached CSV files for your analysis. If a Property column exists, filter rows to match the selected property exactly.
 - {label_monthly}: Monthly property financial data
 - {label_ytd}: Year-to-date (YTD) property financial data
 
-MY LOCAL SUMMARY (for reference only): 
-{kpi_summary}
+{kpi_section}
 
 ANALYSIS REQUIREMENTS:
 1. Load and examine both CSV data structures
 2. Perform detailed trend analysis on key metrics using both monthly and YTD data
-3. Validate key numbers from my summary using the raw data
+3. {validate_bullet}
 4. Calculate percentage changes and identify patterns
 5. Provide actionable insights based on your data analysis
 
@@ -111,10 +121,10 @@ FOCUS AREAS:
 - Validate my Revenue, NOI, and expense calculations against raw data
 - Identify any data quality issues or anomalies
 
-Please provide a comprehensive analysis with strategic recommendations based on your examination of both raw data files."""
+Please provide a comprehensive analysis filtered to the selected property (if provided) with strategic recommendations based on your examination of both raw data files."""
             # Log the exact prompt being sent
             logger.info("=== ENHANCED ANALYSIS PROMPT ===")
-            logger.info(f"Assistant Instructions (system): {self.get_assistant_instructions()}")
+            logger.info(f"Assistant Instructions (system): {self.get_assistant_instructions(format_name, selected_property)}")
             logger.info(f"User Message Content:\n{prompt_content}")
             logger.info(f"Attached File IDs: {file_id_monthly}, {file_id_ytd}")
             logger.info("================================")
@@ -233,7 +243,7 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return f"Error running analysis: {str(e)}"
     
-    def analyze_property_data(self, monthly_df, ytd_df, kpi_summary, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None):
+    def analyze_property_data(self, monthly_df, ytd_df, kpi_summary, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None):
         """Complete property analysis workflow with format-specific instructions, using both monthly and YTD data"""
         try:
             if model_config is None:
@@ -241,10 +251,10 @@ Please provide a comprehensive analysis with strategic recommendations based on 
             if not self.assistant_id:
                 if progress_callback:
                     progress_callback("🤖 Creating AI assistant...", 10)
-                self.create_assistant(format_name, model_config["model_selection"])
+                self.create_assistant(format_name, model_config["model_selection"], selected_property)
             if progress_callback:
                 progress_callback("📤 Uploading data to OpenAI...", 30)
-            self.create_thread_with_data(monthly_df, ytd_df, kpi_summary, format_name)
+            self.create_thread_with_data(monthly_df, ytd_df, kpi_summary, format_name, selected_property)
             if progress_callback:
                 progress_callback("🧠 Starting AI analysis...", 50)
             result = self.run_analysis(progress_callback, streaming_callback)
@@ -262,10 +272,19 @@ Please provide a comprehensive analysis with strategic recommendations based on 
         except Exception as e:
             logger.warning(f"Error cleaning up assistant: {str(e)}")
 
-def analyze_with_assistants_api(monthly_df, ytd_df, kpi_summary, api_key=None, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None):
+def analyze_with_assistants_api(monthly_df, ytd_df, kpi_summary, api_key=None, progress_callback=None, streaming_callback=None, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None):
     """Convenience function for property analysis using Assistants API with both monthly and YTD data"""
     analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        return analyzer.analyze_property_data(monthly_df, ytd_df, kpi_summary, progress_callback, streaming_callback, format_name, model_config)
+        return analyzer.analyze_property_data(
+            monthly_df,
+            ytd_df,
+            kpi_summary,
+            progress_callback,
+            streaming_callback,
+            format_name,
+            model_config,
+            selected_property,
+        )
     finally:
         analyzer.cleanup()

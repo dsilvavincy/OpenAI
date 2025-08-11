@@ -1,19 +1,6 @@
 """
-AI analysis UI comp    # Analysis with detailed progress
-    ai_progress = st.progress(0)
-    ai_status = st.empty()
-    
-    ai_status.text("🔄 Initializing analysis...")
-    ai_progress.progress(0.25)
-    
-    try:
-        # Analysis with Assistants API
-        # Create progress callback function
-        def update_progress(message, progress_pct):
-            ai_status.text(message)
-            # Convert percentage to decimal (0-100 -> 0.0-1.0)
-            progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
-            ai_progress.progress(progress_decimal)hanced Analysis (Assistants API) only
+AI analysis UI components for Enhanced Analysis (Assistants API) flow.
+Handles launching analysis, live streaming updates, and post-processing.
 """
 import streamlit as st
 from datetime import datetime
@@ -32,20 +19,19 @@ def clear_analysis_results():
     if 'analysis_data_hash' in st.session_state:
         del st.session_state['analysis_data_hash']
 
-def display_ai_analysis_section(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
+def display_ai_analysis_section(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None):
     """Display AI analysis section using Enhanced Analysis with format-specific prompts"""
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate analysis")
         return None
     if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
-        # Pass both monthly_df and ytd_df to run_ai_analysis
-        processed_output = run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name, model_config)
+        processed_output = run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name, model_config, selected_property)
         if processed_output:
             st.session_state['processed_analysis_output'] = processed_output
         return processed_output
     return None
 
-def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None):
+def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name="t12_monthly_financial", model_config=None, selected_property: str | None = None):
     """Execute Enhanced AI analysis using Assistants API with both monthly and YTD data"""
     if model_config is None:
         model_config = {
@@ -70,8 +56,27 @@ def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address
                 st.caption(f"📊 Characters received: {len(response_so_far)}")
         # Pass both monthly and YTD data to the analysis function
         try:
-            # You may need to update analyze_with_assistants_api to accept both DataFrames
-            ai_response = analyze_with_assistants_api(monthly_df, ytd_df, api_key, update_progress, update_streaming, format_name, model_config)
+            # Optionally pre-filter dataframes by selected property to reduce tokens
+            if selected_property and 'Property' in monthly_df.columns:
+                filtered_monthly = monthly_df[monthly_df['Property'] == selected_property].copy()
+            else:
+                filtered_monthly = monthly_df
+            if selected_property and 'Property' in ytd_df.columns:
+                filtered_ytd = ytd_df[ytd_df['Property'] == selected_property].copy()
+            else:
+                filtered_ytd = ytd_df
+
+            ai_response = analyze_with_assistants_api(
+                filtered_monthly,
+                filtered_ytd,
+                kpi_summary=None,
+                api_key=api_key,
+                progress_callback=update_progress,
+                streaming_callback=update_streaming,
+                format_name=format_name,
+                model_config=model_config,
+                selected_property=selected_property
+            )
             ai_status.text("✨ Analysis complete!")
             ai_progress.progress(1.0)
             streaming_container.empty()

@@ -183,13 +183,39 @@ class ProductionResults:
         if not api_key:
             st.warning("⚠️ Please enter your OpenAI API key in the sidebar")
             return
+
+        # Property selector (from processed data)
+        try:
+            props_series = pd.concat([
+                monthly_df.get('Property', pd.Series(dtype=str)),
+                ytd_df.get('Property', pd.Series(dtype=str))
+            ], ignore_index=True)
+            properties = sorted({str(p).strip() for p in props_series.dropna().unique() if str(p).strip()})
+        except Exception:
+            properties = []
+
+        selected_property_default = st.session_state.get('selected_property')
+        if properties:
+            if selected_property_default not in properties:
+                selected_property_default = properties[0]
+            selected_property = st.selectbox(
+                "Select property to analyze",
+                properties,
+                index=properties.index(selected_property_default) if selected_property_default in properties else 0,
+                help="Only rows matching this property will be analyzed (both Monthly and YTD).",
+                key="selected_property_select"
+            )
+            st.session_state['selected_property'] = selected_property
+        else:
+            selected_property = None
+            st.info("No Property column found; analysis will use all rows.")
         # Add Upload to LLM button
         show_analyze = st.button("🚀 Upload to LLM & Analyze", type="primary", use_container_width=True)
         if show_analyze:
-            ProductionResults._render_ai_analysis(monthly_df, ytd_df, config)
+            ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
     
     @staticmethod
-    def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any]):
+    def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any], selected_property: Optional[str] = None):
         """Render AI analysis with side-by-side option."""
         from src.ui.ai_analysis import display_ai_analysis_section, display_analysis_results, display_export_options, get_existing_analysis_results
         from src.utils.format_detection import get_stored_format
@@ -215,14 +241,16 @@ class ProductionResults:
         }
         
         # Generate new analysis
+        property_label = selected_property or config.get('property_name', '')
         processed_output = display_ai_analysis_section(
             monthly_df,
             ytd_df,
             config['api_key'],
-            config['property_name'],
+            property_label,
             config['property_address'],
             detected_format,
-            model_config
+            model_config,
+            selected_property=selected_property
         )
         
         if processed_output:

@@ -146,7 +146,15 @@ class PromptManager:
         else:
             template = config.get("user_prompt_template", "Please analyze the following data:\n\n{data_content}")
         
-        return template.format(data_content=data_content)
+        # Safe formatting: only replace {data_content}; leave any other placeholders intact
+        try:
+            class _SafeDict(dict):
+                def __missing__(self, key):
+                    return "{" + key + "}"
+            return template.format_map(_SafeDict(data_content=data_content))
+        except Exception:
+            # Fallback minimal substitution to avoid runtime errors
+            return template.replace("{data_content}", data_content)
     
     def build_prompts(self, format_name: str, data_content: str, analysis_type: str = "standard") -> Tuple[str, str]:
         """Build both system and user prompts for a format"""

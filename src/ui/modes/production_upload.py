@@ -33,21 +33,20 @@ class ProductionUpload:
             key="production_file_uploader"
         )
         
-        # Update session state when file changes
+        # Only process if not already processed
         if uploaded_file is not None:
             st.session_state['current_uploaded_file'] = uploaded_file
-            # Process file immediately
-            with st.spinner("📊 Processing file..."):
-                df = self._handle_file_upload(uploaded_file)
-                
-                if df is not None:
-                    # Store in session state
-                    st.session_state['processed_df'] = df
-                    st.session_state['uploaded_file'] = uploaded_file
-                    st.success("✅ File processed successfully!")
-                    st.rerun()  # Refresh to show results layout
+            if 'processed_monthly_df' not in st.session_state or 'processed_ytd_df' not in st.session_state:
+                with st.spinner("📊 Processing file..."):
+                    monthly_df, ytd_df = self._handle_file_upload(uploaded_file)
+                    if monthly_df is not None:
+                        st.session_state['processed_monthly_df'] = monthly_df
+                        st.session_state['processed_ytd_df'] = ytd_df
+                        st.session_state['uploaded_file'] = uploaded_file
+                        st.success("✅ File processed successfully! Monthly and YTD data available.")
+                        st.rerun()  # Refresh to show results layout
     
-    def _handle_file_upload(self, uploaded_file) -> Optional[pd.DataFrame]:
+    def _handle_file_upload(self, uploaded_file):
         """
         Process uploaded T12 file.
         
@@ -55,27 +54,23 @@ class ProductionUpload:
             uploaded_file: Streamlit uploaded file object
             
         Returns:
-            Processed DataFrame or None if processing failed
+            Tuple of (monthly_df, ytd_df) or (None, None) if processing failed
         """
         try:
-            # Import processing functions
-            from src.core.preprocess import tidy_sheet_all
+            from src.core.cres_batch_processor import process_cres_workbook
             import io
-            
-            # Read Excel file directly from memory (no temp file needed)
             excel_buffer = io.BytesIO(uploaded_file.getvalue())
-            
-            # Process the file
-            df = tidy_sheet_all(excel_buffer)
-            
-            if df is not None and not df.empty:
-                st.success(f"✅ Processed {len(df)} rows with {df['Metric'].nunique()} unique metrics")
-                return df
+            monthly_df, ytd_df = process_cres_workbook(excel_buffer)
+            if monthly_df is not None and not monthly_df.empty:
+                st.success(f"✅ Processed {len(monthly_df)} monthly rows with {monthly_df['Metric'].nunique()} unique metrics")
             else:
-                st.error("❌ No data found in file")
-                return None
-                    
+                st.error("❌ No monthly data found in file")
+            if ytd_df is not None and not ytd_df.empty:
+                st.success(f"✅ Processed {len(ytd_df)} YTD rows")
+            else:
+                st.warning("⚠️ No YTD data found in file")
+            return monthly_df, ytd_df
         except Exception as e:
             st.error(f"❌ Error processing file: {str(e)}")
             st.info("💡 Please ensure your file is a valid T12 Excel format")
-            return None
+            return None, None

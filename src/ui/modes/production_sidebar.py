@@ -50,17 +50,6 @@ class ProductionSidebar:
         st.markdown("---")
         
         # Property information (streamlined)
-        st.markdown("### 🏢 Property Details")
-        updated_property_name = st.text_input(
-            "Property Name", 
-            value=property_name,
-            placeholder="e.g., Sunset Apartments"
-        )
-        updated_property_address = st.text_input(
-            "Property Address", 
-            value=property_address,
-            placeholder="e.g., 123 Main St, City, State"
-        )
         
         st.markdown("---")
         
@@ -96,8 +85,6 @@ class ProductionSidebar:
         
         return {
             "api_key": updated_api_key,
-            "property_name": updated_property_name,
-            "property_address": updated_property_address,
             "model_selection": model_selection,
             "temperature": temperature
             # No max_tokens - allowing unlimited response length

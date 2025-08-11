@@ -5,6 +5,7 @@ Enhanced version based on robust Excel parsing
 import re
 import pandas as pd
 from pathlib import Path
+from .cres_batch_processor import process_cres_workbook
 
 # Regex pattern to match month format like "Jul 2024"
 ptr_month = re.compile(r"^[A-Za-z]{3} \d{4}$")
@@ -23,14 +24,14 @@ def parse_money(x):
 
 def tidy_sheet_all(excel_path, sheet_name=None):
     """
-    Convert wide-format Excel sheet to long-format tidy dataframe.
+    Wrapper for backward compatibility. Uses process_cres_workbook to return monthly and YTD DataFrames.
     
     Args:
         excel_path: Path to Excel file (string or Path object)
         sheet_name: Name of sheet to process (defaults to first sheet)
     
     Returns:
-        pd.DataFrame: Long-format DataFrame with columns [Sheet, Metric, Month, MonthParsed, IsYTD, Value]
+        pd.DataFrame: Monthly data (non-YTD)
     """
     try:
         # Convert to Path object if string
@@ -123,10 +124,7 @@ def tidy_sheet_all(excel_path, sheet_name=None):
             for issue in quality_issues:
                 print("-", issue)
 
-        return df_long[["Sheet", "Metric", "Month", "MonthParsed", "IsYTD", "Value", "Year", "Month_Name", "Is_Negative"]]
-        
-    except Exception as e:
-        raise ValueError(f"Error processing T12 file: {str(e)}")
+        return process_cres_workbook(excel_path)[0]
 
 def validate_t12_format(df):
     """
@@ -157,13 +155,8 @@ def validate_t12_format(df):
 def extract_year(month_str):
     """Extract year from month string like 'Jul 2024'"""
     try:
-        return month_str.split()[-1]
-    except:
-        return None
-
+        monthly_df, ytd_df = process_cres_workbook(excel_path)
+        if monthly_df is None:
+            raise ValueError("No valid CRES sheets found in Excel file.")
+        return monthly_df
 def extract_month_name(month_str):
-    """Extract month name from month string like 'Jul 2024'"""
-    try:
-        return month_str.split()[0]
-    except:
-        return None

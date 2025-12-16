@@ -48,12 +48,11 @@ class DeveloperSidebar:
         
         # Advanced API Settings (collapsible)
         with st.expander("🔧 Advanced API Settings", expanded=False):
-            model_selection = st.radio(
+            model_selection = st.selectbox(
                 "OpenAI Model",
-                ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
-                index=1,
-                help="Select the OpenAI model to use",
-                horizontal=True
+                ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o", "o1", "o3-mini", "gpt-4o-mini", "gpt-4.5-preview", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+                index=0,
+                help="Select the OpenAI model to use. gpt-5.2 is recommended."
             )
             temperature = st.slider(
                 "Temperature",

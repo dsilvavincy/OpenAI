@@ -84,7 +84,18 @@ class ProductionModeCore(BaseUIMode):
             with col2:
                 if st.button("🔄 Upload New File", help="Upload a different T12 file"):
                     # Clear session state to return to upload mode
-                    for key in ['processed_df', 'uploaded_file', 'current_uploaded_file']:
+                    keys_to_clear = [
+                        'processed_df', 
+                        'uploaded_file', 
+                        'current_uploaded_file',
+                        'processed_monthly_df',
+                        'processed_ytd_df',
+                        'processed_analysis_output',
+                        'last_analyzed_property',
+                        'selected_property',
+                        'production_file_uploader'
+                    ]
+                    for key in keys_to_clear:
                         if key in st.session_state:
                             del st.session_state[key]
                     st.rerun()

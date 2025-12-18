@@ -1,12 +1,16 @@
 """
-AI analysis UI components for Enhanced Analysis (Assistants API) flow.
-Handles launching analysis, live streaming updates, and post-processing.
+AI analysis UI components for property analysis.
+Supports both Assistants API (deprecated) and Responses API (recommended).
 """
 import streamlit as st
 from datetime import datetime
 from src.ai.prompt import build_prompt, call_openai, validate_response
-from src.ai.assistants_api import analyze_with_assistants_api
+from src.ai.assistants_api import analyze_with_assistants_api  # Deprecated
 from src.core.output_quality import post_process_output
+
+# New Responses API imports
+from src.core.local_analysis import PropertyAnalyzer, prepare_analysis_for_llm
+from src.ai.responses_api import analyze_with_responses_api, PropertyResponsesAnalyzer
 
 def get_existing_analysis_results():
     """Get existing analysis results from session state if available"""
@@ -25,7 +29,8 @@ def display_ai_analysis_section(monthly_df, ytd_df, api_key, property_name, prop
         st.warning("⚠️ Please enter your OpenAI API key in the sidebar to generate analysis")
         return None
     if st.button("🎯 Generate Analysis", type="primary", use_container_width=True):
-        processed_output = run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address, format_name, model_config, selected_property)
+        # NEW: Use Responses API flow with local processing
+        processed_output = run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, property_address, format_name, model_config, selected_property)
         if processed_output:
             st.session_state['processed_analysis_output'] = processed_output
         return processed_output
@@ -134,6 +139,120 @@ def run_ai_analysis(monthly_df, ytd_df, api_key, property_name, property_address
         st.info("• Check that your data was processed correctly")
         st.info("• Verify your OpenAI API key is valid")
         st.info("• Try refreshing the page and uploading again")
+        return None
+
+
+def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, property_address, 
+                               format_name="t12_monthly_financial", model_config=None, 
+                               selected_property: str | None = None):
+    """
+    Execute AI analysis using Responses API with local Python processing.
+    This is the NEW RECOMMENDED approach - replaces Assistants API.
+    
+    Flow:
+    1. PropertyAnalyzer computes all metrics locally (Python)
+    2. Structured JSON sent to Responses API
+    3. LLM generates narrative report from pre-computed data
+    """
+    if model_config is None:
+        model_config = {
+            "model_selection": "gpt-4o",
+            "temperature": 0.2,
+        }
+    
+    st.info(f"🚀 **Responses API** | Model: {model_config['model_selection']} | Temp: {model_config['temperature']}")
+    
+    ai_progress = st.progress(0)
+    ai_status = st.empty()
+    
+    try:
+        # Step 1: Local Python Analysis
+        ai_status.text("📊 Computing metrics locally...")
+        ai_progress.progress(0.1)
+        
+        # Use the selected property or fall back to property_name
+        analysis_property = selected_property or property_name
+        
+        if not analysis_property:
+            st.error("❌ No property selected for analysis")
+            return None
+        
+        # Create analyzer and compute all metrics
+        analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+        structured_data = analyzer.analyze_property(analysis_property)
+        
+        ai_status.text(f"✅ Computed metrics for {analysis_property}")
+        ai_progress.progress(0.3)
+        
+        # Display computed data summary
+        with st.expander("📋 Pre-computed Analysis Data", expanded=False):
+            st.json({
+                "property": structured_data.get("property_name"),
+                "period": structured_data.get("report_period"),
+                "metrics_count": structured_data.get("validation", {}).get("metrics_count"),
+                "months_with_data": structured_data.get("data_highlights", {}).get("months_with_data"),
+            })
+        
+        # Step 2: Send to Responses API
+        ai_status.text("🧠 Generating AI report...")
+        ai_progress.progress(0.4)
+        
+        streaming_container = st.empty()
+        
+        def update_streaming(response_so_far):
+            with streaming_container.container():
+                st.markdown("### 🔄 AI Analysis (Live Stream)")
+                st.markdown(response_so_far)
+                st.caption(f"📊 Characters received: {len(response_so_far)}")
+        
+        def update_progress(message, progress_pct):
+            ai_status.text(message)
+            progress_decimal = min(1.0, max(0.0, progress_pct / 100.0))
+            ai_progress.progress(progress_decimal)
+        
+        # Call Responses API
+        ai_response = analyze_with_responses_api(
+            structured_data=structured_data,
+            api_key=api_key,
+            model=model_config['model_selection'],
+            temperature=model_config['temperature'],
+            stream_callback=update_streaming,
+            progress_callback=update_progress,
+        )
+        
+        ai_status.text("✨ Analysis complete!")
+        ai_progress.progress(1.0)
+        streaming_container.empty()
+        
+        # Store in session state
+        st.session_state['last_enhanced_analysis_result'] = ai_response
+        st.session_state['last_analysis_method'] = "Responses API (Recommended)"
+        
+        # Process the response
+        if ai_response and not ai_response.startswith("Error:"):
+            st.success("🚀 **Responses API Analysis Complete**")
+            
+            # Create property info for post-processing
+            property_info = {
+                "name": analysis_property or "Unknown Property",
+                "address": property_address or "No address provided"
+            }
+            
+            # Post-process the output
+            processed_output = post_process_output(ai_response, property_info)
+            processed_output["raw_response"] = ai_response
+            processed_output["structured_data"] = structured_data  # Include computed data
+            processed_output["api_method"] = "responses_api"
+            
+            return processed_output
+        else:
+            st.error(f"❌ {ai_response}")
+            return None
+            
+    except Exception as e:
+        st.error(f"❌ Error during Responses API analysis: {str(e)}")
+        import traceback
+        st.error(f"Details: {traceback.format_exc()}")
         return None
 
 def display_analysis_results(processed_output, display_mode="structured"):

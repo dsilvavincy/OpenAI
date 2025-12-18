@@ -9,7 +9,7 @@ Handles analysis generation and display with options for:
 import streamlit as st
 import pandas as pd
 from typing import Optional, Dict, Any
-from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis
+from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis_responses
 from src.utils.format_detection import get_stored_format
 
 
@@ -242,10 +242,11 @@ class ProductionResults:
             "max_tokens": config.get('max_tokens', 2500)
         }
 
-        # Generate new analysis immediately (no second button)
+        # Use the NEW recommended Responses API flow
+        from src.ui.ai_analysis import run_ai_analysis_responses
         property_label = selected_property or config.get('property_name', '')
-        with st.spinner('Uploading to LLM and analyzing…'):
-            processed_output = run_ai_analysis(
+        with st.spinner('Computing local metrics and generating AI report…'):
+            processed_output = run_ai_analysis_responses(
                 monthly_df,
                 ytd_df,
                 config['api_key'],

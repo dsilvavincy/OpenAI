@@ -1,6 +1,12 @@
 """
 OpenAI Assistants API implementation for multi-format property analysis
 Enables AI to analyze raw data directly using code_interpreter
+
+⚠️ DEPRECATED: This module uses the Assistants API which is scheduled for 
+deprecation by August 2026. Use responses_api.py instead, which:
+- Performs all calculations locally (local_analysis.py)
+- Sends pre-computed data to Responses API
+- Offers better performance and access to newer models
 """
 
 import os

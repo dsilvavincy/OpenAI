@@ -58,12 +58,9 @@ class UIModeManager:
     
     def get_current_mode(self) -> str:
         """
-        Get the currently active mode name.
-        
-        Returns:
-            str: Current mode name
+        Always return production mode as per user request.
         """
-        return st.session_state.get('ui_mode', 'production')
+        return 'production'
     
     def set_current_mode(self, mode_name: str):
         """
@@ -134,11 +131,8 @@ class UIModeManager:
         
         # Render sidebar and get configuration
         with st.sidebar:
-            # Mode selector at top of sidebar
-            st.markdown("### 🔧 Interface Mode")
-            selected_mode = self.render_mode_selector()
-            
-            st.markdown("---")
+            # Mode selector hidden as per user request - defaulting to production
+            # current_mode_name = self.get_current_mode() 
             
             # Mode-specific sidebar
             config = mode.render_sidebar(

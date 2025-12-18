@@ -57,9 +57,9 @@ class ProductionSidebar:
         with st.expander("🤖 AI Model Settings", expanded=False):
             model_selection = st.selectbox(
                 "OpenAI Model",
-                ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4o", "o1", "o3-mini", "gpt-4o-mini", "gpt-4.5-preview", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-                index=0,  # Default to gpt-5.2
-                help="gpt-5.2: State-of-the-art Intelligence | gpt-4o: Reliable & Fast | o1: Reasoning"
+                ["gpt-4o", "gpt-4.5-preview", "o1-preview", "o1-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+                index=0,  # Default to gpt-4o
+                help="gpt-4o: Best Overall | gpt-4.5/o1: High Intelligence (Preview) | gpt-4-turbo: Fast"
             )
             
             col1, col2 = st.columns(2)

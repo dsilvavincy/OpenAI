@@ -6,6 +6,9 @@ Focuses on the essential workflow without debug features.
 """
 import streamlit as st
 import pandas as pd
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Optional, Dict, Any
 
 
@@ -43,6 +46,10 @@ class ProductionUpload:
                         st.session_state['processed_monthly_df'] = monthly_df
                         st.session_state['processed_ytd_df'] = ytd_df
                         st.session_state['uploaded_file'] = uploaded_file
+                        
+                        # Save processed data to exports folder
+                        self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
+                        
                         st.success("✅ File processed successfully! Monthly and YTD data available.")
                         st.rerun()  # Refresh to show results layout
     
@@ -74,3 +81,34 @@ class ProductionUpload:
             st.error(f"❌ Error processing file: {str(e)}")
             st.info("💡 Please ensure your file is a valid T12 Excel format")
             return None, None
+    
+    def _save_processed_data(self, monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, original_filename: str):
+        """
+        Save processed monthly and YTD data to CSV files in the exports folder.
+        
+        Args:
+            monthly_df: Processed monthly DataFrame
+            ytd_df: Processed YTD DataFrame  
+            original_filename: Original uploaded filename (for naming)
+        """
+        try:
+            # Create exports folder if it doesn't exist
+            exports_dir = Path("exports")
+            exports_dir.mkdir(exist_ok=True)
+            
+            # Create timestamp for unique filenames
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_name = Path(original_filename).stem
+            
+            # Save monthly data
+            monthly_path = exports_dir / f"{base_name}_monthly_{timestamp}.csv"
+            monthly_df.to_csv(monthly_path, index=False)
+            
+            # Save YTD data
+            ytd_path = exports_dir / f"{base_name}_ytd_{timestamp}.csv"
+            ytd_df.to_csv(ytd_path, index=False)
+            
+            st.info(f"💾 Saved processed data to: `exports/` folder")
+            
+        except Exception as e:
+            st.warning(f"⚠️ Could not save processed files: {str(e)}")

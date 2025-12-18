@@ -275,21 +275,31 @@ def analyze_with_assistants_api(monthly_df, ytd_df, kpi_summary, api_key=None, p
     """Convenience function for property analysis using Assistants API with both monthly and YTD data"""
     analyzer = PropertyAssistantAnalyzer(api_key)
     try:
-        # Reuse assistant if available
+        # Reuse assistant if available and model matches
+        requested_model = (model_config or {}).get("model_selection", "gpt-4o")
         if reuse_session:
             existing_assistant = st.session_state.get('assist_assistant_id')
             existing_thread = st.session_state.get('assist_thread_id')
-            if existing_assistant:
+            stored_model = st.session_state.get('assist_model_name')
+            
+            # Only reuse if model matches
+            if existing_assistant and stored_model == requested_model:
                 analyzer.assistant_id = existing_assistant
-            if existing_thread:
-                analyzer.thread_id = existing_thread
+                if existing_thread:
+                    analyzer.thread_id = existing_thread
+            else:
+                # Model changed or no assistant exists - reset
+                if existing_assistant:
+                    logger.info(f"Switching models: {stored_model} -> {requested_model}. Creating new assistant.")
+                reuse_session = False  # Force new session creation logic below
 
         # Ensure assistant exists
         if not analyzer.assistant_id:
             if progress_callback:
-                progress_callback("🤖 Creating AI assistant...", 10)
-            assistant = analyzer.create_assistant(format_name, (model_config or {}).get("model_selection", "gpt-4o"), selected_property)
+                progress_callback(f"🤖 Creating AI assistant ({requested_model})...", 10)
+            assistant = analyzer.create_assistant(format_name, requested_model, selected_property)
             st.session_state['assist_assistant_id'] = assistant.id
+            st.session_state['assist_model_name'] = requested_model
 
         # Create or reuse thread
         format_upper = format_name.upper().replace("_", " ")

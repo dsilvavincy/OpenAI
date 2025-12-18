@@ -25,7 +25,7 @@ class DeveloperUploadSection:
         
         uploaded_file = st.file_uploader(
             "T12 Excel File",
-            type=['xlsx', 'xls'],
+            type=['xlsx', 'xls', 'xlsm'],
             help="Upload your T12 property financial data",
             key="developer_file_uploader"
         )

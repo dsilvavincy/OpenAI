@@ -12,7 +12,7 @@ def validate_uploaded_file(uploaded_file):
     }
     
     # Check file extension
-    if not uploaded_file.name.endswith(('.xlsx', '.xls')):
+    if not uploaded_file.name.endswith(('.xlsx', '.xls', '.xlsm')):
         validation_results["messages"].append("❌ Invalid file format. Please upload an Excel file (.xlsx or .xls)")
         return validation_results
     

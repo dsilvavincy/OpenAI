@@ -31,7 +31,7 @@ class ProductionUpload:
         
         uploaded_file = st.file_uploader(
             "Choose your T12 Excel file",
-            type=['xlsx', 'xls'],
+            type=['xlsx', 'xls', 'xlsm'],
             help="Upload your T12 property financial data for AI analysis",
             key="production_file_uploader"
         )

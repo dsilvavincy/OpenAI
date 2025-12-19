@@ -11,6 +11,7 @@ import pandas as pd
 from typing import Optional, Dict, Any
 from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis_responses
 from src.utils.format_detection import get_stored_format
+from src.core.local_analysis import PropertyAnalyzer
 
 
 class ProductionResults:
@@ -214,6 +215,21 @@ class ProductionResults:
         else:
             selected_property = None
             st.info("No Property column found; analysis will use all rows.")
+            
+        # Preview Data Package (Structured Results from Python Analysis)
+        if selected_property:
+            with st.expander(f"📦 Preview Data Package: {selected_property}", expanded=False):
+                st.markdown("### 📊 Python Analysis Preview")
+                st.info("This is the pre-computed data package that will be sent to the LLM. You can verify budget variances and 3-month averages here.")
+                
+                # Compute on the fly for preview
+                analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+                preview_data = analyzer.analyze_property(selected_property)
+                
+                # Store in session state so run_ai_analysis_responses can reuse it if needed
+                st.session_state['last_structured_data'] = preview_data
+                
+                st.json(preview_data)
         # Add Upload to LLM button
         show_analyze = st.button("🚀 Upload to LLM & Analyze", type="primary", use_container_width=True)
         if show_analyze:
@@ -267,9 +283,16 @@ class ProductionResults:
     
     @staticmethod
     def _display_analysis_with_options(output: Dict[str, Any], config: Dict[str, Any]):
-        """Display only the raw response as the main content."""
-        # Always display just the raw response
+        """Display raw response. Also show debug data if available."""
+        # Main report content
         ProductionResults._display_raw_response_as_main_report(output)
+        
+        # Add a debug view at the bottom for verification
+        if 'last_structured_data' in st.session_state:
+            with st.expander("🔍 Debug: View Full JSON sent to LLM (Python Analysis Output)", expanded=False):
+                st.markdown("### 📊 Local Python Analysis Verification")
+                st.info("This is the exact structured data pre-computed by Python before being sent to the AI. Use this to verify budget variances and rolling averages.")
+                st.json(st.session_state['last_structured_data'])
     
     @staticmethod
     def _display_raw_response_as_main_report(output: Dict[str, Any]):

@@ -129,9 +129,26 @@ class PropertyAnalyzer:
             "data_highlights": self._get_data_highlights(monthly_filtered, ytd_filtered, latest_month),
             "all_metrics_current": self._get_all_metrics_for_period(monthly_filtered, latest_month),
             "monthly_time_series": self._get_monthly_time_series(monthly_filtered),
+            "debug": {
+                "detected_latest_month": latest_month.strftime("%Y-%m-%d") if latest_month else None,
+                "detection_reason": getattr(self, "_last_detection_reason", "Fallback to absolute max")
+            }
         }
         
-        return result
+        # Sanitize for JSON (convert NaN/Inf to None)
+        return self._sanitize_for_json(result)
+
+    def _sanitize_for_json(self, data: Any) -> Any:
+        """Recursively convert NaN and Inf to None for valid JSON."""
+        if isinstance(data, dict):
+            return {k: self._sanitize_for_json(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._sanitize_for_json(v) for v in data]
+        elif isinstance(data, float):
+            if np.isnan(data) or np.isinf(data):
+                return None
+            return data
+        return data
     
     def _filter_by_property(self, df: pd.DataFrame, property_name: str) -> pd.DataFrame:
         """Filter DataFrame to specific property."""
@@ -158,9 +175,37 @@ class PropertyAnalyzer:
         return df.iloc[0:0]
     
     def _get_latest_month(self, df: pd.DataFrame) -> Optional[datetime]:
-        """Find the latest month in the data."""
+        """Find the latest month in the data that actually has values."""
         if df.empty or 'MonthParsed' not in df.columns:
             return None
+            
+        # Ensure Value is numeric for the check
+        check_df = df.copy()
+        check_df['ValueNumeric'] = pd.to_numeric(check_df['Value'], errors='coerce')
+        
+        # We specifically look for key metrics that define "active" months (Income/Expense/NOI)
+        active_metrics = ['Net Eff. Gross Income', 'Total Expense', 'EBITDA (NOI)']
+        data_mask = (check_df['ValueNumeric'].notna()) & (check_df['ValueNumeric'] != 0)
+        
+        # More robust matching (strip and lower)
+        metric_mask = check_df['Metric'].fillna('').str.strip().str.lower().isin([m.lower() for m in active_metrics])
+        
+        active_data = check_df[data_mask & metric_mask]
+        
+        if not active_data.empty:
+            latest = active_data['MonthParsed'].max()
+            self._last_detection_reason = f"Found data for core metrics up to {latest.strftime('%B %Y')}"
+            return latest
+            
+        # Second attempt: Look for ANY metric with data
+        any_data = check_df[data_mask]
+        if not any_data.empty:
+            latest = any_data['MonthParsed'].max()
+            self._last_detection_reason = f"No core metrics, found other data up to {latest.strftime('%B %Y')}"
+            return latest
+            
+        # Fallback to absolute max if no data found at all
+        self._last_detection_reason = "No actual values found; falling back to absolute calendar maximum"
         return df['MonthParsed'].max()
     
     def _get_prior_month(self, df: pd.DataFrame, latest_month: Optional[datetime]) -> Optional[datetime]:
@@ -400,18 +445,26 @@ class PropertyAnalyzer:
             current_row = metric_data[metric_data['MonthParsed'] == current_month]
             
             if not prior_data.empty and not current_row.empty:
-                avg_3mo = prior_data['Value'].mean()
+                # Filter out NaN/Zero from prior data for a more meaningful average
+                valid_priors = prior_data['Value'][prior_data['Value'].notna() & (prior_data['Value'] != 0)]
+                if valid_priors.empty:
+                    continue
+                    
+                avg_3mo = valid_priors.mean()
                 current_val = current_row['Value'].iloc[0]
+                
+                if pd.isna(current_val) or pd.isna(avg_3mo):
+                    continue
                 
                 key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
                 var_abs = current_val - avg_3mo
                 var_pct = (var_abs / abs(avg_3mo) * 100) if avg_3mo != 0 else 0
                 
                 variances[key] = {
-                    "current": round(current_val, 2),
-                    "prior_3mo_avg": round(avg_3mo, 2),
-                    "variance_abs": round(var_abs, 2),
-                    "variance_pct": round(var_pct, 2)
+                    "current": round(float(current_val), 2),
+                    "prior_3mo_avg": round(float(avg_3mo), 2),
+                    "variance_abs": round(float(var_abs), 2),
+                    "variance_pct": round(float(var_pct), 2)
                 }
                 
         return variances

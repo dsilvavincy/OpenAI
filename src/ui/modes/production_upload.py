@@ -47,8 +47,8 @@ class ProductionUpload:
                         st.session_state['processed_ytd_df'] = ytd_df
                         st.session_state['uploaded_file'] = uploaded_file
                         
-                        # Skip saving to exports folder as requested
-                        # self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
+                        # Save to exports folder as requested
+                        self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
                         
                         st.success("✅ File processed successfully! Monthly and YTD data available.")
                         st.rerun()  # Refresh to show results layout
@@ -136,4 +136,32 @@ class ProductionUpload:
             ytd_df = ytd_df.drop(columns=['IsYTD'])
             
         return monthly_df, ytd_df
+
+    def _save_processed_data(self, monthly_df, ytd_df, filename):
+        """Save processed DataFrames to the exports folder."""
+        import os
+        from pathlib import Path
+        from datetime import datetime
+        
+        try:
+            export_dir = Path("exports")
+            export_dir.mkdir(exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_name = Path(filename).stem
+            
+            monthly_path = export_dir / f"{base_name}_monthly_{timestamp}.csv"
+            ytd_path = export_dir / f"{base_name}_ytd_{timestamp}.csv"
+            
+            monthly_df.to_csv(monthly_path, index=False)
+            ytd_df.to_csv(ytd_path, index=False)
+            
+            # Save a unified version for convenience
+            unified_path = export_dir / f"{base_name}_unified_{timestamp}.csv"
+            pd.concat([monthly_df, ytd_df], ignore_index=True).to_csv(unified_path, index=False)
+            
+            st.info(f"📁 Processed data exported to `{export_dir}`")
+            
+        except Exception as e:
+            st.warning(f"⚠️ Could not save CSVs to exports folder: {str(e)}")
     

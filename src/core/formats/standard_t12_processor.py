@@ -6,6 +6,7 @@ providing support for both Actual and Budget data across all visible sheets.
 """
 import re
 import pandas as pd
+import numpy as np
 import openpyxl
 import datetime
 from pathlib import Path
@@ -129,6 +130,21 @@ class StandardT12Processor(BaseFormatProcessor):
                 # --- Extract Monthly Budgets (Col 18-29) ---
                 budget_months = [self._normalize_date(header_row[i]) for i in range(17, 29)]
                 monthly_budgets = data_df[["Metric"] + [f"col_{i}" for i in range(17, 29)]].copy()
+                
+                # USER FEEDBACK: Rows below "Monthly Cash Flow" don't have applicable budgets.
+                # Find metrics that are balance sheet items or occupancy items that shouldn't have budgets
+                m_cf_series = monthly_budgets['Metric'].str.lower()
+                m_cf_found = m_cf_series.str.contains('monthly cash flow', na=False)
+                if m_cf_found.any():
+                    # Get index of the first occurrence
+                    start_nulling = False
+                    for idx, row in monthly_budgets.iterrows():
+                        if start_nulling:
+                            for i in range(17, 29):
+                                monthly_budgets.at[idx, f"col_{i}"] = np.nan
+                        if 'monthly cash flow' in str(row['Metric']).lower():
+                            start_nulling = True
+                            
                 monthly_budgets.columns = ["Metric"] + budget_months
                 budget_long = monthly_budgets.melt(id_vars="Metric", var_name="Period", value_name="BudgetValue")
                 
@@ -141,6 +157,15 @@ class StandardT12Processor(BaseFormatProcessor):
                 ytd_actuals.columns = ["Metric", "Value"]
                 ytd_actuals["Period"] = "YTD"
                 ytd_actuals["BudgetValue"] = data_df["col_14"].values
+                
+                if m_cf_found.any():
+                    start_nulling = False
+                    for idx, row in ytd_actuals.iterrows():
+                        if start_nulling:
+                            ytd_actuals.at[idx, "BudgetValue"] = np.nan
+                        if 'monthly cash flow' in str(row['Metric']).lower():
+                            start_nulling = True
+                            
                 ytd_actuals["IsYTD"] = True
                 
                 # --- Combine ---

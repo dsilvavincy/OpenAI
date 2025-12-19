@@ -125,6 +125,7 @@ class PropertyAnalyzer:
             "key_ratios": self._calculate_key_ratios(monthly_filtered, ytd_filtered, latest_month),
             "budget_variance": self._get_budget_variance(monthly_filtered, ytd_filtered, latest_month),
             "rolling_avg_variance": self._get_rolling_average_variances(monthly_filtered, latest_month),
+            "metric_anomalies": self._get_global_anomalies(monthly_filtered, latest_month),
             # Data highlights - LLM will interpret these and generate red flags/questions
             "data_highlights": self._get_data_highlights(monthly_filtered, ytd_filtered, latest_month),
             "all_metrics_current": self._get_all_metrics_for_period(monthly_filtered, latest_month),
@@ -468,6 +469,65 @@ class PropertyAnalyzer:
                 }
                 
         return variances
+
+    def _get_global_anomalies(self, df: pd.DataFrame, current_month: Optional[datetime]) -> List[Dict]:
+        """Scan ALL metrics for significant MoM spikes or outliers."""
+        anomalies = []
+        if df.empty or current_month is None:
+            return anomalies
+            
+        all_metrics = df['Metric'].unique()
+        prior_month = self._get_prior_month(df, current_month)
+        
+        for metric in all_metrics:
+            # Skip noise and aggregate metrics that shouldn't be in a line-item deep dive
+            m_lower = metric.lower()
+            if any(skip in m_lower for skip in ['total', 'trailing', 'ytd', 'dscr', 'debt yield', 'economic occupancy']):
+                continue
+                
+            metric_data = df[df['Metric'] == metric].sort_values('MonthParsed')
+            current_row = metric_data[metric_data['MonthParsed'] == current_month]
+            
+            if current_row.empty:
+                continue
+                
+            current_val = float(current_row['Value'].iloc[0]) if pd.notna(current_row['Value'].iloc[0]) else 0
+            
+            if abs(current_val) < 1: # Ignore only true zeros/near-zeros
+                continue
+                
+            prior_row = metric_data[metric_data['MonthParsed'] == prior_month] if prior_month else pd.DataFrame()
+            prior_val = float(prior_row['Value'].iloc[0]) if not prior_row.empty and pd.notna(prior_row['Value'].iloc[0]) else 0
+            
+            # 1. New activity (Zero -> Significant)
+            if prior_val == 0 and abs(current_val) > 1:
+                anomalies.append({
+                    "metric": metric,
+                    "type": "New/Resumed Activity",
+                    "current": round(current_val, 2),
+                    "prior": 0,
+                    "abs_change": round(current_val, 2)
+                })
+                continue
+            
+            # 2. Significant Variance
+            if prior_val != 0:
+                abs_change = current_val - prior_val
+                pct_change = (abs_change / abs(prior_val)) * 100
+                
+                # Flag if change > 15% AND > $1 (scaled/per-unit data), or a massive spike > 50%
+                if (abs(pct_change) > 15 and abs(abs_change) > 1) or abs(pct_change) > 50:
+                    anomalies.append({
+                        "metric": metric,
+                        "type": "Variance",
+                        "current": round(current_val, 2),
+                        "prior": round(prior_val, 2),
+                        "change_pct": round(pct_change, 2),
+                        "abs_change": round(abs_change, 2)
+                    })
+
+        # Return top 12 most significant anomalies
+        return sorted(anomalies, key=lambda x: abs(x.get('abs_change', 0)), reverse=True)[:12]
     
     def _calculate_key_ratios(self, monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, month: Optional[datetime]) -> Dict:
         """Calculate key performance ratios."""

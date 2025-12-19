@@ -9,6 +9,7 @@ import pandas as pd
 from pathlib import Path
 from .formats.base_processor import BaseFormatProcessor
 from .formats.t12_processor import T12MonthlyFinancialProcessor
+from .formats.standard_t12_processor import StandardT12Processor
 
 class FormatRegistry:
     """
@@ -29,6 +30,8 @@ class FormatRegistry:
         """Register all built-in format processors."""
         # Register T12 Monthly Financial processor
         self.register_processor(T12MonthlyFinancialProcessor())
+        # Register Standard T12 Workbook processor
+        self.register_processor(StandardT12Processor())
     
     def register_processor(self, processor: BaseFormatProcessor):
         """

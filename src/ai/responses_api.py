@@ -24,9 +24,8 @@ The data includes:
 - current_month/prior_month: KPI values for each period
 - mom_changes: Month-over-month % and absolute changes
 - t12_trends: 12-month trends, averages, direction
-- ytd_cumulative: Year-to-date totals
-- key_ratios: Calculated ratios (vacancy, expense, delinquency)
-- data_highlights: Notable observations
+- budget_variance: Actual vs Budget comparisons (monthly and YTD)
+- rolling_avg_variance: Current month vs prior 3-month average (to spot spikes/abnormalities)
 
 YOU MUST USE THIS EXACT FORMAT - DO NOT DEVIATE:
 
@@ -54,31 +53,37 @@ YOU MUST USE THIS EXACT FORMAT - DO NOT DEVIATE:
 - **YTD Net Operating Income:** $XX,XXX.XX
 - **YTD Expense Ratio:** XX.XX% ($XX,XXX expenses ÷ $XX,XXX income)
 
-## 3️⃣ Key Observations (Metric-Specific)
-Analyze t12_trends and mom_changes. For each significant finding:
+## 3️⃣ Budget & Rolling Average Variance
+*Only include this section if budget_variance or rolling_avg_variance data is present.*
+- **Monthly NOI vs Budget:** +/-$X,XXX.XX (+/-X.XX% variance)
+- **Expense vs Prior 3-Mo Avg:** +/-$X,XXX.XX (+/-X.XX% variance)
+- **Variance Analysis:** Specifically call out if current expenses are significantly higher than the 3-month average ($[rolling_avg_variance.total_expense.current] vs $[rolling_avg_variance.total_expense.prior_3mo_avg]).
+
+## 4️⃣ Key Observations (Metric-Specific)
+Analyze t12_trends, mom_changes, budget_variance, and rolling_avg_variance. For each significant finding:
 - [Specific metric name]: $X,XXX showed X.XX% change because...
 - [Specific metric name]: $X,XXX represents X.XX% of total income, indicating...
-- [Pattern in specific metrics with actual values]
+- [Pattern in budget variances vs 3-month average trends]
 
 Compare values to industry_benchmarks and note if above/below typical ranges.
 
-## 4️⃣ Strategic Management Questions
+## 5️⃣ Strategic Management Questions
 Generate 5 specific, data-driven questions:
 1. Why did [Specific Metric] change from $X,XXX to $X,XXX (X.XX% change)?
 2. How can we address [Specific Metric] performance of $X,XXX vs industry benchmark?
-3. What caused [Specific Metric] variance of X.XX% this month?
-4. Should we investigate [Specific Metric] trend showing $X,XXX vs $X,XXX?
+3. What caused [Specific Metric] budget variance of X.XX% this month?
+4. Why is [Specific Expense Metric] $X,XXX vs the prior 3-month average of $X,XXX?
 5. How do we optimize [Specific Metric] currently at $X,XXX?
 
-## 5️⃣ Actionable Recommendations (NOI Improvement)
+## 6️⃣ Actionable Recommendations (NOI Improvement)
 Provide 3+ specific recommendations with dollar impact:
 - **Target [Specific Revenue Metric]:** Currently $X,XXX, increase by X.XX% to add $XXX monthly NOI
 - **Reduce [Specific Expense Metric]:** Currently $X,XXX, reduce by X.XX% to save $XXX monthly
 - **Address [Specific Problem Metric]:** At $X,XXX (X.XX% of income), implement [specific action]
 
-## 6️⃣ Red Flags / Immediate Attention
-Based on industry_benchmarks and data_highlights, identify concerns:
-- [Specific Metric] at $X,XXX represents X.XX% variance - requires immediate review
+## 7️⃣ Red Flags / Immediate Attention
+Based on industry_benchmarks, data_highlights, budget_variance, and rolling_avg_variance, identify concerns:
+- [Specific Metric] at $X,XXX represents X.XX% variance to 3-mo avg - requires immediate review
 - [Zero/Missing Metric from zero_value_metrics] should typically have a value
 - [Metric exceeding high threshold] at X.XX% vs benchmark of X.XX%
 
@@ -86,7 +91,9 @@ CRITICAL REQUIREMENTS:
 - Every dollar amount and percentage MUST come directly from the provided JSON
 - Use the EXACT section headers and structure above
 - Reference specific metric names and exact values, never generalize
-- Compare actual values to industry_benchmarks when identifying concerns"""
+- Compare actual values to industry_benchmarks when identifying concerns
+- When budget data or 3-month rolling data is available, highlight variances as key performance indicators
+"""
 
 
 def analyze_with_responses_api(

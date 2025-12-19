@@ -123,6 +123,8 @@ class PropertyAnalyzer:
             "t12_trends": self._get_t12_trends(monthly_filtered),
             "ytd_cumulative": self._get_ytd_performance(ytd_filtered),
             "key_ratios": self._calculate_key_ratios(monthly_filtered, ytd_filtered, latest_month),
+            "budget_variance": self._get_budget_variance(monthly_filtered, ytd_filtered, latest_month),
+            "rolling_avg_variance": self._get_rolling_average_variances(monthly_filtered, latest_month),
             # Data highlights - LLM will interpret these and generate red flags/questions
             "data_highlights": self._get_data_highlights(monthly_filtered, ytd_filtered, latest_month),
             "all_metrics_current": self._get_all_metrics_for_period(monthly_filtered, latest_month),
@@ -202,22 +204,61 @@ class PropertyAnalyzer:
         return None
     
     def _get_period_metrics(self, df: pd.DataFrame, month: Optional[datetime]) -> Dict:
-        """Get all key metrics for a specific month."""
+        """Get all key metrics for a specific month (including budgets if available)."""
         if month is None:
             return {}
         
         metrics = {}
         for metric in self.KEY_METRICS:
-            value = self._get_metric_value(df, metric, month)
-            if value is not None:
-                # Use snake_case keys for JSON
+            # Find value and budget
+            vals = self._get_metric_values(df, metric, month)
+            if vals["value"] is not None:
                 key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
-                metrics[key] = round(value, 2)
+                metrics[key] = round(vals["value"], 2)
+                if vals["budget"] is not None:
+                    metrics[f"{key}_budget"] = round(vals["budget"], 2)
+                    # Calculate variance if both exist
+                    variance_abs = vals["value"] - vals["budget"]
+                    metrics[f"{key}_variance_abs"] = round(variance_abs, 2)
+                    if vals["budget"] != 0:
+                        metrics[f"{key}_variance_pct"] = round((variance_abs / abs(vals["budget"])) * 100, 2)
         
         return metrics
+
+    def _get_metric_values(self, df: pd.DataFrame, metric_name: str, month: Optional[datetime] = None) -> Dict[str, Optional[float]]:
+        """Get both actual and budget value for a metric."""
+        if df.empty:
+            return {"value": None, "budget": None}
+        
+        # Exact match
+        filtered = df[df['Metric'].str.lower() == metric_name.lower()]
+        if (month_filtered := self._apply_month_filter(filtered, month)) is not None:
+            filtered = month_filtered
+        
+        # Partial match if exact failed
+        if filtered.empty:
+            filtered = df[df['Metric'].str.contains(metric_name, case=False, na=False)]
+            if (month_filtered := self._apply_month_filter(filtered, month)) is not None:
+                filtered = month_filtered
+        
+        if not filtered.empty:
+            row = filtered.iloc[0]
+            val = float(row['Value']) if pd.notna(row['Value']) else None
+            budget = float(row['BudgetValue']) if 'BudgetValue' in row and pd.notna(row['BudgetValue']) else None
+            return {"value": val, "budget": budget}
+            
+        return {"value": None, "budget": None}
+
+    def _apply_month_filter(self, df: pd.DataFrame, month: Optional[datetime]) -> Optional[pd.DataFrame]:
+        """Utility to apply month filter if applicable."""
+        if month is not None and 'MonthParsed' in df.columns:
+            m_filtered = df[df['MonthParsed'] == month]
+            if not m_filtered.empty:
+                return m_filtered
+        return None
     
     def _get_all_metrics_for_period(self, df: pd.DataFrame, month: Optional[datetime]) -> Dict:
-        """Get ALL metrics for a specific month (for detailed analysis)."""
+        """Get ALL metrics for a specific month (including budgets)."""
         if month is None or df.empty:
             return {}
         
@@ -227,8 +268,13 @@ class PropertyAnalyzer:
         for _, row in month_data.iterrows():
             metric_name = row['Metric']
             value = row['Value']
-            if pd.notna(value):
-                metrics[metric_name] = round(float(value), 2)
+            budget = row.get('BudgetValue') if 'BudgetValue' in row else None
+            
+            if pd.notna(value) or pd.notna(budget):
+                metrics[metric_name] = {
+                    "actual": round(float(value), 2) if pd.notna(value) else None,
+                    "budget": round(float(budget), 2) if pd.notna(budget) else None
+                }
         
         return metrics
     
@@ -259,7 +305,7 @@ class PropertyAnalyzer:
         return changes
     
     def _get_ytd_performance(self, ytd_df: pd.DataFrame) -> Dict:
-        """Get YTD cumulative performance metrics."""
+        """Get YTD cumulative performance metrics (including budgets)."""
         if ytd_df.empty:
             return {"note": "No YTD data available"}
         
@@ -276,10 +322,16 @@ class PropertyAnalyzer:
         ]
         
         for metric in ytd_keys:
-            value = self._get_metric_value(ytd_df, metric)
-            if value is not None:
+            vals = self._get_metric_values(ytd_df, metric)
+            if vals["value"] is not None:
                 key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
-                ytd_metrics[key] = round(value, 2)
+                ytd_metrics[key] = round(vals["value"], 2)
+                if vals["budget"] is not None:
+                    ytd_metrics[f"{key}_budget"] = round(vals["budget"], 2)
+                    variance_abs = vals["value"] - vals["budget"]
+                    ytd_metrics[f"{key}_variance_abs"] = round(variance_abs, 2)
+                    if vals["budget"] != 0:
+                        ytd_metrics[f"{key}_variance_pct"] = round((variance_abs / abs(vals["budget"])) * 100, 2)
         
         # Calculate YTD expense ratio
         income = self._get_metric_value(ytd_df, 'Net Eff. Gross Income')
@@ -289,6 +341,80 @@ class PropertyAnalyzer:
             ytd_metrics['expense_ratio_pct'] = round(abs(expenses) / income * 100, 2)
         
         return ytd_metrics
+
+    def _get_budget_variance(self, monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, month: Optional[datetime]) -> Dict:
+        """Specifically extract budget variances for detailed analysis."""
+        if 'BudgetValue' not in monthly_df.columns:
+            return {"note": "Budget data not available in this format"}
+            
+        variances = {
+            "monthly": {},
+            "ytd": {}
+        }
+        
+        # Expanded check metrics to include more detail if available
+        check_metrics = ['Net Eff. Gross Income', 'Total Expense', 'EBITDA (NOI)', 'Property Asking Rent', 'Effective Rental Income']
+        
+        for metric in check_metrics:
+            key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
+            
+            # Monthly
+            m_vals = self._get_metric_values(monthly_df, metric, month)
+            if m_vals["value"] is not None and m_vals["budget"] is not None:
+                var_abs = m_vals["value"] - m_vals["budget"]
+                variances["monthly"][key] = {
+                    "actual": round(m_vals["value"], 2),
+                    "budget": round(m_vals["budget"], 2),
+                    "variance_abs": round(var_abs, 2),
+                    "variance_pct": round((var_abs / abs(m_vals["budget"])) * 100, 2) if m_vals["budget"] != 0 else 0
+                }
+            
+            # YTD
+            y_vals = self._get_metric_values(ytd_df, metric)
+            if y_vals["value"] is not None and y_vals["budget"] is not None:
+                var_abs = y_vals["value"] - y_vals["budget"]
+                variances["ytd"][key] = {
+                    "actual": round(y_vals["value"], 2),
+                    "budget": round(y_vals["budget"], 2),
+                    "variance_abs": round(var_abs, 2),
+                    "variance_pct": round((var_abs / abs(y_vals["budget"])) * 100, 2) if y_vals["budget"] != 0 else 0
+                }
+        
+        return variances
+
+    def _get_rolling_average_variances(self, df: pd.DataFrame, current_month: Optional[datetime]) -> Dict:
+        """Calculate variance between current month and prior 3-month average."""
+        if current_month is None or df.empty:
+            return {}
+            
+        variances = {}
+        metrics_to_check = ['Total Expense', 'Net Eff. Gross Income', 'EBITDA (NOI)', 'Property Asking Rent']
+        
+        for metric in metrics_to_check:
+            metric_data = df[df['Metric'].str.lower() == metric.lower()].sort_values('MonthParsed')
+            if metric_data.empty:
+                continue
+                
+            # Filter to months before current
+            prior_data = metric_data[metric_data['MonthParsed'] < current_month].tail(3)
+            current_row = metric_data[metric_data['MonthParsed'] == current_month]
+            
+            if not prior_data.empty and not current_row.empty:
+                avg_3mo = prior_data['Value'].mean()
+                current_val = current_row['Value'].iloc[0]
+                
+                key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
+                var_abs = current_val - avg_3mo
+                var_pct = (var_abs / abs(avg_3mo) * 100) if avg_3mo != 0 else 0
+                
+                variances[key] = {
+                    "current": round(current_val, 2),
+                    "prior_3mo_avg": round(avg_3mo, 2),
+                    "variance_abs": round(var_abs, 2),
+                    "variance_pct": round(var_pct, 2)
+                }
+                
+        return variances
     
     def _calculate_key_ratios(self, monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, month: Optional[datetime]) -> Dict:
         """Calculate key performance ratios."""
@@ -362,6 +488,17 @@ class PropertyAnalyzer:
             if total_expense:
                 highlights['expense_ratio_pct'] = round(abs(total_expense) / effective_income * 100, 2)
         
+        # Budget Variances (Factual)
+        if 'budget_variance' in highlights is False: # Check if we need to add it
+             # We can pull from the already computed budget_variance section if we want, 
+             # but here we'll add specific high-level flags
+             m_vars = self._get_budget_variance(monthly_df, ytd_df, month)
+             if "note" not in m_vars:
+                 if noi_var := m_vars["monthly"].get("ebitda_noi"):
+                     highlights["monthly_noi_variance_pct"] = noi_var["variance_pct"]
+                 if ytd_noi_var := m_vars["ytd"].get("ebitda_noi"):
+                     highlights["ytd_noi_variance_pct"] = ytd_noi_var["variance_pct"]
+
         # MoM changes with largest movements (factual)
         prior_month = self._get_prior_month(monthly_df, month)
         if prior_month:

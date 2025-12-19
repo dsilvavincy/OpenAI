@@ -55,7 +55,7 @@ class ProductionUpload:
     
     def _handle_file_upload(self, uploaded_file):
         """
-        Process uploaded T12 file.
+        Process uploaded T12 file using FormatRegistry for automatic detection.
         
         Args:
             uploaded_file: Streamlit uploaded file object
@@ -64,21 +64,76 @@ class ProductionUpload:
             Tuple of (monthly_df, ytd_df) or (None, None) if processing failed
         """
         try:
-            from src.core.cres_batch_processor import process_cres_workbook
+            from src.core.format_registry import FormatRegistry
+            from src.utils.format_detection import store_detected_format
             import io
+            
+            # Reset buffer
+            uploaded_file.seek(0)
             excel_buffer = io.BytesIO(uploaded_file.getvalue())
-            monthly_df, ytd_df = process_cres_workbook(excel_buffer)
+            
+            # Use registry to detect and process
+            registry = FormatRegistry()
+            unified_df, processor = registry.process_file(excel_buffer)
+            
+            if unified_df is None or unified_df.empty:
+                st.error("❌ No data could be extracted from the file.")
+                return None, None
+                
+            # Store detected format for prompt selection
+            store_detected_format(processor.format_name)
+            
+            # Split into monthly and YTD for the analysis engine
+            monthly_df, ytd_df = self._split_unified_df(unified_df)
+            
             if monthly_df is not None and not monthly_df.empty:
-                st.success(f"✅ Processed {len(monthly_df)} monthly rows with {monthly_df['Metric'].nunique()} unique metrics")
+                metrics_count = monthly_df['Metric'].nunique()
+                properties_count = monthly_df['Property'].nunique()
+                st.success(f"✅ Processed {properties_count} properties, {metrics_count} unique metrics")
             else:
                 st.error("❌ No monthly data found in file")
-            if ytd_df is not None and not ytd_df.empty:
-                st.success(f"✅ Processed {len(ytd_df)} YTD rows")
-            else:
+            
+            if ytd_df is None or ytd_df.empty:
                 st.warning("⚠️ No YTD data found in file")
+                
             return monthly_df, ytd_df
+            
         except Exception as e:
             st.error(f"❌ Error processing file: {str(e)}")
             st.info("💡 Please ensure your file is a valid T12 Excel format")
+            import traceback
+            st.expander("Error Details").code(traceback.format_exc())
             return None, None
+
+    def _split_unified_df(self, df):
+        """Split unified DataFrame into monthly and YTD DataFrames for analysis."""
+        if df is None or df.empty:
+            return None, None
+            
+        # Split by the IsYTD flag
+        monthly_df = df[df['IsYTD'] == False].copy()
+        ytd_df = df[df['IsYTD'] == True].copy()
+        
+        # Fill in date info for YTD rows based on last month of each property
+        # This aligns with how PropertyAnalyzer expects YTD data
+        for prop in ytd_df['Property'].unique():
+            prop_rows = monthly_df[monthly_df['Property'] == prop]
+            if not prop_rows.empty:
+                # Find the latest month for this property
+                max_month_idx = prop_rows['MonthParsed'].idxmax()
+                last_date_info = prop_rows.loc[max_month_idx]
+                
+                idx = ytd_df['Property'] == prop
+                ytd_df.loc[idx, 'Month'] = last_date_info['Month']
+                ytd_df.loc[idx, 'MonthParsed'] = last_date_info['MonthParsed']
+                ytd_df.loc[idx, 'Year'] = last_date_info['Year']
+                ytd_df.loc[idx, 'Month_Name'] = last_date_info['Month_Name']
+        
+        # Drop the IsYTD helper column if it exists to keep DataFrames clean
+        if 'IsYTD' in monthly_df.columns:
+            monthly_df = monthly_df.drop(columns=['IsYTD'])
+        if 'IsYTD' in ytd_df.columns:
+            ytd_df = ytd_df.drop(columns=['IsYTD'])
+            
+        return monthly_df, ytd_df
     

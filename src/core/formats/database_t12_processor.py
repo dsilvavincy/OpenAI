@@ -63,14 +63,30 @@ class DatabaseT12Processor(BaseFormatProcessor):
         wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
         all_sheets = wb.sheetnames
         
-        # Identify pairs
+        # Read property whitelist from DB sheet
+        property_whitelist = self._read_property_whitelist(wb)
+        
+        # Identify pairs (handle both "Name-Fin" and "Name -Fin" patterns)
         pairs = []
         for s in all_sheets:
-            if s.endswith("-Fin"):
-                base_name = s[:-4]
-                bgt_sheet = f"{base_name}-Bgt"
+            if s.endswith("-Fin") or s.endswith(" -Fin"):
+                # Remove suffix to get base name
+                if s.endswith(" -Fin"):
+                    base_name = s[:-5]  # Remove " -Fin"
+                    bgt_sheet = f"{base_name} -Bgt"
+                else:
+                    base_name = s[:-4]  # Remove "-Fin"
+                    bgt_sheet = f"{base_name}-Bgt"
+                
                 if bgt_sheet in all_sheets:
                     pairs.append((base_name, s, bgt_sheet))
+        
+        # Filter by whitelist (case-insensitive match)
+        if property_whitelist:
+            # Create lowercase lookup for case-insensitive matching
+            whitelist_lower = {prop.lower(): prop for prop in property_whitelist}
+            pairs = [(base, fin, bgt) for base, fin, bgt in pairs 
+                     if base.lower() in whitelist_lower]
         
         if not pairs:
             wb.close()
@@ -161,12 +177,20 @@ class DatabaseT12Processor(BaseFormatProcessor):
             if valid_date_cols:
                 max_valid_date = valid_date_cols[-1][1]
             
-            # Re-build date_col_map to only include dates <= max_valid_date
+            # Calculate T12 window (last 12 months from max_valid_date)
+            # This reduces payload size by excluding older history
+            t12_start_date = None
+            if max_valid_date:
+                from dateutil.relativedelta import relativedelta
+                t12_start_date = max_valid_date - relativedelta(months=11)  # 11 months back + current = 12 total
+            
+            # Re-build date_col_map to only include dates <= max_valid_date AND >= t12_start_date
             final_date_col_map = {}
             if max_valid_date:
                 for idx, dt in date_col_map.items():
                     if dt <= max_valid_date:
-                        final_date_col_map[idx] = dt
+                        if t12_start_date is None or dt >= t12_start_date:
+                            final_date_col_map[idx] = dt
             else:
                 final_date_col_map = date_col_map # Fallback
             
@@ -369,6 +393,31 @@ class DatabaseT12Processor(BaseFormatProcessor):
             return str(val)
         return str(val).strip()
 
+    def _read_property_whitelist(self, wb) -> List[str]:
+        """
+        Read property names from 'DB' sheet, Column K, starting Row 2.
+        Returns empty list if DB sheet doesn't exist or column is empty.
+        """
+        if 'DB' not in wb.sheetnames:
+            return []  # No whitelist = process all
+        
+        try:
+            db_sheet = wb['DB']
+            properties = []
+            
+            # Column K is column 11 (1-indexed)
+            row_idx = 2
+            while row_idx < 1000:  # Safety limit
+                cell_val = db_sheet.cell(row=row_idx, column=11).value
+                if not cell_val or (isinstance(cell_val, str) and not cell_val.strip()):
+                    break
+                properties.append(str(cell_val).strip())
+                row_idx += 1
+            
+            return properties
+        except Exception:
+            return []  # If any error, process all
+    
     def _parse_header_date(self, val: Any) -> Optional[datetime.datetime]:
         """Attempt to parse openpyxl cell value as datetime"""
         if isinstance(val, datetime.datetime):

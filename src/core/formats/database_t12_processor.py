@@ -260,12 +260,13 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 if dt:
                     date_col_map_bgt[idx] = dt
             
-            # Filter Budget columns to match Actuals cutoff (prevent future budgets)
+            # Filter Budget columns to match Actuals cutoff (prevent future budgets AND respect T12 window)
             final_date_col_map_bgt = {}
             if max_valid_date:
                 for idx, dt in date_col_map_bgt.items():
                     if dt <= max_valid_date:
-                        final_date_col_map_bgt[idx] = dt
+                        if t12_start_date is None or dt >= t12_start_date:
+                            final_date_col_map_bgt[idx] = dt
             else:
                 final_date_col_map_bgt = date_col_map_bgt
             
@@ -299,11 +300,23 @@ class DatabaseT12Processor(BaseFormatProcessor):
 
             # Melt Budgets
             budget_long = data_bgt.melt(id_vars="Metric", var_name="Period", value_name="BudgetValue")
-            budget_long["BudgetValue"] = pd.to_numeric(budget_long["BudgetValue"], errors='coerce')
+            budget_long["BudgetValue"] = pd.to_numeric(budget_long["BudgetValue"], errors='coerce').fillna(0)
             
             # --- Merge ---
             # Merge on Metric and Period
             combined = pd.merge(actual_long, budget_long, on=["Metric", "Period"], how="outer")
+            
+            # Ensure no NaNs are introduced by the outer merge
+            combined["Value"] = combined["Value"].fillna(0)
+            combined["BudgetValue"] = combined["BudgetValue"].fillna(0)
+            
+            # GUARDRAIL: Brute-force sweep for extreme overflow artifacts (e.g. INT64_MIN used for NaNs in some engines)
+            # This squashes the -9.22E+18 values reported by the user
+            for col in ["Value", "BudgetValue"]:
+                mask_extreme = (combined[col] < -1e15) | (combined[col] > 1e15)
+                if mask_extreme.any():
+                    combined.loc[mask_extreme, col] = 0
+            
             combined["Property"] = property_name
             combined["Sheet"] = fin_sheet # Metadata
             combined["IsYTD"] = False

@@ -113,17 +113,89 @@ class DatabaseT12Processor(BaseFormatProcessor):
             for idx, dt in date_col_map.items():
                 rename_dict[cols[idx]] = dt
             
-            # Keep only Metric + Date columns
-            keep_cols = [cols[i] for i in [0] + list(date_col_map.keys())]
-            data_fin = data_fin[keep_cols].rename(columns=rename_dict)
+            # Determine meaningful cutoff date for Actuals based on "Net Eff. Gross Income"
+            # This is the most reliable indicator of whether a month has actuals.
+            
+            # Find the row index for Net Eff. Gross Income
+            negi_idx = data_fin[data_fin[cols[0]].astype(str).str.contains("Net Eff. Gross Income", case=False, na=False)].index
+            
+            valid_date_cols = []
+            
+            if not negi_idx.empty:
+                target_idx = negi_idx[0]
+                # Check only this row for each column
+                for col_idx, dt in date_col_map.items():
+                    col_name = cols[col_idx]
+                    val = pd.to_numeric(data_fin.loc[target_idx, col_name], errors='coerce')
+                    if pd.notna(val) and val != 0:
+                        valid_date_cols.append((col_idx, dt))
+            else:
+                # Fallback: Check "Total Income" or strictly >5 non-zeros if NEGI missing
+                for col_idx, dt in date_col_map.items():
+                    col_name = cols[col_idx]
+                    col_data = pd.to_numeric(data_fin[col_name], errors='coerce').fillna(0)
+                    if (col_data != 0).sum() > 5: 
+                        valid_date_cols.append((col_idx, dt))
+            
+            # Sort by date
+            valid_date_cols.sort(key=lambda x: x[1])
+            
+            # If we found valid columns, take the set up to the last valid one
+            # Actually, standard practice: If Nov-25 is empty, but Jan-25 is full, we keep Jan-25.
+            # We should keep columns up to the MAX date that has meaningful data.
+            
+            max_valid_date = None
+            if valid_date_cols:
+                max_valid_date = valid_date_cols[-1][1]
+            
+            # Re-build date_col_map to only include dates <= max_valid_date
+            final_date_col_map = {}
+            if max_valid_date:
+                for idx, dt in date_col_map.items():
+                    if dt <= max_valid_date:
+                        final_date_col_map[idx] = dt
+            else:
+                final_date_col_map = date_col_map # Fallback
+            
+            keep_cols = [cols[i] for i in [0] + list(final_date_col_map.keys())]
+            data_fin = data_fin[keep_cols].rename(columns={cols[0]: "Metric", **{cols[k]: v for k,v in final_date_col_map.items()}})
             
             # Drop rows with empty Metric
             data_fin = data_fin.dropna(subset=["Metric"])
+            
+            # Formatting: Clean up metric names (e.g. 0.05 -> "Valuation p/unit 5%")
+            data_fin["Metric"] = data_fin["Metric"].apply(self._format_metric_name)
             
             # Melt Actuals
             actual_long = data_fin.melt(id_vars="Metric", var_name="Period", value_name="Value")
             actual_long["Value"] = pd.to_numeric(actual_long["Value"], errors='coerce').fillna(0)
             
+            # Identify valid metrics for YTD calculation (stop at "Monthly Cash Flow")
+            # We do this on data_fin before melting to preserve order
+            valid_ytd_metrics = set()
+            m_cf_idx_fin = data_fin[data_fin['Metric'].astype(str).str.contains('Monthly Cash Flow', case=False, na=False)].index
+            if not m_cf_idx_fin.empty:
+                cutoff_idx = m_cf_idx_fin[0]
+                # data_fin is indexed by row numbers from read_excel, let's just take head
+                # Since we dropped na metrics, index might be non-contiguous, so use .loc
+                # Actually, simpler: just iterate or finding position
+                # Get all metrics in order
+                all_metrics_ordered = data_fin['Metric'].tolist()
+                try:
+                    # Find index in list (first occurrence)
+                    # Note: formatted names might differ slightly, but we just formatted them.
+                    # Searching for substring match in list might be safer?
+                    # But we used the index directly above.
+                    # Wait, data_fin index is preserved. cutoff_idx is the index label.
+                    # So we can effectively toggle based on index labels assuming increasing
+                    valid_mask = data_fin.index <= cutoff_idx
+                    valid_ytd_metrics = set(data_fin[valid_mask]['Metric'].unique())
+                except:
+                    # Fallback: keep all
+                    valid_ytd_metrics = set(all_metrics_ordered)
+            else:
+                valid_ytd_metrics = set(data_fin['Metric'].unique())
+
             # --- Process Budgets ---
             if hasattr(file_path, 'seek'):
                 file_path.seek(0)
@@ -139,16 +211,28 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 if dt:
                     date_col_map_bgt[idx] = dt
             
+            # Filter Budget columns to match Actuals cutoff (prevent future budgets)
+            final_date_col_map_bgt = {}
+            if max_valid_date:
+                for idx, dt in date_col_map_bgt.items():
+                    if dt <= max_valid_date:
+                        final_date_col_map_bgt[idx] = dt
+            else:
+                final_date_col_map_bgt = date_col_map_bgt
+            
             cols_bgt = list(data_bgt.columns)
             rename_dict_bgt = {cols_bgt[0]: "Metric"}
-            for idx, dt in date_col_map_bgt.items():
+            for idx, dt in final_date_col_map_bgt.items():
                 rename_dict_bgt[cols_bgt[idx]] = dt
                 
-            keep_cols_bgt = [cols_bgt[i] for i in [0] + list(date_col_map_bgt.keys())]
+            keep_cols_bgt = [cols_bgt[i] for i in [0] + list(final_date_col_map_bgt.keys())]
             data_bgt = data_bgt[keep_cols_bgt].rename(columns=rename_dict_bgt)
             
             # Drop rows with empty Metric
             data_bgt = data_bgt.dropna(subset=["Metric"])
+
+            # Formatting: Clean up metric names
+            data_bgt["Metric"] = data_bgt["Metric"].apply(self._format_metric_name)
             
             # Apply Budget Nullification Logic (Monthly Cash Flow cutoff)
             # Find "Monthly Cash Flow"
@@ -183,6 +267,10 @@ class DatabaseT12Processor(BaseFormatProcessor):
             combined["Year"] = combined["Period"].dt.year
             combined["Month_Name"] = combined["Period"].dt.month_name()
             
+            # Filter out rows where BOTH Actual and Budget are zero/nan
+            # This cleans up the dataset significantly
+            combined = combined[~((combined["Value"] == 0) & (combined["BudgetValue"].fillna(0) == 0))]
+            
             # --- Calculate YTD ---
             # We must calculate YTD for the LATEST available month (or all months?)
             # Standard processor generally provides YTD as a separate "Period='YTD'" row.
@@ -203,6 +291,10 @@ class DatabaseT12Processor(BaseFormatProcessor):
                     # Warning: grouping on Metric can be tricky if names are not unique or messy.
                     # We assume names are standard.
                     ytd_values = cy_data.groupby("Metric")[["Value", "BudgetValue"]].sum().reset_index()
+                    
+                    # Filter YTD values to only include applicable Valid Metrics (above Monthly Cash Flow)
+                    ytd_values = ytd_values[ytd_values['Metric'].isin(valid_ytd_metrics)]
+                    
                     ytd_values["Period"] = "YTD"
                     ytd_values["Property"] = property_name
                     ytd_values["Sheet"] = fin_sheet
@@ -238,6 +330,19 @@ class DatabaseT12Processor(BaseFormatProcessor):
     def get_expected_metrics(self) -> List[str]:
         """Return expected metrics"""
         return ["Net Eff. Gross Income", "Total Expense", "EBITDA (NOI)"]
+
+    def _format_metric_name(self, val: Any) -> str:
+        """
+        Format metric names, specifically converting decimal percentages 
+        (e.g., 0.05) to readable strings (Valuation p/unit 5%).
+        """
+        if isinstance(val, (int, float)):
+            # Check for common percentage-like values found in T12s
+            # These often appear as row headers like 0.05, 0.06 etc.
+            if 0 < val < 1:
+                return f"Valuation p/unit {int(val*100)}%"
+            return str(val)
+        return str(val).strip()
 
     def _parse_header_date(self, val: Any) -> Optional[datetime.datetime]:
         """Attempt to parse openpyxl cell value as datetime"""

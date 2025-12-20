@@ -480,6 +480,9 @@ class PropertyAnalyzer:
         prior_month = self._get_prior_month(df, current_month)
         
         for metric in all_metrics:
+            if not isinstance(metric, str):
+                continue
+                
             # Skip noise and aggregate metrics that shouldn't be in a line-item deep dive
             m_lower = metric.lower()
             if any(skip in m_lower for skip in ['total', 'trailing', 'ytd', 'dscr', 'debt yield', 'economic occupancy']):

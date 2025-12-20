@@ -10,6 +10,7 @@ from pathlib import Path
 from .formats.base_processor import BaseFormatProcessor
 from .formats.t12_processor import T12MonthlyFinancialProcessor
 from .formats.standard_t12_processor import StandardT12Processor
+from .formats.database_t12_processor import DatabaseT12Processor
 
 class FormatRegistry:
     """
@@ -32,6 +33,8 @@ class FormatRegistry:
         self.register_processor(T12MonthlyFinancialProcessor())
         # Register Standard T12 Workbook processor
         self.register_processor(StandardT12Processor())
+        # Register Database T12 processor
+        self.register_processor(DatabaseT12Processor())
     
     def register_processor(self, processor: BaseFormatProcessor):
         """

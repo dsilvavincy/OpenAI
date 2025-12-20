@@ -184,9 +184,9 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
         ai_status.text(f"✅ Computed metrics for {analysis_property}")
         ai_progress.progress(0.3)
         
-        # Display computed data summary - Expand to full JSON for verification
-        with st.expander("🔍 Inspect AI Data Package (Python Analysis Output)", expanded=False):
-            st.json(structured_data)
+        # Display computed data summary - Hidden for Production
+        # with st.expander("🔍 Inspect AI Data Package (Python Analysis Output)", expanded=False):
+        #     st.json(structured_data)
             
         # Store for persistent inspection
         st.session_state['last_structured_data'] = structured_data

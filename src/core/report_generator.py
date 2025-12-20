@@ -150,265 +150,195 @@ class ReportGenerator:
 
     def generate_portfolio_table(self, wb, property_name: str) -> str:
         """Generates the Portfolio Snapshot table from 'Internal' sheet."""
-        if "CRES - Portfolio (Internal)" not in wb.sheetnames or "DB" not in wb.sheetnames:
-            return ""
-
-        ws_internal = wb["CRES - Portfolio (Internal)"]
-        ws_db = wb["DB"]
-        
-        # 1. Get Multipliers from DB sheet (Q15:T15)
-        # Assuming Q15=Down, R15=Side, S15=UpAng, T15=Green
         try:
-             mult_down = float(ws_db["Q15"].value or 0)
-             mult_side = float(ws_db["R15"].value or 0)
-             mult_up_ang = float(ws_db["S15"].value or 0)
-             mult_green = float(ws_db["T15"].value or 0)
-        except:
-             mult_down, mult_side, mult_up_ang, mult_green = -0.075, 0, 0.075, 0.1 # Fallback defaults
+            if "CRES - Portfolio (Internal)" not in wb.sheetnames or "DB" not in wb.sheetnames:
+                return "<p>Missing required sheets ('CRES - Portfolio (Internal)' or 'DB').</p>"
 
-        # 2. Find Property Row in Internal Sheet
-        target_row = None
-        for row in ws_internal.iter_rows(min_row=5, max_col=2):
-            cell_val = row[1].value # Column B
-            if cell_val and str(cell_val).strip().lower() == property_name.strip().lower():
-                target_row = row[0].row
-                break
-        
-        if not target_row:
-             return f"<p>Property '{property_name}' not found in Portfolio Snapshot.</p>"
-             
-        # 3. Read Row Data (Cols B to AD -> 2 to 30)
-        headers = []
-        for col in range(2, 31):
-            h_val = ws_internal.cell(row=4, column=col).value
-            headers.append(h_val or f"Col_{col}")
+            ws_internal = wb["CRES - Portfolio (Internal)"]
+            ws_db = wb["DB"]
             
-        row_vals = []
-        for col in range(2, 31):
-            val = ws_internal.cell(row=target_row, column=col).value
-            row_vals.append(val)
-            
-        # 4. Generate HTML
-        html = f"{self.css_styles}\n<div style='overflow-x:auto;'><table class='report-table'><thead>"
-        
-        # --- SUPER HEADER ROW ---
-        # Based on user description + typical layout
-        # Col 1-5 (Phys Occ to DSCR): Operations
-        # Col 6-11: NOI % Variance
-        # Col 12-17: Revenue % Variance
-        # Col 18-23: Expenses % Variance
-        # ... and so on.
-        # We need to map this carefully to the filtered columns.
-        
-        # Filter headers first to know what we are displaying
-        display_headers = []
-        displayed_indices = []
-        for i, h in enumerate(headers):
-            # Robust check for hidden column
-            h_clean = str(h).replace('\n', ' ').replace('  ', ' ')
-            if "In Place Eff. Rate Prior Month" not in h_clean:
-                display_headers.append(h)
-                displayed_indices.append(i)
-        
-        # Define Groups (Count visible columns in each group)
-        # Groups from user image/inference:
-        # A. Cur. Mnth. Operations - Financial Based
-        #    - Physical Occupancy
-        #    - Economic Occupancy
-        #    - In Place Eff. Rate (Prior hidden)
-        #    - Debt Yield
-        #    - DSCR
-        #    COUNT: 4 visible (if Debt Yield/DSCR involved) -> Wait, 5 items listed in code: Phys, Econ, Rate, Debt, DSCR.
-        
-        # B. NOI - % Variance
-        #    - Cur vs Bdgt, T3 vs Bdgt, YTD vs Bdgt, T3 Seq, T1 vs T1, T3 vs T3
-        #    COUNT: 6 columns
-        
-        # C. Revenue - % Variance
-        #    - Same 6 columns
-        
-        # D. Expenses - % Variance
-        #    - Same 6 columns?
-        
-        # Let's count total visible columns: 5 (Ops) + 6 (NOI) + 6 (Rev) + 6 (Exp) = 23?
-        # Total headers range(2, 31) -> 29 columns.
-        # 29 - 1 (hidden) = 28.
-        # Where are the other 5? Maybe NOI only 6?
-        
-        # Let's add the super header row dynamically or hardcoded?
-        # Hardcoding is safer for alignment if we know the structure.
-        # Ops: 5 cols. (Phys, Econ, Rate, Debt, DSCR)
-        # NOI: 6 cols
-        # Rev: 6 cols
-        # Exp: 6 cols
-        # Total 23. Extra columns?
-        # Let's check headers length: 29.
-        # 29 - 23 = 6 columns left. Maybe "Net Income"? Or maybe only 3 groups?
-        
-        # Safer bet: Render Super Header ONLY for the known variance groups.
-        html += "<tr>"
-        # Spacer for Metadata columns (Property Name, Client, Portfolio Manager, State, # of Units)
-        html += "<th colspan='5' style='background-color:#262730; border:none;'></th>" 
-        
-        html += "<th colspan='5' style='text-align:center; background-color:#444'>Cur. Mnth. Operations - Financial Based</th>"
-        html += "<th colspan='6' style='text-align:center; background-color:#555'>NOI - % Variance</th>"
-        html += "<th colspan='6' style='text-align:center; background-color:#444'>Revenue - % Variance</th>"
-        html += "<th colspan='6' style='text-align:center; background-color:#555'>Expenses - % Variance</th>"
-        # Any remaining?
-        remaining = len(display_headers) - (5 + 5 + 6 + 6 + 6)
-        if remaining > 0:
-             html += f"<th colspan='{remaining}'>Other</th>"
-        html += "</tr>"
-        
-        # --- SUB HEADER ROW ---
-        html += "<tr>"
-        for h in display_headers:
-            html += f"<th>{h}</th>"
-        html += "</tr></thead><tbody><tr>"
-        
-        # Helper: Find Prior Value for Arrow Logic (In Place Eff. Rate)
-        prior_rate_val = 0
-        try:
-            # Locate index of "In Place Eff. Rate Prior Month"
-            # Locate index of "In Place Eff. Rate Prior Month"
-            for i, h in enumerate(headers):
-                h_c = str(h).replace('\n', ' ').replace('  ', ' ')
-                if "In Place Eff. Rate Prior Month" in h_c:
-                    prior_rate_val = float(row_vals[i] or 0)
-                    break
-        except:
-            prior_rate_val = 0
-
-        for idx, val in enumerate(row_vals):
-            header = headers[idx]
-            h_str = str(header).strip()
-            
-            # 1. HIDING Logic
-            # Robust check matching header logic
-            h_clean_val = str(header).replace('\n', ' ').replace('  ', ' ')
-            if "In Place Eff. Rate Prior Month" in h_clean_val:
-                continue
-                
-            # 2. VALUE FORMATTING
-            display_val = "-"
-            raw_val = 0
-            is_valid_num = False
-            
+            # 1. Get Multipliers from DB sheet (Q15:T15)
             try:
-                if val is not None:
-                    raw_val = float(val)
-                    is_valid_num = True
+                 mult_down = float(ws_db["Q15"].value or -0.075)
+                 mult_side = float(ws_db["R15"].value or 0)
+                 mult_up_ang = float(ws_db["S15"].value or 0.075)
+                 mult_green = float(ws_db["T15"].value or 0.1)
             except:
-                pass
-                
-            if is_valid_num:
-                # Percentage Logic, excluding DSCR or raw numbers
-                is_pct = any(x in h_str for x in [
-                    "Occupancy", "Yield", "vs Bdgt", "Sequential", "vs T1 Prior", "vs T3 Prior"
-                ])
-                if "DSCR" in h_str: 
-                    is_pct = False
-                    
-                if is_pct:
-                    display_val = f"{raw_val:.1%}" if abs(raw_val) < 10 else f"{raw_val:.1f}%"
-                elif "DSCR" in h_str:
-                    display_val = f"{raw_val:.2f}"
-                elif "Rate" in h_str: # In Place Eff. Rate
-                    display_val = f"${raw_val:,.0f}"
-                else:
-                    display_val = f"{raw_val:,.2f}" # Fallback
-            else:
-                display_val = str(val) if val is not None else "-"
+                 mult_down, mult_side, mult_up_ang, mult_green = -0.075, 0, 0.075, 0.1
 
-            # 3. CONDITIONAL FORMATTING (Colors & Arrows)
-            css_class = ""
-            arrow_html = ""
+            # 2. Find Property Row in Internal Sheet
+            target_row = None
+            for row in ws_internal.iter_rows(min_row=5, max_col=2):
+                cell_val = row[1].value # Column B
+                if cell_val and str(cell_val).strip().lower() == property_name.strip().lower():
+                    target_row = row[0].row
+                    break
             
-            if is_valid_num:
-                # A. Physical Occupancy (>90 Grn, >85 Yel)
-                if "Physical Occupancy" in h_str:
-                    if raw_val >= 0.90: css_class = "val-green"
-                    elif raw_val >= 0.85: css_class = "val-yellow"
-                    else: css_class = "val-red"
+            if not target_row:
+                 return f"<p>Property '{property_name}' not found in Internal sheet.</p>"
+                 
+            # 3. Read Row Data (Cols B to AD -> 2 to 30)
+            headers = []
+            for col in range(2, 31):
+                h_val = ws_internal.cell(row=4, column=col).value
+                headers.append(h_val or f"Col_{col}")
                 
-                # B. Economic Occupancy (>85 Grn, >75 Yel)
-                elif "Economic Occupancy" in h_str:
-                    if raw_val >= 0.85: css_class = "val-green"
-                    elif raw_val >= 0.75: css_class = "val-yellow"
-                    else: css_class = "val-red"
-                    
-                # C. Debt Yield (>7.5% Grn, >5.95% Yel) - Assuming decimal here if < 1, else scaled
-                elif "Debt Yield" in h_str:
-                     cutoff_green = 0.075
-                     cutoff_yellow = 0.0595
-                     if raw_val > 1: # scaled check
-                         cutoff_green = 7.5
-                         cutoff_yellow = 5.95
-                     
-                     if raw_val >= cutoff_green: css_class = "val-green"
-                     elif raw_val >= cutoff_yellow: css_class = "val-yellow"
-                     else: css_class = "val-red"
-                     
-                # D. DSCR (>1.15 Grn, >1.0 Yel)
-                elif "DSCR" in h_str:
-                    if raw_val >= 1.15: css_class = "val-green"
-                    elif raw_val >= 1.0: css_class = "val-yellow"
-                    else: css_class = "val-red"
-                    
-                # E. "Vs Budget" (3% Grn, 0% Yel) - Removed Sequential from here
-                elif any(x in h_str for x in ["vs Bdgt"]): 
-                    cutoff_g = 0.03
-                    cutoff_y = 0.0
-                    if raw_val > 2: # scaled check
-                        cutoff_g = 3.0
-                        cutoff_y = 0.0
-                    
-                    if raw_val >= cutoff_g: css_class = "val-green"
-                    elif raw_val >= cutoff_y: css_class = "val-yellow"
-                    else: css_class = "val-red"
+            row_vals = []
+            for col in range(2, 31):
+                val = ws_internal.cell(row=target_row, column=col).value
+                row_vals.append(val)
+                
+            # Helper to generate a sub-table
+            def generate_chunk(chunk_headers, chunk_vals, title, header_bg):
+                c_html = f"{self.css_styles}\n<div style='margin-bottom: 20px; overflow-x:auto;'><table class='report-table'><thead>"
+                c_html += f"<tr><th colspan='{len(chunk_headers)}' style='text-align:center; background-color:{header_bg}; font-size:1.1em; padding: 8px;'>{title}</th></tr>"
+                
+                c_html += "<tr>"
+                for h in chunk_headers:
+                    c_html += f"<th>{h}</th>"
+                c_html += "</tr></thead><tbody><tr>"
+                
+                # Pre-calculate Prior Rate for Arrow Logic
+                prior_rate_val = 0
+                for i, h in enumerate(headers):
+                     if "In Place Eff. Rate Prior Month" in str(h):
+                         try: prior_rate_val = float(row_vals[i] or 0)
+                         except: pass
+                         break
 
-                # F. ARROWS
-                # "In Place Eff. Rate" (calculated vs Prior Month)
-                # Use h_clean_val for robust matching
-                if "In Place Eff. Rate" in h_clean_val and "Prior" not in h_clean_val:
-                     change_pct = 0
-                     if prior_rate_val != 0:
-                         change_pct = (raw_val - prior_rate_val) / prior_rate_val
-                     
-                     # Using multipliers from DB:
-                     # Green: >= 0.1 (mult_green) -> Up Arrow
-                     # Up Ang: >= 0.075 -> Angled Up
-                     # Side: >= 0 -> Side
-                     # Down: >= -0.075 -> Angled Down
-                     # Else -> Down Arrow
-                     
-                     # Check if change_pct is positive/negative vs multiplier
-                     if change_pct >= mult_green: arrow_html = "▲ "
-                     elif change_pct >= mult_up_ang: arrow_html = "⇗ "
-                     elif change_pct >= mult_side: arrow_html = "▶ "
-                     elif change_pct >= mult_down: arrow_html = "⇘ "
-                     else: arrow_html = "▼ "
-                     
-                     # Color the arrow
-                     if change_pct > 0: arrow_html = f"<span style='color:green;font-weight:bold'>{arrow_html}</span>"
-                     elif change_pct < 0: arrow_html = f"<span style='color:red;font-weight:bold'>{arrow_html}</span>"
-                     else: arrow_html = f"<span style='color:#ccc'>{arrow_html}</span>"
-                     
-                     display_val = f"{arrow_html}{display_val}"
-                     
-                # "T1 Current vs T1 Prior Year" AND "T3 Current vs T3 Prior Year" AND "Sequential" -> Arrow
-                if "vs T1 Prior Year" in h_str or "vs T3 Prior Year" in h_str or "Sequential" in h_str:
-                     # raw_val is the % itself
-                     if raw_val >= 0.01: arrow_html = "<span style='color:green;font-weight:bold'>▲</span> "
-                     elif raw_val >= -0.01: arrow_html = "<span style='color:#ccc'>▶</span> "
-                     else: arrow_html = "<span style='color:red;font-weight:bold'>▼</span> "
-                     display_val = f"{arrow_html}{display_val}"
-                     css_class = ""
-        
-            html += f"<td class='{css_class}'>{display_val}</td>"
+                for idx, val in enumerate(chunk_vals):
+                    header = chunk_headers[idx]
+                    h_str = str(header).strip()
+                    
+                    # VALUE FORMATTING
+                    display_val = "-"
+                    raw_val = 0
+                    is_valid_num = False
+                    
+                    try:
+                        if val is not None:
+                            raw_val = float(val)
+                            is_valid_num = True
+                    except:
+                        pass
+                        
+                    if is_valid_num:
+                        is_pct = any(x in h_str for x in ["Occupancy", "Yield", "vs Bdgt", "Sequential", "vs T1 Prior", "vs T3 Prior"])
+                        if "DSCR" in h_str: is_pct = False
+                            
+                        if is_pct:
+                            display_val = f"{raw_val:.1%}" if abs(raw_val) < 10 else f"{raw_val:.1f}%"
+                        elif "DSCR" in h_str:
+                            display_val = f"{raw_val:.2f}"
+                        elif "Rate" in h_str: # In Place Eff. Rate
+                            display_val = f"${raw_val:,.0f}"
+                        else:
+                            display_val = f"{raw_val:,.2f}"
+                    else:
+                        display_val = str(val) if val is not None else "-"
+
+                    # CONDITIONAL FORMATTING
+                    css_class = ""
+                    arrow_html = ""
+                    
+                    if is_valid_num:
+                        if "Physical Occupancy" in h_str:
+                            css_class = "val-green" if raw_val >= 0.90 else "val-yellow" if raw_val >= 0.85 else "val-red"
+                        elif "Economic Occupancy" in h_str:
+                            css_class = "val-green" if raw_val >= 0.85 else "val-yellow" if raw_val >= 0.75 else "val-red"
+                        elif "Debt Yield" in h_str:
+                             cut_g, cut_y = (7.5, 5.95) if raw_val > 1 else (0.075, 0.0595)
+                             css_class = "val-green" if raw_val >= cut_g else "val-yellow" if raw_val >= cut_y else "val-red"
+                        elif "DSCR" in h_str:
+                            css_class = "val-green" if raw_val >= 1.15 else "val-yellow" if raw_val >= 1.0 else "val-red"
+                        elif "vs Bdgt" in h_str: 
+                            cut_g, cut_y = (3.0, 0.0) if raw_val > 2 else (0.03, 0.0)
+                            css_class = "val-green" if raw_val >= cut_g else "val-yellow" if raw_val >= cut_y else "val-red"
+
+                        # ARROWS
+                        if "In Place Eff. Rate" in h_str and "Prior" not in h_str:
+                             change = (raw_val - prior_rate_val) / prior_rate_val if prior_rate_val != 0 else 0
+                             
+                             if change >= mult_green: arrow_html = "▲ "
+                             elif change >= mult_up_ang: arrow_html = "⇗ "
+                             elif change >= mult_side: arrow_html = "▶ "
+                             elif change >= mult_down: arrow_html = "⇘ "
+                             else: arrow_html = "▼ "
+                             
+                             color = "green" if change > 0 else "red" if change < 0 else "#ccc"
+                             arrow_html = f"<span style='color:{color};font-weight:bold'>{arrow_html}</span>"
+                             display_val = f"{arrow_html}{display_val}"
+                             
+                        if "vs T1 Prior Year" in h_str or "vs T3 Prior Year" in h_str or "Sequential" in h_str:
+                             color = "green" if raw_val >= 0.01 else "#ccc" if raw_val >= -0.01 else "red"
+                             symbol = "▲" if raw_val >= 0.01 else "▶" if raw_val >= -0.01 else "▼"
+                             arrow_html = f"<span style='color:{color};font-weight:bold'>{symbol}</span> "
+                             display_val = f"{arrow_html}{display_val}"
+                             css_class = ""
+                
+                    c_html += f"<td class='{css_class}'>{display_val}</td>"
+                    
+                c_html += "</tr></tbody></table></div>"
+                return c_html
+
+            # --- PREPARE DATA CHUNKS ---
+            # --- PREPARE DATA CHUNKS ---
+            headers_cl = []
+            indices_cl = []
+            for i, h in enumerate(headers):
+                 # Robust Normalize: Replace newlines and multiple spaces
+                 h_norm = str(h).replace('\n', ' ').replace('  ', ' ').strip()
+                 if "In Place Eff. Rate Prior Month" not in h_norm:
+                     headers_cl.append(h)
+                     indices_cl.append(i)
             
-        html += "</tr></tbody></table></div>"
-        return html
+            n = len(headers_cl)
+            
+            # SLICING LOGIC (5 Groups based on User Request)
+            # Total Cleansed Columns = 28
+            # 1. Details: 5 cols (Prop Name, Client, PM, State, Units)
+            # 2. Operations: 5 cols (Visible)
+            # 3. NOI Variance: 6 cols
+            # 4. Revenue Variance: 6 cols
+            # 5. Expense Variance: 6 cols
+            
+            idx_1 = min(5, n)
+            idx_2 = min(10, n)
+            idx_3 = min(16, n)
+            idx_4 = min(22, n)
+            
+            html_out = ""
+            
+            # Group 1: Details
+            if n > 0:
+                g1_idx = indices_cl[:idx_1]
+                # Details typically don't need fancy formatting, but using same generator is fine
+                html_out += generate_chunk(headers_cl[:idx_1], [row_vals[i] for i in g1_idx], "Property Details", "#333")
+            
+            # Group 2: Operations
+            if n > idx_1:
+                g2_idx = indices_cl[idx_1:idx_2]
+                html_out += generate_chunk(headers_cl[idx_1:idx_2], [row_vals[i] for i in g2_idx], "Cur. Mnth. Operations - Financial Based", "#444")
+            
+            # Group 3: NOI
+            if n > idx_2:
+                g3_idx = indices_cl[idx_2:idx_3]
+                html_out += generate_chunk(headers_cl[idx_2:idx_3], [row_vals[i] for i in g3_idx], "NOI - % Variance", "#555")
+
+            # Group 4: Revenue
+            if n > idx_3:
+                g4_idx = indices_cl[idx_3:idx_4]
+                html_out += generate_chunk(headers_cl[idx_3:idx_4], [row_vals[i] for i in g4_idx], "Revenue - % Variance", "#444")
+                
+            # Group 5: Expenses
+            if n > idx_4:
+                g5_idx = indices_cl[idx_4:]
+                html_out += generate_chunk(headers_cl[idx_4:], [row_vals[i] for i in g5_idx], "Expenses - % Variance", "#555")
+                
+            return html_out
+            
+        except Exception as e:
+            return f"<p style='color:red;'>Error generating portfolio table: {str(e)}</p>"
 
     def generate_financial_table(self, df: pd.DataFrame) -> str:
         """Generates the Monthly Financial Data HTML table with conditional formatting."""
@@ -438,11 +368,17 @@ class ReportGenerator:
         # Re-sort dataframe to match ALLOWED_METRICS order
         # Create a categorical type for Metric column (index)
         df = df.copy()
+        
+        # Ensure 'Metric' is the index for filtering if it's currently a column
+        if 'Metric' in df.columns:
+            df = df.set_index('Metric')
+            
         df['sort_key'] = 999
         
         for idx, metric_pattern in enumerate(ALLOWED_METRICS):
             # Find partial matches for this pattern
-            mask = df.index.str.contains(metric_pattern, case=False, regex=False)
+            # Ensure index is treated as string
+            mask = df.index.astype(str).str.contains(metric_pattern, case=False, regex=False)
             df.loc[mask, 'sort_key'] = idx
             
         # Sort by key (matches user order), then by name (for ties)
@@ -515,4 +451,66 @@ class ReportGenerator:
 
             
         html += "</tbody></table></div>"
+        return html
+    def generate_ai_variance_tables(self, ai_data: dict) -> str:
+        """Renders AI-generated JSON narratives as professional HTML tables."""
+        if not ai_data or not isinstance(ai_data, dict):
+            return "<p><i>No narrative data available to render.</i></p>"
+            
+        html = f"{self.css_styles}\n"
+        
+        # 1. Budget Variances Section
+        html += "<h3 style='margin-top: 30px;'>1️⃣ Budget Variances</h3>"
+        bv = ai_data.get("budget_variances", {})
+        if not bv or (not bv.get("Revenue") and not bv.get("Expenses")):
+             html += "<p>No significant budget variances reported.</p>"
+        else:
+            for cat in ["Revenue", "Expenses"]:
+                items = bv.get(cat, [])
+                if not items: continue
+                
+                html += f"<h4>{cat}</h4>"
+                html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Actual</th><th style='width: 12%;'>Budget</th><th style='width: 12%;'>Variance %</th><th>Investigative Questions</th></tr></thead><tbody>"
+                for item in items:
+                    metric = item.get("metric", "Unknown")
+                    actual = item.get("actual", 0)
+                    budget = item.get("budget", 0)
+                    var_pct = item.get("variance_pct", 0)
+                    questions = item.get("questions", [])
+                    q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+                    
+                    # Format as currency if looks like a dollar amount
+                    fmt_actual = f"${actual:,.2f}" if isinstance(actual, (int, float)) else str(actual)
+                    fmt_budget = f"${budget:,.2f}" if isinstance(budget, (int, float)) else str(budget)
+                    
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td><td>{q_html}</td></tr>"
+                html += "</tbody></table>"
+                
+        # 2. Trailing Anomalies Section
+        html += "<h3 style='margin-top: 40px;'>2️⃣ Trailing Anomalies</h3>"
+        ta = ai_data.get("trailing_anomalies", {})
+        if not ta or (not ta.get("Revenue") and not ta.get("Expenses")):
+             html += "<p>No significant trailing anomalies reported.</p>"
+        else:
+            for cat in ["Revenue", "Expenses"]:
+                items = ta.get(cat, [])
+                if not items: continue
+                
+                html += f"<h4>{cat}</h4>"
+                html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Current</th><th style='width: 12%;'>T3 Avg</th><th style='width: 12%;'>Deviation %</th><th>Investigative Questions</th></tr></thead><tbody>"
+                for item in items:
+                    metric = item.get("metric", "Unknown")
+                    current = item.get("current", 0)
+                    t3_avg = item.get("t3_avg", 0)
+                    dev_pct = item.get("deviation_pct", 0)
+                    questions = item.get("questions", [])
+                    q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+                    
+                    # Format as currency
+                    fmt_current = f"${current:,.2f}" if isinstance(current, (int, float)) else str(current)
+                    fmt_t3 = f"${t3_avg:,.2f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
+                    
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td><td>{q_html}</td></tr>"
+                html += "</tbody></table>"
+                
         return html

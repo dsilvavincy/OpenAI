@@ -99,6 +99,9 @@ class StandardT12Processor(BaseFormatProcessor):
                 data_df = df_raw.iloc[7:].copy()
                 data_df.columns = [f"col_{i}" for i in range(len(data_df.columns))]
                 
+                # Add RowOrder to preserve spreadsheet sequence
+                data_df["RowOrder"] = range(len(data_df))
+                
                 # Metric Name (Col 1)
                 data_df = data_df[data_df["col_0"].notna()]
                 
@@ -123,13 +126,13 @@ class StandardT12Processor(BaseFormatProcessor):
 
                 # --- Extract Monthly Actuals (Col 2-13) ---
                 actual_months = [self._normalize_date(header_row[i]) for i in range(1, 13)]
-                monthly_actuals = data_df[["Metric"] + [f"col_{i}" for i in range(1, 13)]].copy()
-                monthly_actuals.columns = ["Metric"] + actual_months
-                actual_long = monthly_actuals.melt(id_vars="Metric", var_name="Period", value_name="Value")
+                monthly_actuals = data_df[["Metric", "RowOrder"] + [f"col_{i}" for i in range(1, 13)]].copy()
+                monthly_actuals.columns = ["Metric", "RowOrder"] + actual_months
+                actual_long = monthly_actuals.melt(id_vars=["Metric", "RowOrder"], var_name="Period", value_name="Value")
                 
                 # --- Extract Monthly Budgets (Col 18-29) ---
                 budget_months = [self._normalize_date(header_row[i]) for i in range(17, 29)]
-                monthly_budgets = data_df[["Metric"] + [f"col_{i}" for i in range(17, 29)]].copy()
+                monthly_budgets = data_df[["Metric", "RowOrder"] + [f"col_{i}" for i in range(17, 29)]].copy()
                 
                 # USER FEEDBACK: Rows below "Monthly Cash Flow" don't have applicable budgets.
                 # Find metrics that are balance sheet items or occupancy items that shouldn't have budgets
@@ -145,16 +148,16 @@ class StandardT12Processor(BaseFormatProcessor):
                         if 'monthly cash flow' in str(row['Metric']).lower():
                             start_nulling = True
                             
-                monthly_budgets.columns = ["Metric"] + budget_months
-                budget_long = monthly_budgets.melt(id_vars="Metric", var_name="Period", value_name="BudgetValue")
+                monthly_budgets.columns = ["Metric", "RowOrder"] + budget_months
+                budget_long = monthly_budgets.melt(id_vars=["Metric", "RowOrder"], var_name="Period", value_name="BudgetValue")
                 
-                # Outer join Actual and Budget on Metric and Period
-                combined_monthly = pd.merge(actual_long, budget_long, on=["Metric", "Period"], how="outer")
+                # Outer join Actual and Budget on Metric and Period (and RowOrder)
+                combined_monthly = pd.merge(actual_long, budget_long, on=["Metric", "Period", "RowOrder"], how="outer")
                 combined_monthly["IsYTD"] = False
                 
                 # --- Extract YTD Totals (Col 14, 15) ---
-                ytd_actuals = data_df[["Metric", "col_13"]].copy()
-                ytd_actuals.columns = ["Metric", "Value"]
+                ytd_actuals = data_df[["Metric", "RowOrder", "col_13"]].copy()
+                ytd_actuals.columns = ["Metric", "RowOrder", "Value"]
                 ytd_actuals["Period"] = "YTD"
                 ytd_actuals["BudgetValue"] = data_df["col_14"].values
                 

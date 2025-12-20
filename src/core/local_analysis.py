@@ -110,35 +110,55 @@ class PropertyAnalyzer:
         # For simplicity and correctness, we aggregate numeric columns and 'first' for non-numeric.
         
         agg_dict = {col: 'sum' for col in monthly_filtered.select_dtypes(include='number').columns}
-        # Special handling for BudgetValue if it's there
-        if 'BudgetValue' in agg_dict: agg_dict['BudgetValue'] = 'sum'
+        # Explicitly ensure core columns are in agg_dict even if they were detected as object
+        if 'Value' in monthly_filtered.columns: agg_dict['Value'] = 'sum'
+        if 'BudgetValue' in monthly_filtered.columns: agg_dict['BudgetValue'] = 'sum'
+        if 'RowOrder' in monthly_filtered.columns: agg_dict['RowOrder'] = 'min'
         
         # Non-numeric columns we want to keep
-        # Ensure MonthParsed is handled correctly even if dtypes are wonky
         if 'MonthParsed' in monthly_filtered.columns:
             agg_dict['MonthParsed'] = 'first'
         if 'Category' in monthly_filtered.columns:
             agg_dict['Category'] = 'first'
+        if 'Property' in monthly_filtered.columns:
+            agg_dict['Property'] = 'first'
             
         # Remove grouping keys from agg_dict if present to avoid errors
-        if 'Metric' in agg_dict: del agg_dict['Metric']
-        if 'Period' in agg_dict: del agg_dict['Period']
+        for key in ['Metric', 'Period']:
+            if key in agg_dict: del agg_dict[key]
                 
         if not monthly_filtered.empty:
+            # Ensure core columns are numeric before aggregation to prevent them being dropped or mangled
+            monthly_filtered['Value'] = pd.to_numeric(monthly_filtered['Value'], errors='coerce')
+            if 'BudgetValue' in monthly_filtered.columns:
+                monthly_filtered['BudgetValue'] = pd.to_numeric(monthly_filtered['BudgetValue'], errors='coerce')
+                
             monthly_filtered = monthly_filtered.groupby(['Metric', 'Period'], as_index=False).agg(agg_dict)
             
         if not ytd_filtered.empty:
             # Similar for YTD if needed (YTD is usually less prone but good for safety)
             ytd_agg = {col: 'sum' for col in ytd_filtered.select_dtypes(include='number').columns}
+            if 'Value' in ytd_filtered.columns: ytd_agg['Value'] = 'sum'
+            if 'BudgetValue' in ytd_filtered.columns: ytd_agg['BudgetValue'] = 'sum'
+            if 'RowOrder' in ytd_filtered.columns: ytd_agg['RowOrder'] = 'min'
+            
             if 'MonthParsed' in ytd_filtered.columns:
                 ytd_agg['MonthParsed'] = 'first'
             if 'Category' in ytd_filtered.columns:
                 ytd_agg['Category'] = 'first'
+            if 'Property' in ytd_filtered.columns:
+                ytd_agg['Property'] = 'first'
             
             # Remove keys
-            if 'Metric' in ytd_agg: del ytd_agg['Metric']
-            if 'Period' in ytd_agg: del ytd_agg['Period']
+            for key in ['Metric', 'Period']:
+                if key in ytd_agg: del ytd_agg[key]
             
+        if not ytd_filtered.empty:
+            # Ensure core columns are numeric before aggregation
+            ytd_filtered['Value'] = pd.to_numeric(ytd_filtered['Value'], errors='coerce')
+            if 'BudgetValue' in ytd_filtered.columns:
+                ytd_filtered['BudgetValue'] = pd.to_numeric(ytd_filtered['BudgetValue'], errors='coerce')
+                
             ytd_filtered = ytd_filtered.groupby(['Metric', 'Period'], as_index=False).agg(ytd_agg)
         
         # 2. Get Datesime periods
@@ -193,7 +213,7 @@ class PropertyAnalyzer:
             "key_ratios": self._calculate_key_ratios(monthly_filtered, ytd_filtered, latest_month),
             # "budget_variance": self._get_budget_variance(...), # Deprecated
             # "rolling_avg_variance": self._get_rolling_average_variances(...), # Deprecated
-            "anomalies": global_anomalies,
+            "metric_anomalies": global_anomalies,
             "highlights": highlights,
             
             "monthly_data": monthly_filtered.to_dict(orient="records"),
@@ -213,15 +233,23 @@ class PropertyAnalyzer:
         return self._sanitize_for_json(result)
 
     def _sanitize_for_json(self, data: Any) -> Any:
-        """Recursively convert NaN and Inf to None for valid JSON."""
+        """Recursively convert NaN, Inf, and datetime/Timestamp to JSON-safe values."""
         if isinstance(data, dict):
             return {k: self._sanitize_for_json(v) for k, v in data.items()}
         elif isinstance(data, list):
             return [self._sanitize_for_json(v) for v in data]
+        elif isinstance(data, (pd.Timestamp, datetime)):
+            return data.isoformat()
         elif isinstance(data, float):
             if np.isnan(data) or np.isinf(data):
                 return None
             return data
+        elif isinstance(data, np.integer):
+            return int(data)
+        elif isinstance(data, np.floating):
+            if np.isnan(data) or np.isinf(data):
+                return None
+            return float(data)
         return data
     
     def _filter_by_property(self, df: pd.DataFrame, property_name: str) -> pd.DataFrame:
@@ -810,7 +838,14 @@ class PropertyAnalyzer:
             return variances
             
         latest_date = self._get_latest_month(df)
-        current_month_data = df[df["Period"] == latest_date]
+        current_month_data = df[df["Period"] == latest_date].copy()
+        
+        # [CUTOFF LOGIC] Filter out metrics below "Monthly Cash Flow"
+        if "RowOrder" in current_month_data.columns:
+            mcf_mask = current_month_data["Metric"].str.lower().str.contains("monthly cash flow", na=False)
+            if mcf_mask.any():
+                cutoff_order = current_month_data.loc[mcf_mask, "RowOrder"].min()
+                current_month_data = current_month_data[current_month_data["RowOrder"] <= cutoff_order]
         
         for _, row in current_month_data.iterrows():
             metric = row["Metric"]
@@ -831,22 +866,22 @@ class PropertyAnalyzer:
             # Let's catch anything > 10% absolute deviation for now.
             
             if abs(variance_pct) > 0.10:
-                # determine type (rough heuristic based on sign of value or list)
-                # Assuming positive values for both REV and EXP in DB usually
-                # detailed categorization would be better, but let's basic
+                # determine type: Check known Revenue keywords first
+                # (usually Income, Rev, Rent, etc.)
+                is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
+                # Exceptions for metrics that look like revenue but are expenses
+                if "expense" in metric.lower(): is_revenue = False
                 
-                # Check known expense keywords
-                is_expense = any(x in metric.lower() for x in ['expense', 'payroll', 'repair', 'marketing', 'salary', 'utility', 'contract'])
-                category = "Expenses" if is_expense else "Revenue"
+                category = "Revenue" if is_revenue else "Expenses"
                 
                 variances[category].append({
                     "metric": metric,
-                    "actual": actual,
-                    "budget": budget,
-                    "variance_pct": variance_pct
+                    "actual": round(actual, 2),
+                    "budget": round(budget, 2),
+                    "variance_pct": round(variance_pct * 100, 2)
                 })
                 
-        # Sort by magnitude of variance
+        # Sort by magnitude of variance (absolute pct)
         for cat in variances:
             variances[cat].sort(key=lambda x: abs(x['variance_pct']), reverse=True)
             
@@ -858,12 +893,20 @@ class PropertyAnalyzer:
         
         latest_date = self._get_latest_month(df)
         
-        # Get list of unique metrics
-        metrics = df["Metric"].unique()
+        # [CUTOFF LOGIC] Filter out metrics below "Monthly Cash Flow"
+        filtered_df = df.copy()
+        if "RowOrder" in filtered_df.columns:
+            mcf_mask = filtered_df["Metric"].str.lower().str.contains("monthly cash flow", na=False)
+            if mcf_mask.any():
+                cutoff_order = filtered_df.loc[mcf_mask, "RowOrder"].min()
+                filtered_df = filtered_df[filtered_df["RowOrder"] <= cutoff_order]
+        
+        # Get list of unique metrics from filtered set
+        metrics = filtered_df["Metric"].unique()
         
         for metric in metrics:
-            # Filter for this metric
-            m_df = df[df["Metric"] == metric].sort_values("Period")
+            # Filter for this metric from the ALREADY filtered dataframe
+            m_df = filtered_df[filtered_df["Metric"] == metric].sort_values("Period")
             
             # Use 'Value' column
             vals = m_df["Value"].values
@@ -890,14 +933,16 @@ class PropertyAnalyzer:
             
             if abs(deviation_pct) > 0.10:
                 # Classify
-                is_expense = any(x in metric.lower() for x in ['expense', 'payroll', 'repair', 'marketing', 'salary', 'utility', 'contract'])
-                category = "Expenses" if is_expense else "Revenue"
+                is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
+                if "expense" in metric.lower(): is_revenue = False
+                
+                category = "Revenue" if is_revenue else "Expenses"
                 
                 anomalies[category].append({
                     "metric": metric,
-                    "current": current_val,
-                    "t3_avg": t3_avg,
-                    "deviation_pct": deviation_pct
+                    "current": round(current_val, 2),
+                    "t3_avg": round(t3_avg, 2),
+                    "deviation_pct": round(deviation_pct * 100, 2)
                 })
 
         # Sort

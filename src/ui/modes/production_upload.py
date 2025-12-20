@@ -130,6 +130,43 @@ class ProductionUpload:
                      processed_data[prop] = {
                          "portfolio_snapshot_html": portfolio_html
                      }
+                     
+                     # Extract RAW DataFrame for Export
+                     if "CRES - Portfolio (Internal)" in wb.sheetnames:
+                         ws_int = wb["CRES - Portfolio (Internal)"]
+                         target_row = None
+                         for row in ws_int.iter_rows(min_row=5, max_col=2):
+                             cell_val = row[1].value
+                             if cell_val and str(cell_val).strip().lower() == prop.strip().lower():
+                                 target_row = row[0].row
+                                 break
+                         
+                         if target_row:
+                             headers = []
+                             row_vals = []
+                             for col in range(2, 31):
+                                 h_val = ws_int.cell(row=4, column=col).value
+                                 headers.append(str(h_val).strip() if h_val else f"Col_{col}")
+                                 val = ws_int.cell(row=target_row, column=col).value
+                                 
+                                 # Basic formatting for export visibility
+                                 if val is None: val = "-"
+                                 elif isinstance(val, (int, float)):
+                                     # Heuristic formatting
+                                     h_str = headers[-1]
+                                     if "Occupancy" in h_str or "Yield" in h_str or "vs" in h_str or "Seq" in h_str:
+                                          if abs(val) < 5: val = f"{val:.1%}"
+                                          else: val = f"{val:.1f}%"
+                                     elif "DSCR" in h_str:
+                                          val = f"{val:.2f}"
+                                     else:
+                                          val = f"{val:,.0f}" if val > 5 else str(val)
+                                 
+                                 row_vals.append(str(val))
+                             
+                             # Create DF
+                             p_df = pd.DataFrame([row_vals], columns=headers)
+                             processed_data[prop]["portfolio_snapshot_df"] = p_df
             except Exception as e:
                 print(f"Portfolio Snapshot Error: {e}")
             # -------------------------------------

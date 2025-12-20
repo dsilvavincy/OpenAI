@@ -8,10 +8,16 @@ Handles analysis generation and display with options for:
 """
 import streamlit as st
 import pandas as pd
+import json
+import re
+import logging
+import datetime
 from typing import Optional, Dict, Any
 from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis_responses
 from src.utils.format_detection import get_stored_format
 from src.core.local_analysis import PropertyAnalyzer
+
+logger = logging.getLogger(__name__)
 
 
 class ProductionResults:
@@ -228,29 +234,47 @@ class ProductionResults:
 
                 # 2. Display Visual Reports (Top Level)
                 st.markdown("### 📋 Automated Data Report")
+                
+                # Get Report Period from Analysis Result
+                report_period_str = preview_data.get("report_period", "Unknown Period")
+                
+                st.markdown(f"**Report Period:** {report_period_str}")
                 st.info("This report is generated locally from your data. No AI analysis has been performed yet.")
                 ProductionResults._render_visual_tables(preview_data, selected_property)
 
-                # 3. Collaborative Debug View (Collapsed)
-                with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=False):
-                    st.write("### Analysis Debug Info")
-                    st.json(preview_data.get('debug', {}))
-                    st.write("### Calculated KPI Data")
-                    st.json(preview_data.get('kpi', {}))
-                    st.write("### MoM Data Trace")
-                    st.json(preview_data.get('mom_changes', {}))
-                    
-                with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
-                    st.json(preview_data)
+                # 3. Collaborative Debug View (Hidden for Production)
+                # with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=False):
+                #     st.write("### Analysis Debug Info")
+                #     st.json(preview_data.get('debug', {}))
+                #     st.write("### Calculated KPI Data")
+                #     st.json(preview_data.get('kpi', {}))
+                #     st.write("### MoM Data Trace")
+                #     st.json(preview_data.get('mom_changes', {}))
+                #     
+                # with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
+                #     # Show ONLY what is sent to LLM for variances
+                #     minimal_payload = {
+                #         "property_name": preview_data.get("property_name"),
+                #         "report_period": preview_data.get("report_period"),
+                #         "budget_variances": preview_data.get("budget_variances", {}),
+                #         "trailing_anomalies": preview_data.get("trailing_anomalies", {})
+                #     }
+                #     st.json(minimal_payload)
 
             except Exception as e:
                 st.error(f"❌ Error generating report preview: {str(e)}")
                 import traceback
                 st.code(traceback.format_exc())
         
-        # Add Upload to LLM button
-        show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)
-        if show_analyze:
+        # Add Upload to LLM button ONLY if no analysis exists
+        # Check if we already have results in session state to avoid double buttons
+        existing_results = get_existing_analysis_results()
+        if not existing_results:
+            show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)
+            if show_analyze:
+                ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
+        else:
+            # If results exist, just render them directly
             ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
 
     @staticmethod
@@ -261,14 +285,26 @@ class ProductionResults:
         
         report_gen = ReportGenerator()
         
+        # Helper to safely persist DFs for export
+        export_cache = {}
+
         # 0. Portfolio Snapshot (from Internal Sheet)
         st.markdown("#### Portfolio Snapshot")
         snapshot_html = ""
-        if "processed_data" in st.session_state:
-            proc_data = st.session_state["processed_data"]
-            if selected_property in proc_data:
-                snapshot_html = proc_data[selected_property].get("portfolio_snapshot_html", "")
         
+        # Try to get the raw T12 Summary Data for Export
+        if "processed_data" in st.session_state:
+             proc_data = st.session_state["processed_data"]
+             
+             # 1. Try to get Pre-Extracted DF (Inserted by production_upload.py)
+             if selected_property in proc_data and "portfolio_snapshot_df" in proc_data[selected_property]:
+                 export_cache['portfolio_snapshot'] = proc_data[selected_property]["portfolio_snapshot_df"]
+             
+             # 2. Get HTML (existing logic)
+             if selected_property in proc_data:
+                snapshot_html = proc_data[selected_property].get("portfolio_snapshot_html", "")
+                export_cache['portfolio_html'] = snapshot_html
+
         if snapshot_html:
             st.markdown(snapshot_html, unsafe_allow_html=True)
         else:
@@ -278,10 +314,70 @@ class ProductionResults:
         st.markdown("#### KPI Snapshot")
         # Extract MoM changes from result
         mom_changes = analysis_result.get('mom_changes', {})
+        monthly_kpi = analysis_result.get('kpi', {})
+        ytd_kpi = analysis_result.get('ytd_kpi', {})
         
+        # Generate Export DF (Replicating ReportGenerator.generate_combined_kpi_table logic)
+        # We must build the exact same rows
+        kpi_rows = []
+        
+        # A. Key Metrics List (from ReportGenerator)
+        metrics = [
+            ("Total Income", "net_eff_gross_income"),
+            ("Total Expenses", "total_expense"),
+            ("Net Operating Income", "ebitda_noi")
+        ]
+        
+        for label, key in metrics:
+            val_mo = monthly_kpi.get(key, 0)
+            val_ytd = ytd_kpi.get(key, 0)
+            kpi_rows.append({
+                "Metric": label,
+                "Current Month": f"${val_mo:,.0f}",
+                "YTD (Cumulative)": f"${val_ytd:,.0f}"
+            })
+            
+        # B. Expense Ratio
+        inc_mo = monthly_kpi.get("net_eff_gross_income", 0)
+        exp_mo = monthly_kpi.get("total_expense", 0)
+        ratio_mo = (exp_mo / inc_mo) if inc_mo and inc_mo != 0 else 0
+        
+        inc_ytd = ytd_kpi.get("net_eff_gross_income", 0)
+        exp_ytd = ytd_kpi.get("total_expense", 0)
+        ratio_ytd = (exp_ytd / inc_ytd) if inc_ytd and inc_ytd != 0 else 0
+        
+        kpi_rows.append({
+            "Metric": "Expense Ratio",
+            "Current Month": f"{ratio_mo:.1%}",
+            "YTD (Cumulative)": f"{ratio_ytd:.1%}"
+        })
+        
+        # C. MoM Changes
+        # Income
+        inc_data = mom_changes.get('net_eff_gross_income', {})
+        inc_pct = inc_data.get('change_pct', 0)
+        inc_abs = inc_data.get('change_abs', 0)
+        kpi_rows.append({
+            "Metric": "MoM Income Change",
+            "Current Month": f"{inc_pct:+.1f}% (${inc_abs:,.0f})",
+            "YTD (Cumulative)": "-"
+        })
+        
+        # Expense
+        exp_data = mom_changes.get('total_expense', {})
+        exp_pct = exp_data.get('change_pct', 0)
+        exp_abs = exp_data.get('change_abs', 0)
+        kpi_rows.append({
+            "Metric": "MoM Expense Change",
+            "Current Month": f"{exp_pct:+.1f}% (${exp_abs:,.0f})",
+            "YTD (Cumulative)": "-"
+        })
+        
+        export_cache['kpi_data'] = pd.DataFrame(kpi_rows)
+
         kpi_html = report_gen.generate_combined_kpi_table(
-            monthly_kpi=analysis_result.get('kpi', {}),
-            ytd_kpi=analysis_result.get('ytd_kpi', {}),
+            monthly_kpi=monthly_kpi,
+            ytd_kpi=ytd_kpi,
             mom_changes=mom_changes
         )
         st.markdown(kpi_html, unsafe_allow_html=True)
@@ -296,10 +392,73 @@ class ProductionResults:
                     pivot_df = m_df.pivot_table(index='Metric', columns='Period', values='Value', aggfunc='sum')
                     pivot_df = pivot_df.sort_index(axis=1) # Chronological sort
                     
+                    # Generate display HTML (will filter internally)
                     fin_html = report_gen.generate_financial_table(pivot_df)
                     st.markdown(fin_html, unsafe_allow_html=True)
+                    
+                    # Generate Export DF (Apply SAME filter as ReportGenerator)
+                    ALLOWED_METRICS = [
+                        "Debt Yield", "1 Month DSCR", "3 Month DSCR", "12 Month DSCR", 
+                        "Physical Occupancy", "Economic Occupancy", 
+                        "Break Even Occ. - NOI", "Break Even Occ. - Cash Flow",
+                        "Asking Rent (Stats)", 
+                        "Inplace Eff. Rent", "Occupied Inplace Eff. Rent", "Concession %"
+                    ]
+                    
+                    filtered_rows = []
+                    # Create a clean DF with readable headers
+                    export_fin = pivot_df.copy()
+                    # Format Headers
+                    export_fin.columns = [pd.to_datetime(c).strftime('%b-%y') if isinstance(c, (pd.Timestamp, datetime.date, datetime.datetime)) or (isinstance(c, str) and c[0].isdigit()) else str(c) for c in export_fin.columns]
+                    
+                    for metric in ALLOWED_METRICS:
+                        # Find matching index using CONTAINS (ignoring case) to match UI Generator logic
+                         matches = [i for i in export_fin.index if metric.lower() in str(i).strip().lower()]
+                         if matches:
+                             # Use the first match (most specific usually found first if sorted, but here we just take one)
+                             # ReportGenerator iterates ALLOWED_METRICS and finds matches.
+                             
+                             # If multiple matches, we might want to disambiguate, but taking first is consistent with typical single-row logic
+                             match_idx = matches[0]
+                             
+                             row = export_fin.loc[[match_idx]].copy()
+                             # Format values
+                             for c in row.columns:
+                                 val = row.at[match_idx, c]
+                                 if pd.isna(val) or val == "":
+                                     row.at[match_idx, c] = "-"
+                                 else:
+                                     # Percentage logic
+                                     is_pct = "Occupancy" in metric or "Retention" in metric or "Renewal" in metric or "Yield" in metric
+                                     is_dscr = "DSCR" in metric
+                                     if is_pct and abs(val) < 5: # Heuristic for pct
+                                         row.at[match_idx, c] = f"{val:.1%}" if val != 0 else "0.0%"
+                                     elif is_dscr:
+                                         row.at[match_idx, c] = f"{val:.2f}"
+                                     else:
+                                         row.at[match_idx, c] = f"{val:,.0f}"
+                             
+                             # Reset index to make Metric a column
+                             row = row.reset_index().rename(columns={'Metric': 'Metric', 'index': 'Metric'})
+                             
+                             # Force metric name to be the nice one (Clean Suffixes)
+                             clean_metric = metric.replace("(Stats)", "").strip()
+                             row['Metric'] = clean_metric
+                             filtered_rows.append(row)
+                    
+                    if filtered_rows:
+                        export_cache['financial_data'] = pd.concat(filtered_rows, ignore_index=True)
+                    else:
+                         # Fallback if no matches - use head but clean names
+                         fallback = export_fin.head(25).reset_index().rename(columns={'index': 'Metric'})
+                         fallback['Metric'] = fallback['Metric'].astype(str).str.replace(r"\s*\(Stats\)", "", regex=True)
+                         export_cache['financial_data'] = fallback
+
                 else:
                     st.warning("Financial data structure invalid for table generation.")
+        
+        # Save to session state for the downloader to pick up
+        st.session_state['export_payload_cache'] = export_cache
 
     @staticmethod
     def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any], selected_property: Optional[str] = None):
@@ -359,8 +518,15 @@ class ProductionResults:
         if 'last_structured_data' in st.session_state:
             with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
                 st.markdown("### 📊 Local Python Analysis Verification")
-                st.info("This is the exact structured data pre-computed by Python before being sent to the AI. Use this to verify budget variances and rolling averages.")
-                st.json(st.session_state['last_structured_data'])
+                st.info("This is the exact minimized data sent to the AI for variance analysis.")
+                raw_data = st.session_state['last_structured_data']
+                minimal_payload = {
+                    "property_name": raw_data.get("property_name"),
+                    "report_period": raw_data.get("report_period"),
+                    "budget_variances": raw_data.get("budget_variances", {}),
+                    "trailing_anomalies": raw_data.get("trailing_anomalies", {})
+                }
+                st.json(minimal_payload)
     
     @staticmethod
     def _display_raw_response_as_main_report(output: Dict[str, Any], selected_property: str):
@@ -368,42 +534,136 @@ class ProductionResults:
         if "raw_response" in output:
             raw_response = output["raw_response"]
             
-            # Add a refresh formatting button
-            col1, col2 = st.columns([3, 1])
-            with col2:
-                if st.button("🎨 Refresh Formatting", help="Re-apply formatting to the current response"):
-                    st.rerun()
-            
-            formatted_html_response = ProductionResults.format_response_for_streamlit(raw_response)
-            
-            # --- RENDER VISUAL DATA SECTION (Shared Helper) ---
-            ProductionResults._render_visual_tables(output, selected_property)
+            # Use raw markdown to support tables and standard formatting
+            final_response = raw_response
             
             # --- RENDER AI NARRATIVE SECTION ---
             st.markdown("### 🤖 AI Analysis & Recommendations")
-            with st.container():
-                st.markdown(formatted_html_response, unsafe_allow_html=True)
+            
+            # Attempt to parse as JSON for Python-side rendering
+            try:
+                # 1. Improved JSON extraction: find the first { and last }
+                json_str = raw_response.strip()
+                
+                # Check for code blocks first
+                if "```json" in json_str:
+                    json_str = json_str.split("```json")[1].split("```")[0].strip()
+                elif "```" in json_str:
+                    json_str = json_str.split("```")[1].split("```")[0].strip()
+                else:
+                    # Look for the first { and the last } in the raw response
+                    start_idx = json_str.find('{')
+                    end_idx = json_str.rfind('}')
+                    if start_idx != -1 and end_idx != -1:
+                        json_str = json_str[start_idx:end_idx+1]
+                
+                # Handle potential trailing commas or other LLM artifacts if needed
+                # (Simple json.loads is usually fine if we cut correctly)
+                ai_data = json.loads(json_str)
+                
+                from src.core.report_generator import ReportGenerator
+                report_gen = ReportGenerator()
+                narrative_html = report_gen.generate_ai_variance_tables(ai_data)
+                st.markdown(narrative_html, unsafe_allow_html=True)
+                
+            except Exception as e:
+                # Fallback to raw markdown if JSON fails
+                st.markdown(final_response, unsafe_allow_html=True)
+                # Log the error for internal debugging
+                logger.error(f"JSON Parse Error in AI narrative: {str(e)}")
             
             st.caption(f"Response length: {len(raw_response):,} characters")
             
             # Download options
-            col1, col2 = st.columns(2)
+            st.markdown("### 📥 Download Report")
+            col1, col2, col3 = st.columns(3)
+            
+            # Prepare Visual Data for Export
+            visual_data = {}
+            if "last_structured_data" in st.session_state:
+                struct_data = st.session_state["last_structured_data"]
+                
+                # Reconstruct KPI Table Data if possible
+                # (Ideally we'd have the DFs ready, but we can access them from the struct)
+            # Retrieve from cache populated during render
+            visual_data = st.session_state.get('export_payload_cache', {})
+            
+            # Fallback (shouldn't happen if render was called)
+            if not visual_data and "last_structured_data" in st.session_state:
+                 # Last resort reconstruction if cache missed
+                 pass 
+
+            # Merge AI data into output for export if it's not already there (it should be)
+            # The 'output' dict here usually contains just the raw response wrapper if it came from the response API.
+            # We need to ensure 'budget_variances' and 'trailing_anomalies' are in the 'processed_output' passed to the generator.
+            
+            # If we parsed ai_data successfully above, add it to export_payload
+            export_payload = output.copy()
+            if 'ai_data' in locals() and ai_data:
+                export_payload.update(ai_data)
+            elif "structured_data" in output:
+                # Fallback if parsing failed but structured data was passed through
+                export_payload.update(output["structured_data"])
+
+            # 3. Add Report Period (from structured data)
+            report_period = output.get("report_period", "N/A")
+            
+            if "property_info" not in export_payload:
+                export_payload["property_info"] = {}
+            export_payload["property_info"]["report_period"] = report_period
+
+            from src.ui.reports import (
+                generate_pdf_report, 
+                generate_word_report, 
+                generate_text_report,
+                generate_html_download
+            )
+            
+            # Generate and offer downloads
+            col1, col2, col3, col4 = st.columns(4)
+            
             with col1:
+                pdf_bytes = generate_pdf_report(processed_output=export_payload, visual_data=visual_data)
                 st.download_button(
-                    label="💾 Download Raw Response",
-                    data=raw_response,
-                    file_name="raw_ai_response.txt",
-                    mime="text/plain",
-                    help="Download the original raw AI response"
+                    label="📄 PDF (App Styling)",
+                    data=pdf_bytes,
+                    file_name=f"{selected_property}_T12_Analysis.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
                 )
+                
             with col2:
+                word_bytes = generate_word_report(processed_output=export_payload, visual_data=visual_data)
                 st.download_button(
-                    label="📄 Download Formatted HTML",
-                    data=formatted_html_response,
-                    file_name="formatted_analysis.html",
-                    mime="text/html",
-                    help="Download the formatted HTML version"
+                    label="📝 Word (Editable)",
+                    data=word_bytes,
+                    file_name=f"{selected_property}_T12_Analysis.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
                 )
+                
+            with col3:
+                txt_bytes = generate_text_report(processed_output=export_payload)
+                st.download_button(
+                    label="📋 Text Summary",
+                    data=txt_bytes,
+                    file_name=f"{selected_property}_T12_Analysis.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
+
+            with col4:
+                html_bytes = generate_html_download(processed_output=export_payload, visual_data=visual_data)
+                st.download_button(
+                    label="🌐 Web Report (Print)",
+                    data=html_bytes,
+                    file_name=f"{selected_property}_T12_Analysis.html",
+                    mime="text/html",
+                    help="For best 'Print to PDF' results.",
+                    use_container_width=True
+                )
+                
+
         else:
             st.warning("No raw response available")
     

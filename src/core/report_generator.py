@@ -9,6 +9,7 @@ derived from the processed financial data. It handles:
 
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 class ReportGenerator:
     """Generates HTML components for the AI analysis report."""
@@ -71,9 +72,9 @@ class ReportGenerator:
         # Define the row mapping: (Original Key -> Display Name)
         # Note: Keys are converted to snake_case by PropertyAnalyzer
         rows_to_display = [
-            ("net_eff_gross_income", "Total Monthly Income"),
-            ("total_expense", "Total Monthly Expenses"),
-            ("ebitda_noi", "Net Operating Income (EBITDA)")
+            ("net_eff_gross_income", "Total Income"),
+            ("total_expense", "Total Expenses"),
+            ("ebitda_noi", "Net Operating Income")
         ]
         
         html = f"{self.css_styles}\n"
@@ -112,7 +113,7 @@ class ReportGenerator:
         # Format as percentage
         html += f"""
             <tr>
-                <td class='metric-header'>Monthly Expense Ratio</td>
+                <td class='metric-header'>Expense Ratio</td>
                 <td>{ratio_mo:.1%}</td>
                 <td>{ratio_ytd:.1%}</td>
             </tr>
@@ -132,13 +133,14 @@ class ReportGenerator:
              
              html += f"<tr><td class='metric-header'>MoM Income Change</td><td class='{inc_color}'>{inc_arrow} {inc_pct:+.1f}% (${inc_abs:,.0f})</td><td>-</td></tr>"
              
-             # Expense Change
              exp_data = mom_changes.get('total_expense', {})
              exp_pct = exp_data.get('change_pct', 0)
              exp_abs = exp_data.get('change_abs', 0)
              
-             # Higher expense is RED
-             exp_color = "val-red" if exp_pct > 0 else "val-green" 
+             # For Negative Expenses:
+             # Increase (+ve change) -> Closer to 0 -> Savings -> GREEN
+             # Decrease (-ve change) -> Further from 0 -> Overspending -> RED
+             exp_color = "val-green" if exp_pct >= 0 else "val-red"
              exp_arrow = "▲" if exp_pct >= 0 else "▼"
              
              html += f"<tr><td class='metric-header'>MoM Expense Change</td><td class='{exp_color}'>{exp_arrow} {exp_pct:+.1f}% (${exp_abs:,.0f})</td><td>-</td></tr>"
@@ -156,19 +158,15 @@ class ReportGenerator:
         
         # 1. Get Multipliers from DB sheet (Q15:T15)
         # Assuming Q15=Down, R15=Side, S15=UpAng, T15=Green
-        # Values in VBA might be retrieved differently, specifically checking ranges.
-        # Let's read Q15, R15, S15, T15.
         try:
              mult_down = float(ws_db["Q15"].value or 0)
              mult_side = float(ws_db["R15"].value or 0)
              mult_up_ang = float(ws_db["S15"].value or 0)
              mult_green = float(ws_db["T15"].value or 0)
         except:
-             return "<p>Error reading multipliers from DB sheet.</p>"
+             mult_down, mult_side, mult_up_ang, mult_green = -0.075, 0, 0.075, 0.1 # Fallback defaults
 
         # 2. Find Property Row in Internal Sheet
-        # Header is Row 4. Data starts Row 5.
-        # Column B is Property Name.
         target_row = None
         for row in ws_internal.iter_rows(min_row=5, max_col=2):
             cell_val = row[1].value # Column B
@@ -180,7 +178,6 @@ class ReportGenerator:
              return f"<p>Property '{property_name}' not found in Portfolio Snapshot.</p>"
              
         # 3. Read Row Data (Cols B to AD -> 2 to 30)
-        # We need headers from Row 4
         headers = []
         for col in range(2, 31):
             h_val = ws_internal.cell(row=4, column=col).value
@@ -192,106 +189,223 @@ class ReportGenerator:
             row_vals.append(val)
             
         # 4. Generate HTML
-        html = f"{self.css_styles}\n<div style='overflow-x:auto;'><table class='report-table'><thead><tr>"
-        for h in headers:
+        html = f"{self.css_styles}\n<div style='overflow-x:auto;'><table class='report-table'><thead>"
+        
+        # --- SUPER HEADER ROW ---
+        # Based on user description + typical layout
+        # Col 1-5 (Phys Occ to DSCR): Operations
+        # Col 6-11: NOI % Variance
+        # Col 12-17: Revenue % Variance
+        # Col 18-23: Expenses % Variance
+        # ... and so on.
+        # We need to map this carefully to the filtered columns.
+        
+        # Filter headers first to know what we are displaying
+        display_headers = []
+        displayed_indices = []
+        for i, h in enumerate(headers):
+            # Robust check for hidden column
+            h_clean = str(h).replace('\n', ' ').replace('  ', ' ')
+            if "In Place Eff. Rate Prior Month" not in h_clean:
+                display_headers.append(h)
+                displayed_indices.append(i)
+        
+        # Define Groups (Count visible columns in each group)
+        # Groups from user image/inference:
+        # A. Cur. Mnth. Operations - Financial Based
+        #    - Physical Occupancy
+        #    - Economic Occupancy
+        #    - In Place Eff. Rate (Prior hidden)
+        #    - Debt Yield
+        #    - DSCR
+        #    COUNT: 4 visible (if Debt Yield/DSCR involved) -> Wait, 5 items listed in code: Phys, Econ, Rate, Debt, DSCR.
+        
+        # B. NOI - % Variance
+        #    - Cur vs Bdgt, T3 vs Bdgt, YTD vs Bdgt, T3 Seq, T1 vs T1, T3 vs T3
+        #    COUNT: 6 columns
+        
+        # C. Revenue - % Variance
+        #    - Same 6 columns
+        
+        # D. Expenses - % Variance
+        #    - Same 6 columns?
+        
+        # Let's count total visible columns: 5 (Ops) + 6 (NOI) + 6 (Rev) + 6 (Exp) = 23?
+        # Total headers range(2, 31) -> 29 columns.
+        # 29 - 1 (hidden) = 28.
+        # Where are the other 5? Maybe NOI only 6?
+        
+        # Let's add the super header row dynamically or hardcoded?
+        # Hardcoding is safer for alignment if we know the structure.
+        # Ops: 5 cols. (Phys, Econ, Rate, Debt, DSCR)
+        # NOI: 6 cols
+        # Rev: 6 cols
+        # Exp: 6 cols
+        # Total 23. Extra columns?
+        # Let's check headers length: 29.
+        # 29 - 23 = 6 columns left. Maybe "Net Income"? Or maybe only 3 groups?
+        
+        # Safer bet: Render Super Header ONLY for the known variance groups.
+        html += "<tr>"
+        # Spacer for Metadata columns (Property Name, Client, Portfolio Manager, State, # of Units)
+        html += "<th colspan='5' style='background-color:#262730; border:none;'></th>" 
+        
+        html += "<th colspan='5' style='text-align:center; background-color:#444'>Cur. Mnth. Operations - Financial Based</th>"
+        html += "<th colspan='6' style='text-align:center; background-color:#555'>NOI - % Variance</th>"
+        html += "<th colspan='6' style='text-align:center; background-color:#444'>Revenue - % Variance</th>"
+        html += "<th colspan='6' style='text-align:center; background-color:#555'>Expenses - % Variance</th>"
+        # Any remaining?
+        remaining = len(display_headers) - (5 + 5 + 6 + 6 + 6)
+        if remaining > 0:
+             html += f"<th colspan='{remaining}'>Other</th>"
+        html += "</tr>"
+        
+        # --- SUB HEADER ROW ---
+        html += "<tr>"
+        for h in display_headers:
             html += f"<th>{h}</th>"
         html += "</tr></thead><tbody><tr>"
         
+        # Helper: Find Prior Value for Arrow Logic (In Place Eff. Rate)
+        prior_rate_val = 0
+        try:
+            # Locate index of "In Place Eff. Rate Prior Month"
+            # Locate index of "In Place Eff. Rate Prior Month"
+            for i, h in enumerate(headers):
+                h_c = str(h).replace('\n', ' ').replace('  ', ' ')
+                if "In Place Eff. Rate Prior Month" in h_c:
+                    prior_rate_val = float(row_vals[i] or 0)
+                    break
+        except:
+            prior_rate_val = 0
+
         for idx, val in enumerate(row_vals):
-            col_idx = idx + 2 # 1-based column index
             header = headers[idx]
-            display_val = str(val) if val is not None else ""
+            h_str = str(header).strip()
+            
+            # 1. HIDING Logic
+            # Robust check matching header logic
+            h_clean_val = str(header).replace('\n', ' ').replace('  ', ' ')
+            if "In Place Eff. Rate Prior Month" in h_clean_val:
+                continue
+                
+            # 2. VALUE FORMATTING
+            display_val = "-"
+            raw_val = 0
+            is_valid_num = False
+            
+            try:
+                if val is not None:
+                    raw_val = float(val)
+                    is_valid_num = True
+            except:
+                pass
+                
+            if is_valid_num:
+                # Percentage Logic, excluding DSCR or raw numbers
+                is_pct = any(x in h_str for x in [
+                    "Occupancy", "Yield", "vs Bdgt", "Sequential", "vs T1 Prior", "vs T3 Prior"
+                ])
+                if "DSCR" in h_str: 
+                    is_pct = False
+                    
+                if is_pct:
+                    display_val = f"{raw_val:.1%}" if abs(raw_val) < 10 else f"{raw_val:.1f}%"
+                elif "DSCR" in h_str:
+                    display_val = f"{raw_val:.2f}"
+                elif "Rate" in h_str: # In Place Eff. Rate
+                    display_val = f"${raw_val:,.0f}"
+                else:
+                    display_val = f"{raw_val:,.2f}" # Fallback
+            else:
+                display_val = str(val) if val is not None else "-"
+
+            # 3. CONDITIONAL FORMATTING (Colors & Arrows)
             css_class = ""
-            icon_html = ""
+            arrow_html = ""
             
-            # Formatting
-            if isinstance(val, (int, float)):
-                 if "Accuarcy" in header or "Occ" in header or "Yield" in header or "DSCR" in header or "vs Bdgt" in header:
-                      display_val = f"{val:.1%}" if abs(val) < 10 else f"{val:.1f}%" # Heuristic
-                 elif val > 1000 or val < -1000:
-                      display_val = f"${val:,.0f}"
-                 else:
-                      display_val = f"{val:,.2f}"
-
-            # --- SMART ARROW LOGIC (Column J: In Place Eff. Rate?) ---
-            # VBA Logic:
-            # vI = wsPort.Cells(i, "I").value
-            # compare vI * multiplier vs vJ (Value in J)
-            # Actually VBA compares vJ against thresholds derived from vI * Multiplier?
-            # Let's re-read user provided VBA:
-            # vI = wsPort.Cells(i, "I").value
-            # Set rngJ = wsPort.Cells(i, "J")
-            # rngJ value is compared against vI * mult...
-            # Wait, "I" is col 9. "J" is col 10.
-            # Header I is "Gross Scheduled Rent" (from screenshot? No, earlier screenshot I=Debt Yield?)
-            # Let's align with VBA blindly: 
-            # Col 9 (I) is the "Base". Col 10 (J) is the "Target".
-            
-            # Let's find index for Col 9 (idx=7) and Col 10 (idx=8)
-            col_9_val = row_vals[7] if len(row_vals) > 7 else 0 # Col I
-            
-            if col_idx == 10: # Column J
-                try:
-                    vI = float(col_9_val)
-                    vJ = float(val) if val is not None else 0
+            if is_valid_num:
+                # A. Physical Occupancy (>90 Grn, >85 Yel)
+                if "Physical Occupancy" in h_str:
+                    if raw_val >= 0.90: css_class = "val-green"
+                    elif raw_val >= 0.85: css_class = "val-yellow"
+                    else: css_class = "val-red"
+                
+                # B. Economic Occupancy (>85 Grn, >75 Yel)
+                elif "Economic Occupancy" in h_str:
+                    if raw_val >= 0.85: css_class = "val-green"
+                    elif raw_val >= 0.75: css_class = "val-yellow"
+                    else: css_class = "val-red"
                     
-                    # Logic from VBA:
-                    # Criteria 2 (Down): >= vI * multDown
-                    # Criteria 3 (Side): >= vI * multSide
-                    # Criteria 4 (UpAng): >= vI * multUpAng
-                    # Criteria 5 (Green): >= vI * multGreen
+                # C. Debt Yield (>7.5% Grn, >5.95% Yel) - Assuming decimal here if < 1, else scaled
+                elif "Debt Yield" in h_str:
+                     cutoff_green = 0.075
+                     cutoff_yellow = 0.0595
+                     if raw_val > 1: # scaled check
+                         cutoff_green = 7.5
+                         cutoff_yellow = 5.95
+                     
+                     if raw_val >= cutoff_green: css_class = "val-green"
+                     elif raw_val >= cutoff_yellow: css_class = "val-yellow"
+                     else: css_class = "val-red"
+                     
+                # D. DSCR (>1.15 Grn, >1.0 Yel)
+                elif "DSCR" in h_str:
+                    if raw_val >= 1.15: css_class = "val-green"
+                    elif raw_val >= 1.0: css_class = "val-yellow"
+                    else: css_class = "val-red"
                     
-                    # IconSet logic is usually < val1, < val2, etc. 
-                    # But .Operator = xlGreaterEqual implies: 
-                    # if Val >= T_Green -> Green Up Arrow
-                    # else if Val >= T_UpAng -> Up Angled
-                    # ...
+                # E. "Vs Budget" (3% Grn, 0% Yel) - Removed Sequential from here
+                elif any(x in h_str for x in ["vs Bdgt"]): 
+                    cutoff_g = 0.03
+                    cutoff_y = 0.0
+                    if raw_val > 2: # scaled check
+                        cutoff_g = 3.0
+                        cutoff_y = 0.0
                     
-                    if vJ >= vI * mult_green:
-                        icon_html = "<span class='arrow-up'>&#9650;</span> " # Up Arrow
-                    elif vJ >= vI * mult_up_ang:
-                        icon_html = "<span class='arrow-up'>&#8599;</span> " # Angled Up
-                    elif vJ >= vI * mult_side:
-                        icon_html = "<span class='arrow-side'>&#9654;</span> " # Side
-                    elif vJ >= vI * mult_down:
-                        icon_html = "<span class='arrow-down'>&#8600;</span> " # Angled Down
-                    else:
-                        icon_html = "<span class='arrow-down'>&#9660;</span> " # Down Arrow
-                        
-                except Exception as e:
-                    pass # Non-numeric
+                    if raw_val >= cutoff_g: css_class = "val-green"
+                    elif raw_val >= cutoff_y: css_class = "val-yellow"
+                    else: css_class = "val-red"
 
-            # --- STANDARD COLOR SCALES for other columns ---
-            # Reusing logic from financial table if headers match
-            # Phys Occ (Col F, idx 4), Econ Occ (Col G, idx 5)
-            # Debt Yield (Col K?), DSCR (Col L?)
-            # CRES - Portfolio (Internal) differs slightly in layout from Financial Data
-            # Let's infer based on header string
-            
-            h_lower = str(header).lower()
-            if "physical occupan" in h_lower:
-                 v = float(val) if isinstance(val, (int, float)) else 0
-                 if v >= 0.90: css_class = "val-green"
-                 elif v >= 0.85: css_class = "val-yellow"
-                 else: css_class = "val-red"
-            elif "economic occupan" in h_lower:
-                 v = float(val) if isinstance(val, (int, float)) else 0
-                 if v >= 0.85: css_class = "val-green"
-                 elif v >= 0.75: css_class = "val-yellow"
-                 else: css_class = "val-red"
-            elif "dscr" in h_lower:
-                 v = float(val) if isinstance(val, (int, float)) else 0
-                 if v >= 1.15: css_class = "val-green"
-                 elif v >= 1.0: css_class = "val-yellow"
-                 else: css_class = "val-red"
-            elif "vs bdgt" in h_lower: # Cur Mnth vs Bdgt, YTD vs Bdgt
-                 v = float(val) if isinstance(val, (int, float)) else 0
-                 if v >= 0: css_class = "val-green"
-                 elif v >= -0.10: css_class = "val-yellow"
-                 else: css_class = "val-red"
-
-            
-            html += f"<td class='{css_class}'>{icon_html}{display_val}</td>"
+                # F. ARROWS
+                # "In Place Eff. Rate" (calculated vs Prior Month)
+                # Use h_clean_val for robust matching
+                if "In Place Eff. Rate" in h_clean_val and "Prior" not in h_clean_val:
+                     change_pct = 0
+                     if prior_rate_val != 0:
+                         change_pct = (raw_val - prior_rate_val) / prior_rate_val
+                     
+                     # Using multipliers from DB:
+                     # Green: >= 0.1 (mult_green) -> Up Arrow
+                     # Up Ang: >= 0.075 -> Angled Up
+                     # Side: >= 0 -> Side
+                     # Down: >= -0.075 -> Angled Down
+                     # Else -> Down Arrow
+                     
+                     # Check if change_pct is positive/negative vs multiplier
+                     if change_pct >= mult_green: arrow_html = "▲ "
+                     elif change_pct >= mult_up_ang: arrow_html = "⇗ "
+                     elif change_pct >= mult_side: arrow_html = "▶ "
+                     elif change_pct >= mult_down: arrow_html = "⇘ "
+                     else: arrow_html = "▼ "
+                     
+                     # Color the arrow
+                     if change_pct > 0: arrow_html = f"<span style='color:green;font-weight:bold'>{arrow_html}</span>"
+                     elif change_pct < 0: arrow_html = f"<span style='color:red;font-weight:bold'>{arrow_html}</span>"
+                     else: arrow_html = f"<span style='color:#ccc'>{arrow_html}</span>"
+                     
+                     display_val = f"{arrow_html}{display_val}"
+                     
+                # "T1 Current vs T1 Prior Year" AND "T3 Current vs T3 Prior Year" AND "Sequential" -> Arrow
+                if "vs T1 Prior Year" in h_str or "vs T3 Prior Year" in h_str or "Sequential" in h_str:
+                     # raw_val is the % itself
+                     if raw_val >= 0.01: arrow_html = "<span style='color:green;font-weight:bold'>▲</span> "
+                     elif raw_val >= -0.01: arrow_html = "<span style='color:#ccc'>▶</span> "
+                     else: arrow_html = "<span style='color:red;font-weight:bold'>▼</span> "
+                     display_val = f"{arrow_html}{display_val}"
+                     css_class = ""
+        
+            html += f"<td class='{css_class}'>{display_val}</td>"
             
         html += "</tr></tbody></table></div>"
         return html
@@ -301,113 +415,104 @@ class ReportGenerator:
         if df.empty:
             return "<p>No financial data available.</p>"
             
-        # Whitelist of metrics to display (Exact match or substring, handle case sensitivity)
-        # Based on user request
+        # Whitelist of metrics AND Order definition
+        # Based on user request (Sheet Order)
         ALLOWED_METRICS = [
             "Debt Yield",
             "1 Month DSCR",
             "3 Month DSCR",
             "12 Month DSCR", 
-            "Physical Occupancy",
+            "Physical Occupancy", # Matches 'Physical Occupancy (Stats)' if exists, or just 'Physical Occupancy'
             "Economic Occupancy",
             "Break Even Occ. - NOI",
             "Break Even Occ. - Cash Flow",
-            "Asking Rent",
-            "Gross Scheduled Rent",
-            "Inplace Eff. Rent", # Matches 'Inplace Eff. Rent (GSR - Conc)'
+            "Asking Rent (Stats)", # Specialized to exclude 'Property Asking Rent'
+            # "Gross Scheduled Rent", # Removed per user request
+            "Inplace Eff. Rent",
             "Occupied Inplace Eff. Rent",
             "Concession %"
         ]
 
         html = f"{self.css_styles}\n<div style='overflow-x:auto;'><table class='report-table'><thead><tr><th>Metric</th>"
         
+        # Re-sort dataframe to match ALLOWED_METRICS order
+        # Create a categorical type for Metric column (index)
+        df = df.copy()
+        df['sort_key'] = 999
+        
+        for idx, metric_pattern in enumerate(ALLOWED_METRICS):
+            # Find partial matches for this pattern
+            mask = df.index.str.contains(metric_pattern, case=False, regex=False)
+            df.loc[mask, 'sort_key'] = idx
+            
+        # Sort by key (matches user order), then by name (for ties)
+        df = df.sort_values(['sort_key', 'Metric' if 'Metric' in df.columns else df.index.name or 'index'])
+        # Drop rows that didn't match any allowed pattern (sort_key 999)
+        df = df[df['sort_key'] != 999]
+        
         # Header Row (Months)
-        date_cols = [c for c in df.columns if c not in ['Metric', 'sheet_source']]
+        date_cols = [c for c in df.columns if c not in ['Metric', 'sheet_source', 'sort_key']]
         for col in date_cols:
-            html += f"<th>{col}</th>"
+            formatted_col = str(col)
+            try:
+                # 1. Check strict types
+                if isinstance(col, (pd.Timestamp, datetime)):
+                    formatted_col = col.strftime("%b-%y")
+                else:
+                    # 2. Robust String convert
+                    # Handle raw strings like '2024-11-30 00:00:00'
+                    s_col = str(col).strip()
+                    # If it looks like a long timestamp string, try taking the date part
+                    if " " in s_col:
+                        s_col = s_col.split(" ")[0] # '2024-11-30'
+                    
+                    dt = pd.to_datetime(s_col, errors='coerce')
+                    if pd.notna(dt):
+                        formatted_col = dt.strftime("%b-%y")
+            except:
+                pass
+                
+            html += f"<th>{formatted_col}</th>"
         html += "</tr></thead><tbody>"
         
-        # Specific Formatting Rules
-        def get_format_class(metric, value):
-            try:
-                val = float(value)
-            except:
-                return ""
-                
-            m_lower = metric.lower()
-            
-            # Physical Occupancy (90/85)
-            if "physical occupancy" in m_lower:
-                if val >= 0.90: return "val-green"
-                if val >= 0.85: return "val-yellow"
-                return "val-red"
-                
-            # Economic Occupancy (85/75)
-            if "economic occupancy" in m_lower:
-                if val >= 0.85: return "val-green"
-                if val >= 0.75: return "val-yellow"
-                return "val-red"
-                
-            # Debt Yield (7.5 / 5.95) - Note: Input might be 7.5 or 0.075 depending on scale
-            # Assuming percentage is decimal (0.075)
-            if "debt yield" in m_lower:
-                 if val >= 0.075: return "val-green"
-                 if val >= 0.0595: return "val-yellow"
-                 return "val-red"
-
-            # DSCR (1.15 / 1.0)
-            if "dscr" in m_lower or "debt service coverage" in m_lower:
-                if val >= 1.15: return "val-green"
-                if val >= 1.0: return "val-yellow"
-                return "val-red"
-            
-            return ""
-
         # Data Rows
         for idx, row in df.iterrows():
             metric = row.name # index is Metric
             
-            # Whitelist Filtering
-            is_allowed = False
-            for allowed in ALLOWED_METRICS:
-                if allowed.lower() in str(metric).lower():
-                    is_allowed = True
-                    break
-            
-            if not is_allowed:
-                continue
+            # Whitelist Filtering is mostly handled by sort logic above
+            # Clean Metric Name for Display (Remove '(Stats)')
+            display_metric = str(metric).replace('(Stats)', '').strip()
                 
-            html += f"<tr><td class='metric-header'>{metric}</td>"
+            html += f"<tr><td class='metric-header'>{display_metric}</td>"
             for col in date_cols:
                 val = row[col]
                 
                 # Format Value String
-                display_val = str(val)
-                if isinstance(val, (int, float)):
-                    if "Occupancy" in metric or "Yield" in metric or "Rate" in metric or "DSCR" in metric or "Concession" in metric:
-                         # Handle 0.95 vs 95.0
-                         # If value < 2 and likely a percentage, format as %. Else numeric.
-                         # DSCR is usually > 1 but < 5.
-                         if "DSCR" in metric:
-                             display_val = f"{val:.2f}"
-                         elif abs(val) <= 1: 
-                             display_val = f"{val:.1%}"
-                         else: # e.g. 5.15 mean 5.15% ? Or raw number?
-                             # In T12, Occupancy usually 0.95.
-                             if "Occupancy" in metric and abs(val) > 1:
-                                 # Maybe it's 95.0?
-                                 display_val = f"{val:.1f}%"
+                if pd.isna(val):
+                    display_val = "-"
+                else:
+                    display_val = str(val)
+                    try:
+                        if isinstance(val, (int, float)):
+                             # Percentage formatting logic
+                             if any(x in str(metric).lower() for x in ['occupancy', 'yield', 'percent', '%', 'concession']):
+                                 if "DSCR" not in metric and abs(val) <= 1:
+                                     display_val = f"{val:.1%}"
+                                 elif "DSCR" in metric:
+                                     display_val = f"{val:.2f}"
+                                 else:
+                                     display_val = f"{val:.1%}" # Fallback
+                             elif val > 100 or val < -100: # Heuristic for dollar amounts
+                                 display_val = f"${val:,.0f}"
                              else:
-                                 display_val = f"{val:.1%}"
-                    elif val > 1000 or val < -1000: # Likely currency
-                         display_val = f"${val:,.0f}"
-                    else:
-                         display_val = f"{val:,.2f}"
-                
-                # Get CSS Class
-                css_class = get_format_class(metric, val)
-                html += f"<td class='{css_class}'>{display_val}</td>"
+                                 display_val = f"{val:.2f}"
+                    except:
+                        pass
+
+                # No color class applied
+                html += f"<td>{display_val}</td>"
             html += "</tr>"
+
             
         html += "</tbody></table></div>"
         return html

@@ -218,37 +218,35 @@ class ProductionResults:
             
         # Preview Data Package (Structured Results from Python Analysis)
         if selected_property:
-            # Debug Expander to trace Zero Value issue
-            with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=True):
-                try:
-                    # Compute on the fly for preview
-                    analyzer = PropertyAnalyzer(monthly_df, ytd_df)
-                    preview_data = analyzer.analyze_property(selected_property)
-                    
+            try:
+                # 1. Compute Analysis Data (Structure)
+                analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+                preview_data = analyzer.analyze_property(selected_property)
+                
+                # Store in session state for reuse
+                st.session_state['last_structured_data'] = preview_data
+
+                # 2. Display Visual Reports (Top Level)
+                st.markdown("### 📋 Automated Data Report")
+                st.info("This report is generated locally from your data. No AI analysis has been performed yet.")
+                ProductionResults._render_visual_tables(preview_data, selected_property)
+
+                # 3. Collaborative Debug View (Collapsed)
+                with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=False):
                     st.write("### Analysis Debug Info")
                     st.json(preview_data.get('debug', {}))
-                    
                     st.write("### Calculated KPI Data")
                     st.json(preview_data.get('kpi', {}))
-                    
                     st.write("### MoM Data Trace")
                     st.json(preview_data.get('mom_changes', {}))
+                    
+                with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
+                    st.json(preview_data)
 
-                    # Store in session state so run_ai_analysis_responses can reuse it if needed
-                    st.session_state['last_structured_data'] = preview_data
-                    
-                    st.markdown("### 📋 Automated Data Report")
-                    st.info("This report is generated locally from your data. No AI analysis has been performed yet.")
-                    
-                    # Use our new helper to render the beautiful tables
-                    ProductionResults._render_visual_tables(preview_data, selected_property)
-                    
-                    with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
-                        st.json(preview_data)
-                except Exception as e:
-                    st.error(f"❌ Error generating report preview: {str(e)}")
-                    import traceback
-                    st.code(traceback.format_exc())
+            except Exception as e:
+                st.error(f"❌ Error generating report preview: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
         
         # Add Upload to LLM button
         show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)

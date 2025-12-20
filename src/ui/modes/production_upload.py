@@ -59,11 +59,14 @@ class ProductionUpload:
             st.session_state['current_uploaded_file'] = uploaded_file
             if 'processed_monthly_df' not in st.session_state or 'processed_ytd_df' not in st.session_state:
                 with st.spinner("📊 Processing file..."):
-                    monthly_df, ytd_df = self._handle_file_upload(uploaded_file)
+                    monthly_df, ytd_df, processed_data = self._handle_file_upload(uploaded_file)
                     if monthly_df is not None:
                         st.session_state['processed_monthly_df'] = monthly_df
                         st.session_state['processed_ytd_df'] = ytd_df
                         st.session_state['uploaded_file'] = uploaded_file
+                        
+                        if processed_data:
+                            st.session_state['processed_data'] = processed_data
                         
                         # Cache to disk for persistence across refreshes
                         monthly_df.to_pickle(CACHE_MONTHLY)
@@ -100,13 +103,36 @@ class ProductionUpload:
             
             if unified_df is None or unified_df.empty:
                 st.error("❌ No data could be extracted from the file.")
-                return None, None
+                return None, None, None
                 
             # Store detected format for prompt selection
             store_detected_format(processor.format_name)
             
             # Split into monthly and YTD for the analysis engine
             monthly_df, ytd_df = self._split_unified_df(unified_df)
+            
+            # --- PORTFOLIO SNAPSHOT GENERATION ---
+            processed_data = {}
+            try:
+                import openpyxl
+                from src.core.report_generator import ReportGenerator
+                
+                # Re-open for specific cell extraction
+                excel_buffer.seek(0)
+                wb = openpyxl.load_workbook(excel_buffer, data_only=True)
+                
+                report_gen = ReportGenerator()
+                
+                # Iterate detected properties
+                detected_props = monthly_df['Property'].unique()
+                for prop in detected_props:
+                     portfolio_html = report_gen.generate_portfolio_table(wb, prop)
+                     processed_data[prop] = {
+                         "portfolio_snapshot_html": portfolio_html
+                     }
+            except Exception as e:
+                print(f"Portfolio Snapshot Error: {e}")
+            # -------------------------------------
             
             if monthly_df is not None and not monthly_df.empty:
                 metrics_count = monthly_df['Metric'].nunique()
@@ -118,14 +144,14 @@ class ProductionUpload:
             if ytd_df is None or ytd_df.empty:
                 st.warning("⚠️ No YTD data found in file")
                 
-            return monthly_df, ytd_df
+            return monthly_df, ytd_df, processed_data
             
         except Exception as e:
             st.error(f"❌ Error processing file: {str(e)}")
             st.info("💡 Please ensure your file is a valid T12 Excel format")
             import traceback
             st.expander("Error Details").code(traceback.format_exc())
-            return None, None
+            return None, None, None
 
     def _split_unified_df(self, df):
         """Split unified DataFrame into monthly and YTD DataFrames for analysis."""

@@ -140,6 +140,19 @@ class DatabaseT12Processor(BaseFormatProcessor):
             # Sort by date
             valid_date_cols.sort(key=lambda x: x[1])
             
+            # GUARDRAIL: Remove dates in the future (Actuals cannot be in future)
+            # We allow the current month (even if day > today), but not future months.
+            current_date = datetime.datetime.now()
+            
+            def is_past_or_current_month(dt):
+                if dt.year < current_date.year:
+                    return True
+                if dt.year == current_date.year and dt.month <= current_date.month:
+                    return True
+                return False
+                
+            valid_date_cols = [x for x in valid_date_cols if is_past_or_current_month(x[1])]
+            
             # If we found valid columns, take the set up to the last valid one
             # Actually, standard practice: If Nov-25 is empty, but Jan-25 is full, we keep Jan-25.
             # We should keep columns up to the MAX date that has meaningful data.
@@ -165,6 +178,18 @@ class DatabaseT12Processor(BaseFormatProcessor):
             
             # Formatting: Clean up metric names (e.g. 0.05 -> "Valuation p/unit 5%")
             data_fin["Metric"] = data_fin["Metric"].apply(self._format_metric_name)
+            
+            # --- Differentiate Duplicate Metrics (e.g., Financial Data Section) ---
+            # There is a distinct "Financial Data" section at the bottom which re-uses metric names.
+            # We must detect this section and rename metrics to avoid collisions (e.g., Gross Scheduled Rent).
+            fd_idx = data_fin[data_fin['Metric'].astype(str).str.contains('Financial Data', case=False, na=False)].index
+            if not fd_idx.empty:
+                cutoff_stats = fd_idx[0]
+                # Identify rows AFTER the Financial Data header
+                # Since dataframe index preserves original row numbers, we can use simple comparison
+                stats_mask = data_fin.index > cutoff_stats
+                # Append suffix
+                data_fin.loc[stats_mask, "Metric"] = data_fin.loc[stats_mask, "Metric"] + " (Stats)"
             
             # Melt Actuals
             actual_long = data_fin.melt(id_vars="Metric", var_name="Period", value_name="Value")

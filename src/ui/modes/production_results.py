@@ -183,11 +183,11 @@ class ProductionResults:
         api_key = config.get('api_key', '')
         property_name = config.get('property_name', '')
         property_address = config.get('property_address', '')
+        
         if not api_key:
             st.warning("⚠️ Please enter your OpenAI API key in the sidebar")
             return
-
-        # Property selector (from processed data)
+        
         try:
             props_series = pd.concat([
                 monthly_df.get('Property', pd.Series(dtype=str)),
@@ -218,33 +218,103 @@ class ProductionResults:
             
         # Preview Data Package (Structured Results from Python Analysis)
         if selected_property:
-            with st.expander(f"📦 Preview Data Package: {selected_property}", expanded=False):
-                st.markdown("### 📊 Python Analysis Preview")
-                st.info("This is the pre-computed data package that will be sent to the LLM. You can verify budget variances and 3-month averages here.")
-                
-                # Compute on the fly for preview
-                analyzer = PropertyAnalyzer(monthly_df, ytd_df)
-                preview_data = analyzer.analyze_property(selected_property)
-                
-                # Store in session state so run_ai_analysis_responses can reuse it if needed
-                st.session_state['last_structured_data'] = preview_data
-                
-                st.json(preview_data)
+            # Debug Expander to trace Zero Value issue
+            with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=True):
+                try:
+                    # Compute on the fly for preview
+                    analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+                    preview_data = analyzer.analyze_property(selected_property)
+                    
+                    st.write("### Analysis Debug Info")
+                    st.json(preview_data.get('debug', {}))
+                    
+                    st.write("### Calculated KPI Data")
+                    st.json(preview_data.get('kpi', {}))
+                    
+                    st.write("### MoM Data Trace")
+                    st.json(preview_data.get('mom_changes', {}))
+
+                    # Store in session state so run_ai_analysis_responses can reuse it if needed
+                    st.session_state['last_structured_data'] = preview_data
+                    
+                    st.markdown("### 📋 Automated Data Report")
+                    st.info("This report is generated locally from your data. No AI analysis has been performed yet.")
+                    
+                    # Use our new helper to render the beautiful tables
+                    ProductionResults._render_visual_tables(preview_data, selected_property)
+                    
+                    with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
+                        st.json(preview_data)
+                except Exception as e:
+                    st.error(f"❌ Error generating report preview: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        
         # Add Upload to LLM button
-        show_analyze = st.button("🚀 Upload to LLM & Analyze", type="primary", use_container_width=True)
+        show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)
         if show_analyze:
             ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
-    
+
+    @staticmethod
+    def _render_visual_tables(analysis_result: Dict[str, Any], selected_property: str):
+        """Unified helper to render the HTML tables (KPI, Financial, Portfolio)."""
+        from src.core.report_generator import ReportGenerator
+        import pandas as pd
+        
+        report_gen = ReportGenerator()
+        
+        # 0. Portfolio Snapshot (from Internal Sheet)
+        st.markdown("#### Portfolio Snapshot")
+        snapshot_html = ""
+        if "processed_data" in st.session_state:
+            proc_data = st.session_state["processed_data"]
+            if selected_property in proc_data:
+                snapshot_html = proc_data[selected_property].get("portfolio_snapshot_html", "")
+        
+        if snapshot_html:
+            st.markdown(snapshot_html, unsafe_allow_html=True)
+        else:
+            st.caption("ℹ️ Portfolio snapshot not available for this workbook.")
+
+        # 1. KPI Snapshot Table (Merged Monthly + YTD)
+        st.markdown("#### KPI Snapshot")
+        # Extract MoM changes from result
+        mom_changes = analysis_result.get('mom_changes', {})
+        
+        kpi_html = report_gen.generate_combined_kpi_table(
+            monthly_kpi=analysis_result.get('kpi', {}),
+            ytd_kpi=analysis_result.get('ytd_kpi', {}),
+            mom_changes=mom_changes
+        )
+        st.markdown(kpi_html, unsafe_allow_html=True)
+        
+        # 2. Financial Data Section
+        st.markdown("#### Monthly Financial Data")
+        if 'monthly_data' in analysis_result:
+            m_df = pd.DataFrame(analysis_result['monthly_data'])
+            if not m_df.empty:
+                if 'Metric' in m_df.columns and 'Period' in m_df.columns and 'Value' in m_df.columns:
+                    # Use pivot_table with aggfunc='sum' to be resilient to any remaining duplicates
+                    pivot_df = m_df.pivot_table(index='Metric', columns='Period', values='Value', aggfunc='sum')
+                    pivot_df = pivot_df.sort_index(axis=1) # Chronological sort
+                    
+                    fin_html = report_gen.generate_financial_table(pivot_df)
+                    st.markdown(fin_html, unsafe_allow_html=True)
+                else:
+                    st.warning("Financial data structure invalid for table generation.")
+
     @staticmethod
     def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any], selected_property: Optional[str] = None):
         """Render AI analysis with side-by-side option."""
+        # ... existing implementation ...
+        # (Assuming the rest of the method is unchanged except for calling the helper)
         # Check for existing analysis results first
         existing_output = get_existing_analysis_results()
 
         if existing_output:
             # Display existing results
-            st.markdown("## 📊 Analysis Report")
-            ProductionResults._display_analysis_with_options(existing_output, config)
+            st.markdown("## 📊 Full AI Analysis Report")
+            ProductionResults._display_analysis_with_options(existing_output, config, selected_property)
             ProductionResults._display_regenerate_option()
             return
 
@@ -275,27 +345,27 @@ class ProductionResults:
 
         if processed_output:
             st.markdown("---")
-            st.markdown("## 📊 Analysis Report")
+            st.markdown("## 📊 Full AI Analysis Report")
             # Persist for subsequent reruns so the UI shows existing results
             st.session_state['processed_analysis_output'] = processed_output
             st.session_state['last_analyzed_property'] = selected_property
-            ProductionResults._display_analysis_with_options(processed_output, config)
+            ProductionResults._display_analysis_with_options(processed_output, config, selected_property)
     
     @staticmethod
-    def _display_analysis_with_options(output: Dict[str, Any], config: Dict[str, Any]):
+    def _display_analysis_with_options(output: Dict[str, Any], config: Dict[str, Any], selected_property: str):
         """Display raw response. Also show debug data if available."""
         # Main report content
-        ProductionResults._display_raw_response_as_main_report(output)
+        ProductionResults._display_raw_response_as_main_report(output, selected_property)
         
-        # Add a debug view at the bottom for verification
+        # Add a preview view at the bottom for verification
         if 'last_structured_data' in st.session_state:
-            with st.expander("🔍 Debug: View Full JSON sent to LLM (Python Analysis Output)", expanded=False):
+            with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
                 st.markdown("### 📊 Local Python Analysis Verification")
                 st.info("This is the exact structured data pre-computed by Python before being sent to the AI. Use this to verify budget variances and rolling averages.")
                 st.json(st.session_state['last_structured_data'])
     
     @staticmethod
-    def _display_raw_response_as_main_report(output: Dict[str, Any]):
+    def _display_raw_response_as_main_report(output: Dict[str, Any], selected_property: str):
         """Display the raw AI response as the main report content, using enhanced HTML formatting."""
         if "raw_response" in output:
             raw_response = output["raw_response"]
@@ -308,6 +378,11 @@ class ProductionResults:
             
             formatted_html_response = ProductionResults.format_response_for_streamlit(raw_response)
             
+            # --- RENDER VISUAL DATA SECTION (Shared Helper) ---
+            ProductionResults._render_visual_tables(output, selected_property)
+            
+            # --- RENDER AI NARRATIVE SECTION ---
+            st.markdown("### 🤖 AI Analysis & Recommendations")
             with st.container():
                 st.markdown(formatted_html_response, unsafe_allow_html=True)
             

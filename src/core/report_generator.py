@@ -59,10 +59,15 @@ class ReportGenerator:
                 border-bottom: 2px solid {COLOR_TEAL};
             }}
             
-            /* High Contrast Status Colors - FUNCTIONAL (Keep dark blocks for status) */
+            /* High Contrast Status Colors - GLOBAL (Standard Dark/White) */
             .val-green {{ background-color: #1e4620 !important; color: #ffffff !important; font-weight: bold; }}
             .val-yellow {{ background-color: #4d3e04 !important; color: #fdf2ce !important; font-weight: bold; }}
             .val-red {{ background-color: #5a1a1e !important; color: #ffffff !important; font-weight: bold; }}
+
+            /* Portfolio Specific Bright Colors (User Request) */
+            .portfolio-green {{ background-color: #00FF00 !important; color: #000000 !important; font-weight: bold; }}
+            .portfolio-yellow {{ background-color: #FFFF00 !important; color: #000000 !important; font-weight: bold; }}
+            .portfolio-red {{ background-color: #FF3636 !important; color: #000000 !important; font-weight: bold; }}
             
             /* Arrow Colors - Darker for Light Mode Visibility */
             .arrow-up {{ color: #2e7d32 !important; font-weight: bold; }}   
@@ -151,7 +156,11 @@ class ReportGenerator:
              inc_color = "val-green" if inc_pct >= 0 else "val-red"
              inc_arrow = "▲" if inc_pct >= 0 else "▼"
              
-             html += f"<tr><td class='metric-header'>MoM Income Change</td><td class='{inc_color}'>{inc_arrow} {inc_pct:+.1f}% (${inc_abs:,.0f})</td><td>-</td></tr>"
+             # User Request: Remove fills (background color) for MoM rows, keep arrows
+             # We use inc_color to determine arrow color only, but remove class='val-...' from td
+             # Use standard "green"/"red" to match Portfolio Snapshot arrows
+             arrow_style = f"color: {'green' if inc_pct >= 0 else 'red'}; font-weight: bold;"
+             html += f"<tr><td class='metric-header'>MoM Income Change</td><td><span style='{arrow_style}'>{inc_arrow}</span> {inc_pct:+.1f}% (${inc_abs:,.0f})</td><td>-</td></tr>"
              
              exp_data = mom_changes.get('total_expense', {})
              exp_pct = exp_data.get('change_pct', 0)
@@ -163,13 +172,17 @@ class ReportGenerator:
              exp_color = "val-green" if exp_pct >= 0 else "val-red"
              exp_arrow = "▲" if exp_pct >= 0 else "▼"
              
-             html += f"<tr><td class='metric-header'>MoM Expense Change</td><td class='{exp_color}'>{exp_arrow} {exp_pct:+.1f}% (${exp_abs:,.0f})</td><td>-</td></tr>"
+             exp_arrow = "▲" if exp_pct >= 0 else "▼"
+             
+             arrow_style_exp = f"color: {'green' if exp_pct >= 0 else 'red'}; font-weight: bold;"
+             html += f"<tr><td class='metric-header'>MoM Expense Change</td><td><span style='{arrow_style_exp}'>{exp_arrow}</span> {exp_pct:+.1f}% (${exp_abs:,.0f})</td><td>-</td></tr>"
         
         html += "</tbody></table>"
         return html
 
     def generate_portfolio_table(self, wb, property_name: str) -> str:
         """Generates the Portfolio Snapshot table from 'Internal' sheet."""
+        from src.ui.theme import COLOR_NAVY, COLOR_TEAL, COLOR_SAGE
         try:
             if "CRES - Portfolio (Internal)" not in wb.sheetnames or "DB" not in wb.sheetnames:
                 return "<p>Missing required sheets ('CRES - Portfolio (Internal)' or 'DB').</p>"
@@ -268,17 +281,17 @@ class ReportGenerator:
                     
                     if is_valid_num:
                         if "Physical Occupancy" in h_str:
-                            css_class = "val-green" if raw_val >= 0.90 else "val-yellow" if raw_val >= 0.85 else "val-red"
+                            css_class = "portfolio-green" if raw_val >= 0.90 else "portfolio-yellow" if raw_val >= 0.85 else "portfolio-red"
                         elif "Economic Occupancy" in h_str:
-                            css_class = "val-green" if raw_val >= 0.85 else "val-yellow" if raw_val >= 0.75 else "val-red"
+                            css_class = "portfolio-green" if raw_val >= 0.85 else "portfolio-yellow" if raw_val >= 0.75 else "portfolio-red"
                         elif "Debt Yield" in h_str:
                              cut_g, cut_y = (7.5, 5.95) if raw_val > 1 else (0.075, 0.0595)
-                             css_class = "val-green" if raw_val >= cut_g else "val-yellow" if raw_val >= cut_y else "val-red"
+                             css_class = "portfolio-green" if raw_val >= cut_g else "portfolio-yellow" if raw_val >= cut_y else "portfolio-red"
                         elif "DSCR" in h_str:
-                            css_class = "val-green" if raw_val >= 1.15 else "val-yellow" if raw_val >= 1.0 else "val-red"
+                            css_class = "portfolio-green" if raw_val >= 1.15 else "portfolio-yellow" if raw_val >= 1.0 else "portfolio-red"
                         elif "vs Bdgt" in h_str: 
                             cut_g, cut_y = (3.0, 0.0) if raw_val > 2 else (0.03, 0.0)
-                            css_class = "val-green" if raw_val >= cut_g else "val-yellow" if raw_val >= cut_y else "val-red"
+                            css_class = "portfolio-green" if raw_val >= cut_g else "portfolio-yellow" if raw_val >= cut_y else "portfolio-red"
 
                         # ARROWS
                         # Match "In Place Eff. Rate", "Inplace Eff. Rent", etc.
@@ -351,28 +364,32 @@ class ReportGenerator:
             # Group 1: Details
             if n > 0:
                 g1_idx = indices_cl[:idx_1]
-                # Details typically don't need fancy formatting, but using same generator is fine
-                html_out += generate_chunk(headers_cl[:idx_1], [row_vals[i] for i in g1_idx], "Property Details", "#333")
+                # Use COLOR_TEAL for Property Details to contrast with Navy headers
+                html_out += generate_chunk(headers_cl[:idx_1], [row_vals[i] for i in g1_idx], "Property Details", COLOR_TEAL)
             
             # Group 2: Operations
             if n > idx_1:
                 g2_idx = indices_cl[idx_1:idx_2]
-                html_out += generate_chunk(headers_cl[idx_1:idx_2], [row_vals[i] for i in g2_idx], "Cur. Mnth. Operations - Financial Based", "#444")
+                # Use COLOR_TEAL for Operations
+                html_out += generate_chunk(headers_cl[idx_1:idx_2], [row_vals[i] for i in g2_idx], "Cur. Mnth. Operations - Financial Based", COLOR_TEAL)
             
             # Group 3: NOI
             if n > idx_2:
                 g3_idx = indices_cl[idx_2:idx_3]
-                html_out += generate_chunk(headers_cl[idx_2:idx_3], [row_vals[i] for i in g3_idx], "NOI - % Variance", "#555")
+                # Use COLOR_TEAL for NOI variance
+                html_out += generate_chunk(headers_cl[idx_2:idx_3], [row_vals[i] for i in g3_idx], "NOI - % Variance", COLOR_TEAL)
 
             # Group 4: Revenue
             if n > idx_3:
                 g4_idx = indices_cl[idx_3:idx_4]
-                html_out += generate_chunk(headers_cl[idx_3:idx_4], [row_vals[i] for i in g4_idx], "Revenue - % Variance", "#444")
+                # Use COLOR_TEAL for Revenue
+                html_out += generate_chunk(headers_cl[idx_3:idx_4], [row_vals[i] for i in g4_idx], "Revenue - % Variance", COLOR_TEAL)
                 
             # Group 5: Expenses
             if n > idx_4:
                 g5_idx = indices_cl[idx_4:]
-                html_out += generate_chunk(headers_cl[idx_4:], [row_vals[i] for i in g5_idx], "Expenses - % Variance", "#555")
+                # Use COLOR_TEAL for Expenses
+                html_out += generate_chunk(headers_cl[idx_4:], [row_vals[i] for i in g5_idx], "Expenses - % Variance", COLOR_TEAL)
                 
             return html_out
             

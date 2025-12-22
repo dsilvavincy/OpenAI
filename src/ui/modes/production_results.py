@@ -258,6 +258,19 @@ class ProductionResults:
                 
                 # Store in session state for reuse
                 st.session_state['last_structured_data'] = preview_data
+                
+                # LLM Payload Preview - Visible for verification BEFORE analysis
+                st.info("Debugging: New Code IS Running - Look for Payload Preview below")
+                with st.expander("📦 DEBUG: Data Preview (No Cost)", expanded=True):
+                    st.markdown("### 📊 Local Python Analysis Verification")
+                    st.info("This is the exact minimized data sent to the AI for variance analysis.")
+                    minimal_payload = {
+                        "property_name": preview_data.get("property_name"),
+                        "report_period": preview_data.get("report_period"),
+                        "budget_variances": preview_data.get("budget_variances", {}),
+                        "trailing_anomalies": preview_data.get("trailing_anomalies", {})
+                    }
+                    st.json(minimal_payload)
 
                 # 2. Display Visual Reports (Top Level)
                 
@@ -361,6 +374,12 @@ class ProductionResults:
         for label, key in metrics:
             val_mo = monthly_kpi.get(key, 0)
             val_ytd = ytd_kpi.get(key, 0)
+            
+            # USER REQUEST: Show expenses as positive numbers
+            if key == "total_expense":
+                val_mo = abs(val_mo)
+                val_ytd = abs(val_ytd)
+                
             kpi_rows.append({
                 "Metric": label,
                 "Current Month": f"${val_mo:,.0f}",
@@ -370,11 +389,13 @@ class ProductionResults:
         # B. Expense Ratio
         inc_mo = monthly_kpi.get("net_eff_gross_income", 0)
         exp_mo = monthly_kpi.get("total_expense", 0)
-        ratio_mo = (exp_mo / inc_mo) if inc_mo and inc_mo != 0 else 0
+        # Use ABS(Expenses) for positive ratio
+        ratio_mo = (abs(exp_mo) / inc_mo) if inc_mo and inc_mo != 0 else 0
         
         inc_ytd = ytd_kpi.get("net_eff_gross_income", 0)
         exp_ytd = ytd_kpi.get("total_expense", 0)
-        ratio_ytd = (exp_ytd / inc_ytd) if inc_ytd and inc_ytd != 0 else 0
+        # Use ABS(Expenses) for positive ratio
+        ratio_ytd = (abs(exp_ytd) / inc_ytd) if inc_ytd and inc_ytd != 0 else 0
         
         kpi_rows.append({
             "Metric": "Expense Ratio",
@@ -418,6 +439,18 @@ class ProductionResults:
             m_df = pd.DataFrame(analysis_result['monthly_data'])
             if not m_df.empty:
                 if 'Metric' in m_df.columns and 'Period' in m_df.columns and 'Value' in m_df.columns:
+                    # User Request: Multiply Trailing 12 month NOI by 1000
+                    # Robust matching: strip whitespace and ignore case
+                    try:
+                        print("DEBUG: Unique Metrics found:", m_df['Metric'].unique(), flush=True) # <<< DEBUG LINE
+                        m_df['Value'] = pd.to_numeric(m_df['Value'], errors='coerce').fillna(0)
+                        mask = m_df['Metric'].astype(str).str.strip().str.lower() == "trailing 12 month noi"
+                        if mask.any():
+                            print(f"DEBUG: Scalling {mask.sum()} NOI rows by 1000", flush=True)
+                            m_df.loc[mask, 'Value'] = m_df.loc[mask, 'Value'] * 1000
+                    except Exception as e:
+                        print(f"DEBUG Error scaling NOI: {e}", flush=True)
+                    
                     # Use pivot_table with aggfunc='sum' to be resilient to any remaining duplicates
                     pivot_df = m_df.pivot_table(index='Metric', columns='Period', values='Value', aggfunc='sum')
                     pivot_df = pivot_df.sort_index(axis=1) # Chronological sort
@@ -546,20 +579,6 @@ class ProductionResults:
         # Main report content
         ProductionResults._display_raw_response_as_main_report(output, selected_property)
         
-        # LLM Payload Preview - Hidden per user request
-        # if 'last_structured_data' in st.session_state:
-        #     with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
-        #         st.markdown("### 📊 Local Python Analysis Verification")
-        #         st.info("This is the exact minimized data sent to the AI for variance analysis.")
-        #         raw_data = st.session_state['last_structured_data']
-        #         minimal_payload = {
-        #             "property_name": raw_data.get("property_name"),
-        #             "report_period": raw_data.get("report_period"),
-        #             "budget_variances": raw_data.get("budget_variances", {}),
-        #             "trailing_anomalies": raw_data.get("trailing_anomalies", {})
-        #         }
-        #         st.json(minimal_payload)
-    
     @staticmethod
     def _display_raw_response_as_main_report(output: Dict[str, Any], selected_property: str):
         """Display the raw AI response as the main report content, using enhanced HTML formatting."""

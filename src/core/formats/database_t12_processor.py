@@ -110,6 +110,8 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 pass
 
             data_fin = df_fin.iloc[7:].copy()
+            # Add RowOrder for Standard T12 Analysis compatibility (Start at Row 8)
+            data_fin["RowOrder"] = range(8, 8 + len(data_fin))
             
             # Identify Date Columns (Col 1 onwards)
             # Filter columns that parse to datetime
@@ -195,6 +197,11 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 final_date_col_map = date_col_map # Fallback
             
             keep_cols = [cols[i] for i in [0] + list(final_date_col_map.keys())]
+            
+            # Ensure RowOrder is preserved (it was added manually as a column, not in cols index map)
+            if "RowOrder" in data_fin.columns:
+                keep_cols.append("RowOrder")
+                
             data_fin = data_fin[keep_cols].rename(columns={cols[0]: "Metric", **{cols[k]: v for k,v in final_date_col_map.items()}})
             
             # Drop rows with empty Metric
@@ -216,7 +223,7 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 data_fin.loc[stats_mask, "Metric"] = data_fin.loc[stats_mask, "Metric"] + " (Stats)"
             
             # Melt Actuals
-            actual_long = data_fin.melt(id_vars="Metric", var_name="Period", value_name="Value")
+            actual_long = data_fin.melt(id_vars=["Metric", "RowOrder"], var_name="Period", value_name="Value")
             actual_long["Value"] = pd.to_numeric(actual_long["Value"], errors='coerce').fillna(0)
             
             # Identify valid metrics for YTD calculation (stop at "Monthly Cash Flow")
@@ -253,6 +260,9 @@ class DatabaseT12Processor(BaseFormatProcessor):
             header_row_bgt = df_bgt.iloc[6]
             data_bgt = df_bgt.iloc[7:].copy()
             
+            # Add RowOrder to Budget too (Consistency)
+            data_bgt["RowOrder"] = range(8, 8 + len(data_bgt))
+            
             date_col_map_bgt = {}
             for idx, val in enumerate(header_row_bgt):
                 if idx == 0: continue
@@ -275,7 +285,17 @@ class DatabaseT12Processor(BaseFormatProcessor):
             for idx, dt in final_date_col_map_bgt.items():
                 rename_dict_bgt[cols_bgt[idx]] = dt
                 
+            # Keep RowOrder in budget processing
             keep_cols_bgt = [cols_bgt[i] for i in [0] + list(final_date_col_map_bgt.keys())]
+            
+            # Handle RowOrder being in the last position or specific position in data_bgt
+            # data_bgt["RowOrder"] was added manually, so it's a column. 
+            # We need to ensure we don't drop it.
+            keep_cols_bgt.append("RowOrder")
+            
+            # Ensure intersection
+            keep_cols_bgt = [c for c in keep_cols_bgt if c in data_bgt.columns]
+            
             data_bgt = data_bgt[keep_cols_bgt].rename(columns=rename_dict_bgt)
             
             # Drop rows with empty Metric
@@ -294,17 +314,28 @@ class DatabaseT12Processor(BaseFormatProcessor):
                 # Nullify all values for rows numerically > cutoff_index
                 rows_to_null = data_bgt.index[data_bgt.index > cutoff_index]
                 if not rows_to_null.empty:
-                    # Set date columns to NaN
-                    date_cols_bgt_list = [c for c in data_bgt.columns if c != "Metric"]
+                    # Set date columns to NaN (Exclude Metric/RowOrder)
+                    date_cols_bgt_list = [c for c in data_bgt.columns if c not in ["Metric", "RowOrder"]]
                     data_bgt.loc[rows_to_null, date_cols_bgt_list] = np.nan
 
             # Melt Budgets
-            budget_long = data_bgt.melt(id_vars="Metric", var_name="Period", value_name="BudgetValue")
+            budget_long = data_bgt.melt(id_vars=["Metric", "RowOrder"], var_name="Period", value_name="BudgetValue")
             budget_long["BudgetValue"] = pd.to_numeric(budget_long["BudgetValue"], errors='coerce').fillna(0)
             
             # --- Merge ---
-            # Merge on Metric and Period
+            # Merge on Metric and Period. This will create RowOrder_x and RowOrder_y
             combined = pd.merge(actual_long, budget_long, on=["Metric", "Period"], how="outer")
+            
+            # Restore RowOrder by coalescing
+            if "RowOrder_x" in combined.columns and "RowOrder_y" in combined.columns:
+                combined["RowOrder"] = combined["RowOrder_x"].fillna(combined["RowOrder_y"])
+                combined = combined.drop(columns=["RowOrder_x", "RowOrder_y"])
+            elif "RowOrder_x" in combined.columns:
+                 combined["RowOrder"] = combined["RowOrder_x"]
+                 combined = combined.drop(columns=["RowOrder_x"])
+            elif "RowOrder_y" in combined.columns: # Unlikely if actuals exist
+                 combined["RowOrder"] = combined["RowOrder_y"]
+                 combined = combined.drop(columns=["RowOrder_y"])
             
             # Ensure no NaNs are introduced by the outer merge
             combined["Value"] = combined["Value"].fillna(0)

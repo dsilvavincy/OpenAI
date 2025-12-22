@@ -99,8 +99,8 @@ class StandardT12Processor(BaseFormatProcessor):
                 data_df = df_raw.iloc[7:].copy()
                 data_df.columns = [f"col_{i}" for i in range(len(data_df.columns))]
                 
-                # Add RowOrder to preserve spreadsheet sequence
-                data_df["RowOrder"] = range(len(data_df))
+                # Add RowOrder to preserve spreadsheet sequence (Start at Row 8)
+                data_df["RowOrder"] = range(8, 8 + len(data_df))
                 
                 # Metric Name (Col 1)
                 data_df = data_df[data_df["col_0"].notna()]

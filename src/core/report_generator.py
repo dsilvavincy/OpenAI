@@ -161,6 +161,11 @@ class ReportGenerator:
             if isinstance(val_ytd, (int, float)):
                 val_ytd = val_ytd * 1000
             
+            # USER REQUEST: Show expenses as positive numbers
+            if snake_key == "total_expense":
+                val_mo = abs(val_mo)
+                val_ytd = abs(val_ytd)
+            
             # Format currency
             fmt_mo = f"${val_mo:,.0f}" if isinstance(val_mo, (int, float)) else str(val_mo)
             fmt_ytd = f"${val_ytd:,.0f}" if isinstance(val_ytd, (int, float)) else str(val_ytd)
@@ -171,12 +176,14 @@ class ReportGenerator:
         # Calculate Monthly
         inc_mo = monthly_kpi.get("net_eff_gross_income", 0)
         exp_mo = monthly_kpi.get("total_expense", 0)
-        ratio_mo = (exp_mo / inc_mo) if inc_mo and inc_mo != 0 else 0
+        # Use ABS(Expenses) for positive ratio
+        ratio_mo = (abs(exp_mo) / inc_mo) if inc_mo and inc_mo != 0 else 0
         
         # Calculate YTD
         inc_ytd = ytd_kpi.get("net_eff_gross_income", 0)
         exp_ytd = ytd_kpi.get("total_expense", 0)
-        ratio_ytd = (exp_ytd / inc_ytd) if inc_ytd and inc_ytd != 0 else 0
+        # Use ABS(Expenses) for positive ratio
+        ratio_ytd = (abs(exp_ytd) / inc_ytd) if inc_ytd and inc_ytd != 0 else 0
         
         # Format as percentage
         html += f"""
@@ -523,6 +530,13 @@ class ReportGenerator:
             for col in date_cols:
                 val = row[col]
                 
+                # User Request: Multiply Trailing 12 month NOI by 1000
+                if 'trailing 12 month noi' in str(metric).lower():
+                    try:
+                        val = float(val) * 1000
+                    except:
+                        pass
+                
                 # Format Value String
                 if pd.isna(val):
                     display_val = "-"
@@ -582,15 +596,15 @@ class ReportGenerator:
         ]
         
         bv = ai_data.get("budget_variances", {})
-        if not bv or (not bv.get("Revenue") and not bv.get("Expenses")):
+        if not bv or (not bv.get("Revenue") and not bv.get("Expenses") and not bv.get("Balance Sheet")):
              html += "<p>No significant budget variances reported.</p>"
         else:
-            for cat in ["Revenue", "Expenses"]:
+            for cat in ["Revenue", "Expenses", "Balance Sheet"]:
                 items = bv.get(cat, [])
                 if not items: continue
                 
-                # Sort by ACTUAL variance PERCENTAGE (descending - Highest to Lowest)
-                items.sort(key=get_sort_val, reverse=True)
+                # Sort by ACTUAL variance PERCENTAGE (Ascending - Lowest to Highest)
+                items.sort(key=get_sort_val, reverse=False)
                 
                 html += f"<h4>{cat}</h4>"
                 html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Actual</th><th style='width: 12%;'>Budget</th><th style='width: 12%;'>Variance %</th><th>Investigative Questions</th></tr></thead><tbody>"
@@ -617,15 +631,15 @@ class ReportGenerator:
         # 2. Trailing Anomalies Section
         html += "<h3 style='margin-top: 40px;'>2️⃣ Trailing Anomalies</h3>"
         ta = ai_data.get("trailing_anomalies", {})
-        if not ta or (not ta.get("Revenue") and not ta.get("Expenses")):
+        if not ta or (not ta.get("Revenue") and not ta.get("Expenses") and not ta.get("Balance Sheet")):
              html += "<p>No significant trailing anomalies reported.</p>"
         else:
-            for cat in ["Revenue", "Expenses"]:
+            for cat in ["Revenue", "Expenses", "Balance Sheet"]:
                 items = ta.get(cat, [])
                 if not items: continue
                 
-                # Sort by ACTUAL deviation percentage (descending - Highest to Lowest)
-                items.sort(key=get_sort_val, reverse=True)
+                # Sort by ACTUAL deviation percentage (Ascending - Lowest to Highest)
+                items.sort(key=get_sort_val, reverse=False)
                 
                 html += f"<h4>{cat}</h4>"
                 html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Current</th><th style='width: 12%;'>T3 Avg</th><th style='width: 12%;'>Deviation %</th><th>Investigative Questions</th></tr></thead><tbody>"

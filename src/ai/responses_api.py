@@ -31,11 +31,14 @@ JSON Structure:
       { "metric": "string", "actual": "number", "budget": "number", "variance_pct": "number", "questions": ["string", "string"] }
     ]
   },
-  "trailing_anomalies": {
+    "trailing_anomalies": {
     "Revenue": [
       { "metric": "string", "current": "number", "t3_avg": "number", "deviation_pct": "number", "questions": ["string", "string"] }
     ],
     "Expenses": [
+      { "metric": "string", "current": "number", "t3_avg": "number", "deviation_pct": "number", "questions": ["string", "string"] }
+    ],
+    "Balance Sheet": [
       { "metric": "string", "current": "number", "t3_avg": "number", "deviation_pct": "number", "questions": ["string", "string"] }
     ]
   }

@@ -854,8 +854,15 @@ class PropertyAnalyzer:
         return exp / inc
 
     def _get_budget_variances(self, df: pd.DataFrame) -> Dict[str, List[Dict]]:
-        """Identifies budget variances > 10%."""
-        variances = {"Revenue": [], "Expenses": []}
+        """
+        Identifies budget variances > 10% based on specific T12 Row Ranges.
+        
+        Categorization Rules (based on Excel RowOrder):
+        - Revenue: Rows 8-20
+        - Expenses: Rows 23-38 AND 44-50
+        - Balance Sheet: Rows 58-71
+        """
+        variances = {"Revenue": [], "Expenses": [], "Balance Sheet": []}
         
         if "BudgetValue" not in df.columns:
             return variances
@@ -863,17 +870,23 @@ class PropertyAnalyzer:
         latest_date = self._get_latest_month(df)
         current_month_data = df[df["Period"] == latest_date].copy()
         
-        # [CUTOFF LOGIC] Filter out metrics below "Monthly Cash Flow"
+        # Ensure RowOrder exists for this logic
         if "RowOrder" in current_month_data.columns:
-            mcf_mask = current_month_data["Metric"].str.lower().str.contains("monthly cash flow", na=False)
-            if mcf_mask.any():
-                cutoff_order = current_month_data.loc[mcf_mask, "RowOrder"].min()
-                current_month_data = current_month_data[current_month_data["RowOrder"] <= cutoff_order]
+            min_row = current_month_data["RowOrder"].min()
+            logger.info(f"Budget Variance: Detected RowOrder Min = {min_row}")
+            if min_row == 0:
+                logger.warning("Budget Variance: RowOrder starts at 0! Stale data detected. Rows will be shifted +8 for temporary fix.")
+                current_month_data["RowOrder"] = current_month_data["RowOrder"] + 8
+                
+        if "RowOrder" not in current_month_data.columns:
+            # Fallback based on keywords if RowOrder missing (unlikely in this pipeline)
+            return self._get_budget_variances_fallback(current_month_data, variances)
         
         for _, row in current_month_data.iterrows():
             metric = row["Metric"]
             actual = row["Value"]
             budget = row["BudgetValue"]
+            row_num = row.get("RowOrder", 0)
             
             # Skip if budget is 0 to avoid div by zero
             if budget == 0:
@@ -881,48 +894,72 @@ class PropertyAnalyzer:
                 
             variance_pct = (actual - budget) / abs(budget)
             
-            # Check thresholds: >10% variance (either direction)
-            # Logic: 
-            # - For Revenue: actual < budget by 10% is bad (variance_pct < -0.10)
-            # - For Expense: actual > budget by 10% is bad (variance_pct > 0.10)
-            # Actually user asked for "deviation > 10%" in general for the AI to question.
-            # Let's catch anything > 10% absolute deviation for now.
-            
+            # Threshold: > 10% absolute deviation
             if abs(variance_pct) > 0.10:
-                # determine type: Check known Revenue keywords first
-                # (usually Income, Rev, Rent, etc.)
-                is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
-                # Exceptions for metrics that look like revenue but are expenses
-                if "expense" in metric.lower(): is_revenue = False
                 
-                category = "Revenue" if is_revenue else "Expenses"
+                category = None
                 
-                variances[category].append({
-                    "metric": metric,
-                    "actual": round(actual, 2),
-                    "budget": round(budget, 2),
-                    "variance_pct": round(variance_pct * 100, 2)
-                })
+                # Strict Row-Based Categorization
+                if 8 <= row_num <= 20:
+                    category = "Revenue"
+                elif (23 <= row_num <= 38) or (44 <= row_num <= 50):
+                    category = "Expenses"
+                elif 58 <= row_num <= 71:
+                    category = "Balance Sheet"
+                
+                # Only add if it falls into one of our valid categories
+                if category:
+                    variances[category].append({
+                        "metric": metric,
+                        "actual": round(actual, 2),
+                        "budget": round(budget, 2),
+                        "variance_pct": round(variance_pct * 100, 2)
+                    })
                 
         # Sort by magnitude of variance (absolute pct)
         for cat in variances:
             variances[cat].sort(key=lambda x: abs(x['variance_pct']), reverse=True)
             
         return variances
+
+    def _get_budget_variances_fallback(self, df: pd.DataFrame, variances: Dict) -> Dict[str, List[Dict]]:
+        """Original keyword-based fallback if RowOrder is missing."""
+        for _, row in df.iterrows():
+            metric = row["Metric"]
+            actual = row["Value"]
+            budget = row["BudgetValue"]
+            if budget == 0: continue
+            
+            variance_pct = (actual - budget) / abs(budget)
+            
+            if abs(variance_pct) > 0.10:
+                is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
+                if "expense" in metric.lower(): is_revenue = False
+                
+                category = "Revenue" if is_revenue else "Expenses"
+                variances[category].append({
+                    "metric": metric,
+                    "actual": round(actual, 2),
+                    "budget": round(budget, 2),
+                    "variance_pct": round(variance_pct * 100, 2)
+                })
+        return variances
     
     def _get_trailing_anomalies(self, df: pd.DataFrame) -> Dict[str, List[Dict]]:
         """Identifies metrics where Current Month deviates > 10% from T3 Average."""
-        anomalies = {"Revenue": [], "Expenses": []}
+        anomalies = {"Revenue": [], "Expenses": [], "Balance Sheet": []}
         
         latest_date = self._get_latest_month(df)
         
-        # [CUTOFF LOGIC] Filter out metrics below "Monthly Cash Flow"
+        # Ensure RowOrder exists and fix Stale Data if needed (Same logic as Variance)
         filtered_df = df.copy()
         if "RowOrder" in filtered_df.columns:
-            mcf_mask = filtered_df["Metric"].str.lower().str.contains("monthly cash flow", na=False)
-            if mcf_mask.any():
-                cutoff_order = filtered_df.loc[mcf_mask, "RowOrder"].min()
-                filtered_df = filtered_df[filtered_df["RowOrder"] <= cutoff_order]
+             min_row = filtered_df["RowOrder"].min()
+             if min_row == 0:
+                 filtered_df["RowOrder"] = filtered_df["RowOrder"] + 8
+        
+        # [CUTOFF LOGIC REMOVED] - We want Balance Sheet (Rows 58-71) to be included now.
+        # Previously we filtered out metrics below "Monthly Cash Flow". Now we keep them.
         
         # Get list of unique metrics from filtered set
         metrics = filtered_df["Metric"].unique()
@@ -955,18 +992,38 @@ class PropertyAnalyzer:
             deviation_pct = (current_val - t3_avg) / abs(t3_avg)
             
             if abs(deviation_pct) > 0.10:
-                # Classify
-                is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
-                if "expense" in metric.lower(): is_revenue = False
                 
-                category = "Revenue" if is_revenue else "Expenses"
+                # Get Row Num for category
+                # M_df has multiple rows for same metric, RowOrder should be constant
+                row_num = 0
+                if "RowOrder" in m_df.columns:
+                    row_num = m_df["RowOrder"].iloc[0] # Take first
                 
-                anomalies[category].append({
-                    "metric": metric,
-                    "current": round(current_val, 2),
-                    "t3_avg": round(t3_avg, 2),
-                    "deviation_pct": round(deviation_pct * 100, 2)
-                })
+                category = None
+                
+                # Strict Row-Based Categorization
+                if 8 <= row_num <= 20:
+                     category = "Revenue"
+                elif (23 <= row_num <= 38) or (44 <= row_num <= 50):
+                     category = "Expenses"
+                elif 58 <= row_num <= 71:
+                     category = "Balance Sheet"
+                else:
+                    # Fallback for old data or weird rows? 
+                    # If we have RowNum but it doesn't match, maybe ignore or put in Expenses?
+                    # Let's use the old keyword logic ONLY if Category is still None (and RowNum was 0/invalid)
+                    if row_num == 0:
+                        is_revenue = any(x in metric.lower() for x in ['income', 'revenue', 'rent', 'collection', 'reimbursement', 'storage', 'fee', 'late'])
+                        if "expense" in metric.lower(): is_revenue = False
+                        category = "Revenue" if is_revenue else "Expenses"
+                
+                if category:
+                    anomalies[category].append({
+                        "metric": metric,
+                        "current": round(current_val, 2),
+                        "t3_avg": round(t3_avg, 2),
+                        "deviation_pct": round(deviation_pct * 100, 2)
+                    })
 
         # Sort
         for cat in anomalies:

@@ -107,6 +107,12 @@ class ReportGenerator:
             val_mo = monthly_kpi.get(snake_key, 0)
             val_ytd = ytd_kpi.get(snake_key, 0)
             
+            # Scale values by 1000 (data is in thousands)
+            if isinstance(val_mo, (int, float)):
+                val_mo = val_mo * 1000
+            if isinstance(val_ytd, (int, float)):
+                val_ytd = val_ytd * 1000
+            
             # Format currency
             fmt_mo = f"${val_mo:,.0f}" if isinstance(val_mo, (int, float)) else str(val_mo)
             fmt_ytd = f"${val_ytd:,.0f}" if isinstance(val_ytd, (int, float)) else str(val_ytd)
@@ -140,7 +146,7 @@ class ReportGenerator:
              # Backend sends: mom_changes['net_eff_gross_income'] = {'change_pct': ..., 'change_abs': ...}
              inc_data = mom_changes.get('net_eff_gross_income', {})
              inc_pct = inc_data.get('change_pct', 0)
-             inc_abs = inc_data.get('change_abs', 0)
+             inc_abs = inc_data.get('change_abs', 0) * 1000  # Scale by 1000
              
              inc_color = "val-green" if inc_pct >= 0 else "val-red"
              inc_arrow = "▲" if inc_pct >= 0 else "▼"
@@ -149,7 +155,7 @@ class ReportGenerator:
              
              exp_data = mom_changes.get('total_expense', {})
              exp_pct = exp_data.get('change_pct', 0)
-             exp_abs = exp_data.get('change_abs', 0)
+             exp_abs = exp_data.get('change_abs', 0) * 1000  # Scale by 1000
              
              # For Negative Expenses:
              # Increase (+ve change) -> Closer to 0 -> Savings -> GREEN
@@ -493,8 +499,28 @@ class ReportGenerator:
             
         html = f"{self.css_styles}\n"
         
+        # Helper for robust sorting (highest positive % -> lowest negative %)
+        def get_sort_val(item):
+            # Check common keys for percentage change
+            val = item.get("variance_pct", item.get("change_pct", item.get("deviation_pct", 0)))
+            try:
+                # Handle strings like "5.2%" or "-10.5"
+                if isinstance(val, str):
+                    val = val.replace('%', '').strip()
+                return float(val)
+            except:
+                return -999999.0 # Push errors to bottom
+        
         # 1. Budget Variances Section
         html += "<h3 style='margin-top: 30px;'>1️⃣ Budget Variances</h3>"
+        
+        # User defined exclusions for variance reporting
+        excluded_metrics = [
+            "gross scheduled rent", "effective rental income", "total other income",
+            "net eff. gross income", "total income", "total expense", "ebitda",
+            "total below line", "monthly cash flow", "total cash"
+        ]
+        
         bv = ai_data.get("budget_variances", {})
         if not bv or (not bv.get("Revenue") and not bv.get("Expenses")):
              html += "<p>No significant budget variances reported.</p>"
@@ -503,21 +529,29 @@ class ReportGenerator:
                 items = bv.get(cat, [])
                 if not items: continue
                 
+                # Sort by ACTUAL variance PERCENTAGE (descending - Highest to Lowest)
+                items.sort(key=get_sort_val, reverse=True)
+                
                 html += f"<h4>{cat}</h4>"
                 html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Actual</th><th style='width: 12%;'>Budget</th><th style='width: 12%;'>Variance %</th><th>Investigative Questions</th></tr></thead><tbody>"
                 for item in items:
                     metric = item.get("metric", "Unknown")
+                    
+                    # POST-PROCESSING FILTER check
+                    m_lower = metric.lower().strip()
+                    if any(ex in m_lower for ex in excluded_metrics):
+                        continue
+                        
                     actual = item.get("actual", 0)
                     budget = item.get("budget", 0)
                     var_pct = item.get("variance_pct", 0)
                     questions = item.get("questions", [])
                     q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
                     
-                    # Format as currency if looks like a dollar amount
                     fmt_actual = f"${actual:,.2f}" if isinstance(actual, (int, float)) else str(actual)
                     fmt_budget = f"${budget:,.2f}" if isinstance(budget, (int, float)) else str(budget)
                     
-                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td><td>{q_html}</td></tr>"
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td><td style='text-align: left;'>{q_html}</td></tr>"
                 html += "</tbody></table>"
                 
         # 2. Trailing Anomalies Section
@@ -530,21 +564,29 @@ class ReportGenerator:
                 items = ta.get(cat, [])
                 if not items: continue
                 
+                # Sort by ACTUAL deviation percentage (descending - Highest to Lowest)
+                items.sort(key=get_sort_val, reverse=True)
+                
                 html += f"<h4>{cat}</h4>"
                 html += "<table class='report-table'><thead><tr><th style='width: 25%;'>Metric</th><th style='width: 12%;'>Current</th><th style='width: 12%;'>T3 Avg</th><th style='width: 12%;'>Deviation %</th><th>Investigative Questions</th></tr></thead><tbody>"
                 for item in items:
                     metric = item.get("metric", "Unknown")
+                    
+                    # POST-PROCESSING FILTER check
+                    m_lower = metric.lower().strip()
+                    if any(ex in m_lower for ex in excluded_metrics):
+                        continue
+
                     current = item.get("current", 0)
                     t3_avg = item.get("t3_avg", 0)
                     dev_pct = item.get("deviation_pct", 0)
                     questions = item.get("questions", [])
                     q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
                     
-                    # Format as currency
                     fmt_current = f"${current:,.2f}" if isinstance(current, (int, float)) else str(current)
                     fmt_t3 = f"${t3_avg:,.2f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
                     
-                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td><td>{q_html}</td></tr>"
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td><td style='text-align: left;'>{q_html}</td></tr>"
                 html += "</tbody></table>"
                 
         return html

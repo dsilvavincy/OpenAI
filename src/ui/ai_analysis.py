@@ -195,13 +195,15 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
         ai_status.text("🧠 Generating AI report...")
         ai_progress.progress(0.4)
         
-        streaming_container = st.empty()
+        # streaming_container = st.empty()
         
         def update_streaming(response_so_far):
-            with streaming_container.container():
-                st.markdown("### 🔄 AI Analysis (Live Stream)")
-                st.markdown(response_so_far)
-                st.caption(f"📊 Characters received: {len(response_so_far)}")
+            # Disabled raw streaming per user request - only show progress bar
+            pass
+            # with streaming_container.container():
+            #     st.markdown("### 🔄 AI Analysis (Live Stream)")
+            #     st.markdown(response_so_far)
+            #     st.caption(f"📊 Characters received: {len(response_so_far)}")
         
         def update_progress(message, progress_pct):
             ai_status.text(message)
@@ -220,7 +222,7 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
         
         ai_status.text("✨ Analysis complete!")
         ai_progress.progress(1.0)
-        streaming_container.empty()
+        # streaming_container.empty()
         
         # Store in session state
         st.session_state['last_enhanced_analysis_result'] = ai_response

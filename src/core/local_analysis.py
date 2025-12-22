@@ -515,8 +515,10 @@ class PropertyAnalyzer:
             "ytd": {}
         }
         
+        
         # Expanded check metrics to include more detail if available
-        check_metrics = ['Net Eff. Gross Income', 'Total Expense', 'EBITDA (NOI)', 'Property Asking Rent', 'Effective Rental Income']
+        # Note: Broad Summary Metrics (NOI, Total Expense, etc.) excluded per user request to focus on line items
+        check_metrics = ['Property Asking Rent']
         
         for metric in check_metrics:
             key = metric.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '').replace('.', '')
@@ -551,7 +553,8 @@ class PropertyAnalyzer:
             return {}
             
         variances = {}
-        metrics_to_check = ['Total Expense', 'Net Eff. Gross Income', 'EBITDA (NOI)', 'Property Asking Rent']
+        # Note: Broad Summary Metrics excluded per user request
+        metrics_to_check = ['Property Asking Rent', 'Physical Occupancy', 'Renewal Rent Change']
         
         for metric in metrics_to_check:
             metric_data = df[df['Metric'].str.lower() == metric.lower()].sort_values('MonthParsed')
@@ -601,8 +604,28 @@ class PropertyAnalyzer:
                 continue
                 
             # Skip noise and aggregate metrics that shouldn't be in a line-item deep dive
-            m_lower = metric.lower()
+            # Skip noise and aggregate metrics that shouldn't be in a line-item deep dive
+            m_lower = metric.lower().strip()
+            
+            # 1. Existing Broad Skips
             if any(skip in m_lower for skip in ['total', 'trailing', 'ytd', 'dscr', 'debt yield', 'economic occupancy']):
+                 # Except specific line items that might start with Total but are granular (unlikely, but safety check)
+                 continue
+
+            # 2. User Specific Exclusions (Summary Rows)
+            excluded_specific = [
+                "gross scheduled rent",
+                "effective rental income", 
+                "total other income",
+                "net eff. gross income",
+                "total expense",
+                "ebitda", # Covers EBITDA (NOI)
+                "total below line",
+                "monthly cash flow",
+                "total cash"
+            ]
+            
+            if any(ex in m_lower for ex in excluded_specific):
                 continue
                 
             metric_data = df[df['Metric'] == metric].sort_values('MonthParsed')

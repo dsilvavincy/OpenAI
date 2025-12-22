@@ -127,10 +127,13 @@ Generate the Monthly Variance & Anomaly Report for {minimal_data.get('property_n
                 if stream_callback:
                     stream_callback(full_response)
                 
-                # Update progress based on content length
+                # Update progress based on content length (Target ~20,000 chars)
                 if progress_callback:
-                    progress_pct = min(95, 50 + len(full_response) // 100)
-                    progress_callback(f"🧠 Generating report... ({len(full_response)} chars)", progress_pct)
+                    # Scale: 50% start, 45% range (up to 95%). 20,000 chars = full range.
+                    # Formula: 50 + (len / 20000) * 45
+                    progress_scaler = min(45, (len(full_response) / 20000) * 45)
+                    progress_pct = int(50 + progress_scaler)
+                    progress_callback(f"🧠 Generating report... ({len(full_response):,} chars)", progress_pct)
         
         if progress_callback:
             progress_callback("✅ Report complete!", 100)

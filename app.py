@@ -61,9 +61,41 @@ st.markdown("""
         page-break-after: avoid !important;
         break-after: avoid !important;
     }
+    
+    /* Print footer - appears at bottom of each page */
+    .print-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 10px;
+        right: 20px;
+        opacity: 0.7;
+    }
+    
+    .print-footer img {
+        height: 30px;
+        width: auto;
+    }
+}
+
+/* Hide print footer on screen */
+.print-footer {
+    display: none;
 }
 </style>
 """, unsafe_allow_html=True)
+
+# Print-only footer with secondary logo (hidden on screen, visible when printing)
+import os
+import base64
+logo_secondary_path = os.path.join("src", "ui", "assets", "logo_secondary.jpg")
+if os.path.exists(logo_secondary_path):
+    with open(logo_secondary_path, "rb") as f:
+        logo_b64 = base64.b64encode(f.read()).decode()
+    st.markdown(f'''
+    <div class="print-footer">
+        <img src="data:image/jpeg;base64,{logo_b64}" alt="Logo">
+    </div>
+    ''', unsafe_allow_html=True)
 
 def main():
     """Main application entry point using dual-mode UI system."""

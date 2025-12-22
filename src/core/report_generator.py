@@ -213,7 +213,12 @@ class ReportGenerator:
                 # Pre-calculate Prior Rate for Arrow Logic
                 prior_rate_val = 0
                 for i, h in enumerate(headers):
-                     if "In Place Eff. Rate Prior Month" in str(h):
+                     h_str = str(h).lower().replace('\n', ' ')
+                     # Explicitly match In Place Rate/Rent Prior Month (Exclude YEAR)
+                     if ("prior" in h_str) and \
+                        ("inplace" in h_str or "in place" in h_str) and \
+                        ("rate" in h_str or "rent" in h_str) and \
+                        ("year" not in h_str):
                          try: prior_rate_val = float(row_vals[i] or 0)
                          except: pass
                          break
@@ -268,17 +273,31 @@ class ReportGenerator:
                             css_class = "val-green" if raw_val >= cut_g else "val-yellow" if raw_val >= cut_y else "val-red"
 
                         # ARROWS
-                        if "In Place Eff. Rate" in h_str and "Prior" not in h_str:
+                        # Match "In Place Eff. Rate", "Inplace Eff. Rent", etc.
+                        is_rate_col = ("inplace" in h_str.lower() or "in place" in h_str.lower()) and \
+                                      ("rate" in h_str.lower() or "rent" in h_str.lower())
+                        
+                        if is_rate_col and "prior" not in h_str.lower():
                              change = (raw_val - prior_rate_val) / prior_rate_val if prior_rate_val != 0 else 0
                              
-                             if change >= mult_green: arrow_html = "▲ "
-                             elif change >= mult_up_ang: arrow_html = "⇗ "
-                             elif change >= mult_side: arrow_html = "▶ "
-                             elif change >= mult_down: arrow_html = "⇘ "
+                             # Custom Thresholds for Rent/Rate (More sensitive than 7.5%)
+                             # Use 0.5% for angled, 1.0% for full arrow
+                             t_green = 0.01
+                             t_up = 0.005
+                             t_down = -0.005
+                             t_red = -0.01
+                             
+                             if change >= t_green: arrow_html = "▲ "
+                             elif change >= t_up: arrow_html = "⇗ "
+                             elif change > t_down: arrow_html = "▶ " # Flat / Steady
+                             elif change > t_red: arrow_html = "⇘ "
                              else: arrow_html = "▼ "
                              
-                             color = "green" if change > 0 else "red" if change < 0 else "#ccc"
-                             arrow_html = f"<span style='color:{color};font-weight:bold'>{arrow_html}</span>"
+                             color = "green" if change > 0 else "red" if change < 0 else "#888"
+                             
+                             # Add Tooltip for Debugging
+                             tooltip = f"Current: {raw_val:,.0f} | Prior: {prior_rate_val:,.0f} | Change: {change:.2%}"
+                             arrow_html = f"<span title='{tooltip}' style='color:{color};font-weight:bold;cursor:help;'>{arrow_html}</span>"
                              display_val = f"{arrow_html}{display_val}"
                              
                         if "vs T1 Prior Year" in h_str or "vs T3 Prior Year" in h_str or "Sequential" in h_str:

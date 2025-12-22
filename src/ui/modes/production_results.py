@@ -397,11 +397,12 @@ class ProductionResults:
                     
                     # Generate Export DF (Apply SAME filter as ReportGenerator)
                     ALLOWED_METRICS = [
-                        "Debt Yield", "1 Month DSCR", "3 Month DSCR", "12 Month DSCR", 
+                        "Debt Yield", "1 Month DSCR", "12 Month DSCR", 
                         "Physical Occupancy", "Economic Occupancy", 
                         "Break Even Occ. - NOI", "Break Even Occ. - Cash Flow",
                         "Asking Rent (Stats)", 
-                        "Inplace Eff. Rent", "Occupied Inplace Eff. Rent", "Concession %"
+                        "Inplace Eff. Rent", "Occupied Inplace Eff. Rent", "Concession %",
+                        "Delinquency %", "Trailing 12 month NOI"
                     ]
                     
                     filtered_rows = []
@@ -428,7 +429,7 @@ class ProductionResults:
                                      row.at[match_idx, c] = "-"
                                  else:
                                      # Percentage logic
-                                     is_pct = "Occupancy" in metric or "Retention" in metric or "Renewal" in metric or "Yield" in metric
+                                     is_pct = "Occupancy" in metric or "Retention" in metric or "Renewal" in metric or "Yield" in metric or "Break Even" in metric
                                      is_dscr = "DSCR" in metric
                                      if is_pct and abs(val) < 5: # Heuristic for pct
                                          row.at[match_idx, c] = f"{val:.1%}" if val != 0 else "0.0%"

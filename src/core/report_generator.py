@@ -26,6 +26,7 @@ class ReportGenerator:
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 border-collapse: collapse;
                 width: 100%;
+                table-layout: fixed; /* Equal column widths */
                 margin-bottom: 25px;
                 font-size: 0.9em;
                 background-color: #ffffff; /* Light background for clean look */
@@ -40,6 +41,7 @@ class ReportGenerator:
             .report-table th, .report-table td {{
                 padding: 12px 15px;
                 border: 1px solid #dddddd; /* Lighter border */
+                text-align: center; /* Center align all data columns */
             }}
             .report-table tbody tr {{
                 border-bottom: 1px solid #dddddd;
@@ -67,7 +69,7 @@ class ReportGenerator:
             .arrow-side {{ color: #f57f17 !important; font-weight: bold; }} 
             .arrow-down {{ color: #c62828 !important; font-weight: bold; }} 
             
-            .metric-header {{ font-weight: bold; color: {COLOR_NAVY} !important; }}
+            .metric-header {{ font-weight: bold; color: {COLOR_NAVY} !important; text-align: left !important; }}
         </style>
         """
 
@@ -381,7 +383,6 @@ class ReportGenerator:
         ALLOWED_METRICS = [
             "Debt Yield",
             "1 Month DSCR",
-            "3 Month DSCR",
             "12 Month DSCR", 
             "Physical Occupancy", # Matches 'Physical Occupancy (Stats)' if exists, or just 'Physical Occupancy'
             "Economic Occupancy",
@@ -391,7 +392,9 @@ class ReportGenerator:
             # "Gross Scheduled Rent", # Removed per user request
             "Inplace Eff. Rent",
             "Occupied Inplace Eff. Rent",
-            "Concession %"
+            "Concession %",
+            "Delinquency %",
+            "Trailing 12 month NOI"
         ]
 
         html = f"{self.css_styles}\n<div style='overflow-x:auto;'><table class='report-table'><thead><tr><th>Metric</th>"
@@ -462,7 +465,7 @@ class ReportGenerator:
                     try:
                         if isinstance(val, (int, float)):
                              # Percentage formatting logic
-                             if any(x in str(metric).lower() for x in ['occupancy', 'yield', 'percent', '%', 'concession']):
+                             if any(x in str(metric).lower() for x in ['occupancy', 'yield', 'percent', '%', 'concession', 'break even']):
                                  if "DSCR" not in metric and abs(val) <= 1:
                                      display_val = f"{val:.1%}"
                                  elif "DSCR" in metric:

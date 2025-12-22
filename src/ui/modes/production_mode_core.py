@@ -40,8 +40,57 @@ class ProductionModeCore(BaseUIMode):
             uploaded_file: Uploaded file object (if any)
             config: Configuration dictionary from sidebar
         """
-        # Clean, minimal header
-        st.title("🏢 Property Analysis Dashboard")
+        # Inject Custom CSS for Branding
+        from src.ui.theme import COLOR_NAVY, COLOR_TEAL, COLOR_ORANGE, COLOR_SAGE, COLOR_CREAM
+        
+        st.markdown(f"""
+        <style>
+            /* Header */
+            h1, h2, h3 {{
+                color: {COLOR_NAVY} !important; 
+            }}
+            /* Streamlit Buttons */
+            .stButton > button {{
+                background-color: {COLOR_NAVY} !important;
+                color: #ffffff !important;
+                border: none !important;
+            }}
+            .stButton > button:hover {{
+                background-color: {COLOR_TEAL} !important;
+            }}
+            /* Sidebar background fallback if needed, though Streamlit controls this mostly via config */
+            
+            /* Metric / Important values */
+            [data-testid="stMetricValue"] {{
+                color: {COLOR_ORANGE} !important;
+            }}
+            
+            /* Custom separators */
+            hr {{
+                border-color: {COLOR_SAGE} !important;
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Display Branding Logo + Header in 2-Column Grid for better alignment
+        import os
+        logo_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
+        
+        # Use a container for the header to control spacing
+        with st.container():
+            col1, col2 = st.columns([1, 4])
+            
+            with col1:
+                if os.path.exists(logo_path):
+                    st.image(logo_path, use_container_width=True)
+                else:
+                    st.write("Logo not found")
+            
+            with col2:
+                # Add some vertical padding to align text with logo center
+                st.markdown('<div style="padding-top: 10px;"></div>', unsafe_allow_html=True)
+                st.title("Property Analysis Dashboard")
+                st.markdown("AI-powered property performance analysis")
         
         # Check if we have processed monthly and YTD data to determine layout
         if (
@@ -56,7 +105,8 @@ class ProductionModeCore(BaseUIMode):
     
     def _render_upload_first_layout(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """Render layout when no data is processed - focus on upload."""
-        st.markdown("Upload your T12 Excel file for AI-powered property performance analysis")
+        
+        st.markdown("---") # Visual separator
         
         # Center the upload section
         col1, col2, col3 = st.columns([1, 2, 1])

@@ -239,7 +239,6 @@ class ProductionResults:
                 report_period_str = preview_data.get("report_period", "Unknown Period")
                 
                 st.markdown(f"**Report Period:** {report_period_str}")
-                st.info("This report is generated locally from your data. No AI analysis has been performed yet.")
                 ProductionResults._render_visual_tables(preview_data, selected_property)
 
                 # 3. Collaborative Debug View (Hidden for Production)

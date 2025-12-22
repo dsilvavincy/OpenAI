@@ -30,6 +30,13 @@ class DeveloperMode(BaseUIMode):
     
     def render_main_content(self, uploaded_file: Optional[Any], config: Dict[str, Any]) -> None:
         """Render comprehensive main content with developer tools."""
+        # Display Branding Logo
+        import os
+        logo_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=250)
+            st.markdown("<br>", unsafe_allow_html=True) # Subtle spacer
+
         st.title("🏢 Property Analysis Dashboard (Developer Mode)")
         st.markdown("Advanced interface with debugging tools, raw data access, and detailed controls")
         

@@ -11,6 +11,12 @@ class DeveloperSidebar:
     def render(self, api_key: str, property_name: str, property_address: str) -> Dict[str, Any]:
         """Render comprehensive sidebar with organized collapsible sections."""
         
+        # Display Branding Logo
+        logo_path = os.path.join("src", "ui", "assets", "logo_secondary.jpg")
+        if os.path.exists(logo_path):
+            st.sidebar.image(logo_path, use_container_width=True)
+            st.sidebar.markdown("---")
+
         # Essential Configuration (always visible)
         st.markdown("### ⚙️ Essential Configuration")
         

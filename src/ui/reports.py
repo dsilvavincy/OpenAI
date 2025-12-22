@@ -9,6 +9,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+import base64
+import os
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -16,6 +19,9 @@ from docx.enum.section import WD_ORIENT
 from docx.enum.section import WD_ORIENT
 import pandas as pd
 from src.core.report_generator import ReportGenerator
+from src.ui.theme import (
+    COLOR_NAVY, COLOR_TEAL, COLOR_SAGE, COLOR_ORANGE, COLOR_CREAM
+)
 
 # --- COLORS ---
 # Hex to RGB Tuple for ReportLab
@@ -23,23 +29,28 @@ def hex_to_rgb(hex_str):
     hex_str = hex_str.lstrip('#')
     return tuple(int(hex_str[i:i+2], 16)/255.0 for i in (0, 2, 4))
 
-# --- COLORS (DARK MODE MATCHING CSS) ---
-# Hex to RGB Tuple for ReportLab
-def hex_to_rgb(hex_str):
-    hex_str = hex_str.lstrip('#')
-    return tuple(int(hex_str[i:i+2], 16)/255.0 for i in (0, 2, 4))
+# Map Theme to ReportLab
+COLOR_HEADER_TEAL = hex_to_rgb(COLOR_NAVY) # Using Navy for Headers now
+COLOR_BODY_BG = hex_to_rgb("#262730") # Keep Dark Body for PDF as per previous choice? Or switch to Cream?
+# Previous prompt implied "Dark Mode PDF styling" was desired.
+# But new palette has cream background.
+# Let's keep dark body relative to screen, but use Navy/Teal for accents.
+# Wait, user palette is: Navy, Teal, Sage, Orange, Cream.
+# For PDF, usually white/cream background is better unless explicitly dark mode.
+# I will switch headers to Navy/Teal.
 
-COLOR_HEADER_TEAL = hex_to_rgb("#009879") 
-COLOR_BODY_BG = hex_to_rgb("#262730") # Dark Body
+COLOR_HEADER_BG = hex_to_rgb(COLOR_NAVY)
+COLOR_TEXT_ACCENT = hex_to_rgb(COLOR_ORANGE)
+
 COLOR_BODY_TEXT = hex_to_rgb("#ffffff") # White Text
 
-# High Contrast Status Colors (Flip from previous: Dark BG, Light Text)
-COLOR_TEXT_GREEN = hex_to_rgb("#a3e6b1")
-COLOR_BG_GREEN = hex_to_rgb("#1e4620")
-COLOR_TEXT_RED = hex_to_rgb("#f8d7da") 
-COLOR_BG_RED = hex_to_rgb("#5a1a1e")
+# High Contrast Status Colors (Refined with new palette)
+COLOR_TEXT_GREEN = hex_to_rgb("#ffffff")
+COLOR_BG_GREEN = hex_to_rgb(COLOR_TEAL)
+COLOR_TEXT_RED = hex_to_rgb("#ffffff") 
+COLOR_BG_RED = hex_to_rgb(COLOR_ORANGE)
 COLOR_TEXT_YELLOW = hex_to_rgb("#fdf2ce")
-COLOR_BG_YELLOW = hex_to_rgb("#4d3e04")
+COLOR_BG_YELLOW = hex_to_rgb("#4d3e04") # Keep standard yellow-dark
 
 COLOR_BORDER = hex_to_rgb("#444444")
 
@@ -70,6 +81,17 @@ def generate_pdf_report(processed_output, visual_data=None):
     
     story = []
     
+    # Add Logo
+    logo_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
+    if os.path.exists(logo_path):
+        try:
+            img = Image(logo_path, width=2.0*inch, height=1.0*inch)
+            img.hAlign = 'CENTER'
+            story.append(img)
+            story.append(Spacer(1, 10))
+        except:
+            pass
+
     # Title
     story.append(Paragraph("T12 PROPERTY ANALYSIS REPORT", title_style))
     story.append(Spacer(1, 10))
@@ -296,6 +318,17 @@ def generate_pdf_report(processed_output, visual_data=None):
                 story.append(Paragraph(text, styles['Normal']))
                 story.append(Spacer(1, 5))
 
+    # Add Secondary Logo at end
+    logo_sec_path = os.path.join("src", "ui", "assets", "logo_secondary.jpg")
+    if os.path.exists(logo_sec_path):
+        try:
+            story.append(Spacer(1, 40))
+            img_sec = Image(logo_sec_path, width=1.2*inch, height=0.6*inch)
+            img_sec.hAlign = 'RIGHT'
+            story.append(img_sec)
+        except:
+            pass
+
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
@@ -318,6 +351,17 @@ def generate_word_report(processed_output, visual_data=None):
 
     title = doc.add_heading('T12 PROPERTY ANALYSIS REPORT', 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add Logo
+    logo_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
+    if os.path.exists(logo_path):
+        try:
+            # Add to main body top
+            doc.add_picture(logo_path, width=Inches(1.5))
+            last_p = doc.paragraphs[-1]
+            last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        except:
+            pass
     
     # Property Info
     doc.add_heading('PROPERTY INFORMATION', level=1)
@@ -467,6 +511,19 @@ def generate_word_report(processed_output, visual_data=None):
                 p.add_run(f"\nCurrent: ${item.get('current', 0):,} | T3 Avg: ${item.get('t3_avg', 0):,} | Dev: {item.get('deviation_pct', 0)}%")
                 for q in item.get('questions', []):
                     doc.add_paragraph(f"• {q}", style='List Bullet')
+
+    # Add Secondary Logo at end
+    logo_sec_path = os.path.join("src", "ui", "assets", "logo_secondary.jpg")
+    if os.path.exists(logo_sec_path):
+        try:
+            doc.add_paragraph() # Spacer
+            doc.add_paragraph() # Spacer
+            p_sec = doc.add_paragraph()
+            p_sec.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run_sec = p_sec.add_run()
+            run_sec.add_picture(logo_sec_path, width=Inches(1.0))
+        except:
+            pass
 
     # Save to BytesIO
     buffer = io.BytesIO()
@@ -626,7 +683,7 @@ def generate_html_download(processed_output, visual_data=None):
                 for item in items:
                     ai_html += f"<li><b>{item.get('metric')}</b>: Var {item.get('variance_pct')}% (Act ${item.get('actual',0):,} vs Bud ${item.get('budget',0):,})</li>"
                 ai_html += "</ul>"
-                
+
     # Trailing Anomalies
     if 'trailing_anomalies' in processed_output:
         ai_html += "<h3>Trailing Anomalies</h3>"
@@ -636,6 +693,28 @@ def generate_html_download(processed_output, visual_data=None):
                 for item in items:
                     ai_html += f"<li><b>{item.get('metric')}</b>: Dev {item.get('deviation_pct')}% (Cur ${item.get('current',0):,} vs T3 ${item.get('t3_avg',0):,})</li>"
                 ai_html += "</ul>"
+    
+    # AI Analysis Main Text
+    if 'ai_analysis' in processed_output:
+        ai_html += "<h3>AI Narrative & Recommendations</h3>"
+        ai_html += f"<div style='white-space: pre-wrap;'>{processed_output['ai_analysis']}</div>"
+
+    # Logo base64
+    logo_p_b64 = ""
+    logo_p_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
+    if os.path.exists(logo_p_path):
+        try:
+            with open(logo_p_path, "rb") as f:
+                logo_p_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except: pass
+
+    logo_s_b64 = ""
+    logo_s_path = os.path.join("src", "ui", "assets", "logo_secondary.jpg")
+    if os.path.exists(logo_s_path):
+        try:
+            with open(logo_s_path, "rb") as f:
+                logo_s_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except: pass
 
     # Assemble Full Page
     full_html = f"""
@@ -643,7 +722,7 @@ def generate_html_download(processed_output, visual_data=None):
     <html>
     <head>
         <meta charset="utf-8">
-        <title>T12 Analysis - {property_info.get('name', 'Property')}</title>
+        <title>T12 Analysis Report - {property_info.get('name', 'N/A')}</title>
         {gen.css_styles}
         <style>
             body {{
@@ -653,22 +732,33 @@ def generate_html_download(processed_output, visual_data=None):
                 padding: 40px;
             }}
             .container {{
-                max_width: 1200px;
+                max-width: 1200px;
                 margin: 0 auto;
+            }}
+            .logo-container {{
+                text-align: center;
+                margin-bottom: 20px;
+            }}
+            .logo-header {{
+                max-height: 80px;
+                width: auto;
+            }}
+            .logo-footer {{
+                max-height: 50px;
+                width: auto;
+                float: right;
             }}
             h1, h2, h3, h4 {{ color: #ffffff; }}
             .header-info {{
                 margin-bottom: 30px;
                 border-bottom: 1px solid #444;
                 padding-bottom: 20px;
+                text-align: center;
             }}
             /* PRINT OPTIMIZATIONS */
             @media print {{
                 body {{
-                    background-color: #ffffff !important; /* Optional: Print white or keep dark? User liked "Screen" look */
-                    /* Actually user said "Actual Page on Screen" which is dark. 
-                       But browsers usually force white BG for print to save ink.
-                       Force background graphics */
+                    background-color: #ffffff !important;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact; 
                 }}
@@ -676,7 +766,6 @@ def generate_html_download(processed_output, visual_data=None):
                     box-shadow: none;
                     break-inside: avoid;
                 }}
-                /* Force Dark Mode Print if requested */
                 body {{
                     background-color: #262730 !important;
                     color: #ffffff !important;
@@ -686,6 +775,7 @@ def generate_html_download(processed_output, visual_data=None):
     </head>
     <body>
         <div class="container">
+            {"<div class='logo-container'><img src='data:image/jpeg;base64," + logo_p_b64 + "' class='logo-header' /></div>" if logo_p_b64 else ""}
             <div class="header-info">
                 <h1>T12 PROPERTY ANALYSIS REPORT</h1>
                 <h2>{property_info.get('name', 'N/A')}</h2>
@@ -702,12 +792,11 @@ def generate_html_download(processed_output, visual_data=None):
             <h2>AI ANALYSIS & RECOMMENDATIONS</h2>
             {ai_html}
             
-            <p style="margin-top: 50px; font-size: 0.8em; color: #888;">Generated by T12 Analysis Tool</p>
+            <div style="margin-top: 50px; overflow: hidden; border-top: 1px solid #444; padding-top: 20px;">
+                {"<img src='data:image/jpeg;base64," + logo_s_b64 + "' class='logo-footer' />" if logo_s_b64 else ""}
+                <p style="font-size: 0.8em; color: #888;">Generated by T12 Analysis Tool</p>
+            </div>
         </div>
-        <script>
-            // Optional: Auto-print
-            // window.print();
-        </script>
     </body>
     </html>
     """

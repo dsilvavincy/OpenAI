@@ -15,47 +15,59 @@ class ReportGenerator:
     """Generates HTML components for the AI analysis report."""
     
     def __init__(self):
+        from src.ui.theme import (
+            COLOR_NAVY, COLOR_TEAL, COLOR_SAGE, COLOR_ORANGE, COLOR_CREAM,
+            REPORT_HEADER_BG, REPORT_HEADER_TEXT
+        )
         # CSS Styles for Tables
-        self.css_styles = """
+        self.css_styles = f"""
         <style>
-            .report-table {
+            .report-table {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 border-collapse: collapse;
                 width: 100%;
                 margin-bottom: 25px;
                 font-size: 0.9em;
-                background-color: #262730; /* Force dark background matches visual */
-                color: #ffffff !important; /* Force pure white text */
-                box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            }
-            .report-table thead tr {
-                background-color: #009879;
-                color: #ffffff;
+                background-color: #ffffff; /* Light background for clean look */
+                color: #333333 !important; /* Dark text for readability */
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.05); /* Softer shadow */
+            }}
+            .report-table thead tr {{
+                background-color: {REPORT_HEADER_BG};
+                color: {REPORT_HEADER_TEXT};
                 text-align: left;
-            }
-            .report-table th, .report-table td {
+            }}
+            .report-table th, .report-table td {{
                 padding: 12px 15px;
-                border: 1px solid #444;
-            }
-            .report-table tbody tr {
-                border-bottom: 1px solid #444;
-            }
+                border: 1px solid #dddddd; /* Lighter border */
+            }}
+            .report-table tbody tr {{
+                border-bottom: 1px solid #dddddd;
+            }}
             
-            .report-table tbody tr:last-of-type {
-                border-bottom: 2px solid #009879;
-            }
+            .report-table tbody tr:nth-of-type(even) {{
+                background-color: #f8f9fa; /* Subtle zebra striping */
+            }}
+
+            .report-table tbody tr:nth-of-type(odd) {{
+                background-color: #ffffff;
+            }}
             
-            /* High Contrast Status Colors */
-            .val-green { background-color: #1e4620 !important; color: #a3e6b1 !important; font-weight: bold; }
-            .val-yellow { background-color: #4d3e04 !important; color: #fdf2ce !important; font-weight: bold; }
-            .val-red { background-color: #5a1a1e !important; color: #f8d7da !important; font-weight: bold; }
+            .report-table tbody tr:last-of-type {{
+                border-bottom: 2px solid {COLOR_TEAL};
+            }}
             
-            /* Arrow Colors - Brightened for Dark Mode */
-            .arrow-up { color: #4cd137 !important; font-weight: bold; }   
-            .arrow-side { color: #fbc531 !important; font-weight: bold; } 
-            .arrow-down { color: #e84118 !important; font-weight: bold; } 
+            /* High Contrast Status Colors - FUNCTIONAL (Keep dark blocks for status) */
+            .val-green {{ background-color: #1e4620 !important; color: #ffffff !important; font-weight: bold; }}
+            .val-yellow {{ background-color: #4d3e04 !important; color: #fdf2ce !important; font-weight: bold; }}
+            .val-red {{ background-color: #5a1a1e !important; color: #ffffff !important; font-weight: bold; }}
             
-            .metric-header { font-weight: bold; color: #ffffff !important; }
+            /* Arrow Colors - Darker for Light Mode Visibility */
+            .arrow-up {{ color: #2e7d32 !important; font-weight: bold; }}   
+            .arrow-side {{ color: #f57f17 !important; font-weight: bold; }} 
+            .arrow-down {{ color: #c62828 !important; font-weight: bold; }} 
+            
+            .metric-header {{ font-weight: bold; color: {COLOR_NAVY} !important; }}
         </style>
         """
 

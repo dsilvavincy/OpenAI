@@ -31,17 +31,7 @@ class ProductionUpload:
         CACHE_MONTHLY = CACHE_DIR / "monthly_df.pkl"
         CACHE_YTD = CACHE_DIR / "ytd_df.pkl"
         
-        # Check for cached data to offer restore
-        if 'processed_monthly_df' not in st.session_state and CACHE_MONTHLY.exists() and CACHE_YTD.exists():
-            if st.button("🔄 Restore Previous Session Data", type="primary"):
-                try:
-                    st.session_state['processed_monthly_df'] = pd.read_pickle(CACHE_MONTHLY)
-                    st.session_state['processed_ytd_df'] = pd.read_pickle(CACHE_YTD)
-                    st.session_state['current_uploaded_file'] = "Restored Session"
-                    st.success("✅ Previous session restored!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Could not restore session: {e}")
+        # (Restore button removed as per user request)
         
         # Use session state to persist uploaded file
         if 'current_uploaded_file' not in st.session_state:

@@ -75,6 +75,49 @@ class ReportGenerator:
             .arrow-down {{ color: #c62828 !important; font-weight: bold; }} 
             
             .metric-header {{ font-weight: bold; color: {COLOR_NAVY} !important; text-align: left !important; }}
+            
+            /* Print-Specific Styles for Chrome PDF Export */
+            @media print {{
+                /* COMPACT MODE - Reduce sizes for print */
+                .report-table {{
+                    font-size: 0.75em !important;
+                    margin-bottom: 10px !important;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }}
+                
+                .report-table th, .report-table td {{
+                    padding: 4px 6px !important;
+                }}
+                
+                h4 {{
+                    font-size: 1em !important;
+                    margin: 8px 0 4px 0 !important;
+                }}
+                
+                /* Force each major section to start on a new page */
+                .print-section {{
+                    page-break-before: always;
+                    break-before: page;
+                }}
+                
+                /* Keep headers with their content - never orphan a header */
+                h1, h2, h3, h4, h5, h6,
+                .section-header {{
+                    page-break-after: avoid;
+                    break-after: avoid;
+                }}
+                
+                /* Keep table headers with table body */
+                .report-table thead {{
+                    display: table-header-group;
+                }}
+                
+                .report-table tbody {{
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }}
+            }}
         </style>
         """
 

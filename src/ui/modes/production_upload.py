@@ -48,32 +48,41 @@ class ProductionUpload:
         if uploaded_file is not None:
             st.session_state['current_uploaded_file'] = uploaded_file
             if 'processed_monthly_df' not in st.session_state or 'processed_ytd_df' not in st.session_state:
-                with st.spinner("📊 Processing file..."):
-                    monthly_df, ytd_df, processed_data = self._handle_file_upload(uploaded_file)
-                    if monthly_df is not None:
-                        st.session_state['processed_monthly_df'] = monthly_df
-                        st.session_state['processed_ytd_df'] = ytd_df
-                        st.session_state['uploaded_file'] = uploaded_file
-                        
-                        if processed_data:
-                            st.session_state['processed_data'] = processed_data
-                        
-                        # Cache to disk for persistence across refreshes
-                        monthly_df.to_pickle(CACHE_MONTHLY)
-                        ytd_df.to_pickle(CACHE_YTD)
-                        
-                        # Save to exports folder as requested
-                        self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
-                        
-                        st.success("✅ File processed successfully! Monthly and YTD data available.")
-                        st.rerun()  # Refresh to show results layout
+                # Progress bar instead of spinner
+                progress_bar = st.progress(0, text="📂 Reading file...")
+                
+                progress_bar.progress(10, text="📊 Detecting format...")
+                monthly_df, ytd_df, processed_data = self._handle_file_upload(uploaded_file, progress_bar)
+                
+                if monthly_df is not None:
+                    progress_bar.progress(90, text="💾 Saving to cache...")
+                    st.session_state['processed_monthly_df'] = monthly_df
+                    st.session_state['processed_ytd_df'] = ytd_df
+                    st.session_state['uploaded_file'] = uploaded_file
+                    
+                    if processed_data:
+                        st.session_state['processed_data'] = processed_data
+                    
+                    # Cache to disk for persistence across refreshes
+                    monthly_df.to_pickle(CACHE_MONTHLY)
+                    ytd_df.to_pickle(CACHE_YTD)
+                    
+                    # Save to exports folder as requested
+                    self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
+                    
+                    progress_bar.progress(100, text="✅ Complete!")
+                    st.success("✅ File processed successfully! Monthly and YTD data available.")
+                    st.rerun()  # Refresh to show results layout
+                else:
+                    progress_bar.empty()  # Clear progress bar on error
     
-    def _handle_file_upload(self, uploaded_file):
+    def _handle_file_upload(self, uploaded_file, progress_bar=None):
         """
         Process uploaded T12 file using FormatRegistry for automatic detection.
         
         Args:
             uploaded_file: Streamlit uploaded file object
+            progress_bar: Optional Streamlit progress bar to update
             
         Returns:
             Tuple of (monthly_df, ytd_df) or (None, None) if processing failed
@@ -87,9 +96,15 @@ class ProductionUpload:
             uploaded_file.seek(0)
             excel_buffer = io.BytesIO(uploaded_file.getvalue())
             
+            if progress_bar:
+                progress_bar.progress(20, text="🔍 Analyzing file structure...")
+            
             # Use registry to detect and process
             registry = FormatRegistry()
             unified_df, processor = registry.process_file(excel_buffer)
+            
+            if progress_bar:
+                progress_bar.progress(40, text="📊 Extracting data...")
             
             if unified_df is None or unified_df.empty:
                 st.error("❌ No data could be extracted from the file.")
@@ -98,10 +113,15 @@ class ProductionUpload:
             # Store detected format for prompt selection
             store_detected_format(processor.format_name)
             
+            if progress_bar:
+                progress_bar.progress(60, text="🔄 Splitting Monthly/YTD...")
+            
             # Split into monthly and YTD for the analysis engine
             monthly_df, ytd_df = self._split_unified_df(unified_df)
             
             # --- PORTFOLIO SNAPSHOT GENERATION ---
+            if progress_bar:
+                progress_bar.progress(70, text="📋 Generating Portfolio Snapshot...")
             processed_data = {}
             try:
                 import openpyxl

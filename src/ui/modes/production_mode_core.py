@@ -72,31 +72,46 @@ class ProductionModeCore(BaseUIMode):
         </style>
         """, unsafe_allow_html=True)
 
-        # Display Branding Logo + Header in 2-Column Grid for better alignment
+        # Display Branding Logo + Header in clean single row
         import os
         logo_path = os.path.join("src", "ui", "assets", "logo_primary.jpg")
         
-        # Use a container for the header to control spacing
+        # Check if we have processed data
+        has_data = (
+            'processed_monthly_df' in st.session_state and st.session_state['processed_monthly_df'] is not None and
+            'processed_ytd_df' in st.session_state and st.session_state['processed_ytd_df'] is not None
+        )
+        
+        # Single row: Logo | Title | Upload Button (if data loaded)
         with st.container():
-            col1, col2 = st.columns([1, 4])
+            col1, col2, col3 = st.columns([1, 4, 1])
             
             with col1:
                 if os.path.exists(logo_path):
                     st.image(logo_path, use_container_width=True)
-                else:
-                    st.write("Logo not found")
             
             with col2:
-                # Add some vertical padding to align text with logo center
-                st.markdown('<div style="padding-top: 10px;"></div>', unsafe_allow_html=True)
-                st.title("Property Analysis Dashboard")
-                st.markdown("AI-powered property performance analysis")
+                st.markdown('<div style="padding-top: 8px;"></div>', unsafe_allow_html=True)
+                st.markdown("## Property Analysis Dashboard")
+                st.caption("AI-powered property performance analysis")
+            
+            with col3:
+                if has_data:
+                    st.markdown('<div style="padding-top: 18px;"></div>', unsafe_allow_html=True)
+                    if st.button("🔄 New File", use_container_width=True, help="Upload different file"):
+                        keys_to_clear = [
+                            'processed_df', 'uploaded_file', 'current_uploaded_file',
+                            'processed_monthly_df', 'processed_ytd_df', 'processed_analysis_output',
+                            'last_analyzed_property', 'selected_property', 'production_file_uploader'
+                        ]
+                        for key in keys_to_clear:
+                            st.session_state.pop(key, None)
+                        st.rerun()
         
-        # Check if we have processed monthly and YTD data to determine layout
-        if (
-            'processed_monthly_df' in st.session_state and st.session_state['processed_monthly_df'] is not None and
-            'processed_ytd_df' in st.session_state and st.session_state['processed_ytd_df'] is not None
-        ):
+        st.markdown("---")
+        
+        # Render content based on data state
+        if has_data:
             # Results-first layout: show results prominently, upload section minimized
             self._render_results_first_layout(uploaded_file, config)
         else:
@@ -105,9 +120,6 @@ class ProductionModeCore(BaseUIMode):
     
     def _render_upload_first_layout(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """Render layout when no data is processed - focus on upload."""
-        
-        st.markdown("---") # Visual separator
-        
         # Center the upload section
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -117,42 +129,7 @@ class ProductionModeCore(BaseUIMode):
     
     def _render_results_first_layout(self, uploaded_file: Optional[Any], config: Dict[str, Any]):
         """Render layout when data is processed - focus on results."""
-        # Compact file status at top
-        with st.container():
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                if 'uploaded_file' in st.session_state:
-                    file_name = st.session_state['uploaded_file'].name
-                    monthly_df = st.session_state.get('processed_monthly_df')
-                    ytd_df = st.session_state.get('processed_ytd_df')
-                    msg = f"✅ **{file_name}**"
-                    if monthly_df is not None:
-                        msg += f" - {monthly_df.shape[0]} monthly rows, {monthly_df['Metric'].nunique()} metrics"
-                    if ytd_df is not None:
-                        msg += f" | {ytd_df.shape[0]} YTD rows"
-                    st.success(msg)
-            with col2:
-                if st.button("🔄 Upload New File", help="Upload a different T12 file"):
-                    # Clear session state to return to upload mode
-                    keys_to_clear = [
-                        'processed_df', 
-                        'uploaded_file', 
-                        'current_uploaded_file',
-                        'processed_monthly_df',
-                        'processed_ytd_df',
-                        'processed_analysis_output',
-                        'last_analyzed_property',
-                        'selected_property',
-                        'production_file_uploader'
-                    ]
-                    for key in keys_to_clear:
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    st.rerun()
-        
-        st.markdown("---")
-        
-        # Results take up main content area
+        # Results take up main content area (upload button is in header now)
         from .production_results import ProductionResults
         results_handler = ProductionResults()
         results_handler.render(uploaded_file, config)

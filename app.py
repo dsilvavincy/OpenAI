@@ -29,6 +29,42 @@ st.set_page_config(
     layout="wide"
 )
 
+# Global Print CSS - Ensures headers stay with tables when printing to PDF
+st.markdown("""
+<style>
+@media print {
+    /* Prevent headers from being orphaned at page bottom */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+    }
+    
+    /* Prevent tables from breaking across pages */
+    table, .report-table, .stDataFrame {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    
+    /* Force major sections to start on new page */
+    [data-testid="stVerticalBlock"] > div:has(h4) {
+        page-break-before: auto;
+    }
+    
+    /* Keep Streamlit blocks together */
+    .element-container {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    
+    /* Ensure headers and their following content stay together */
+    .element-container:has(h4) {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 def main():
     """Main application entry point using dual-mode UI system."""
     # Initialize session state for API key from environment

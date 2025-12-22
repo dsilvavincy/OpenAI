@@ -160,10 +160,16 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
             "temperature": 0.2,
         }
     
-    st.info(f"🚀 **Responses API** | Model: {model_config['model_selection']} | Temp: {model_config['temperature']}")
-    
-    ai_progress = st.progress(0)
-    ai_status = st.empty()
+    # Use progress container from session state (placed at top) if available
+    progress_container = st.session_state.pop('analysis_progress_container', None)
+    if progress_container:
+        with progress_container:
+            ai_progress = st.progress(0)
+            ai_status = st.empty()
+    else:
+        # Fallback - create inline
+        ai_progress = st.progress(0)
+        ai_status = st.empty()
     
     try:
         # Step 1: Local Python Analysis
@@ -220,9 +226,12 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
             progress_callback=update_progress,
         )
         
-        ai_status.text("✨ Analysis complete!")
-        ai_progress.progress(1.0)
-        # streaming_container.empty()
+        # Clear progress elements after completion
+        ai_status.empty()
+        ai_progress.empty()
+        
+        # Toast notification for completion
+        st.toast("✅ AI Analysis Complete!", icon="✨")
         
         # Store in session state
         st.session_state['last_enhanced_analysis_result'] = ai_response
@@ -230,7 +239,6 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
         
         # Process the response
         if ai_response and not ai_response.startswith("Error:"):
-            st.success("🚀 **Responses API Analysis Complete**")
             
             # Create property info for post-processing
             property_info = {

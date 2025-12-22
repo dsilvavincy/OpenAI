@@ -203,21 +203,48 @@ class ProductionResults:
         except Exception:
             properties = []
 
-        selected_property_default = st.session_state.get('selected_property')
-        if properties:
-            if selected_property_default not in properties:
-                selected_property_default = properties[0]
-            selected_property = st.selectbox(
-                "Select property to analyze",
-                properties,
-                index=properties.index(selected_property_default) if selected_property_default in properties else 0,
-                help="Only rows matching this property will be analyzed (both Monthly and YTD).",
-                key="selected_property_select"
-            )
-            st.session_state['selected_property'] = selected_property
-            # If the selected property changed since the last analysis, clear cached output
-            if st.session_state.get('last_analyzed_property') != selected_property:
+        # Initialize session state if needed
+        if 'selected_property' not in st.session_state:
+            st.session_state['selected_property'] = properties[0] if properties else None
+        elif st.session_state['selected_property'] not in properties and properties:
+            st.session_state['selected_property'] = properties[0]
+        
+        # Callback to handle property changes atomically
+        def on_property_change():
+            new_val = st.session_state.get('selected_property_select')
+            if new_val != st.session_state.get('selected_property'):
+                st.session_state['selected_property'] = new_val
+                # Clear cached analysis when property changes
                 st.session_state.pop('processed_analysis_output', None)
+        
+        if properties:
+            # Use columns: dropdown (80%) + run button (20%)
+            col1, col2 = st.columns([4, 1])
+            
+            with col1:
+                selected_property = st.selectbox(
+                    "Select property to analyze",
+                    properties,
+                    index=properties.index(st.session_state['selected_property']) if st.session_state['selected_property'] in properties else 0,
+                    help="Only rows matching this property will be analyzed (both Monthly and YTD).",
+                    key="selected_property_select",
+                    on_change=on_property_change,
+                    label_visibility="collapsed"
+                )
+            
+            with col2:
+                # Quick Run button - triggers AI analysis
+                if st.button("🚀 Run Analysis", type="primary", use_container_width=True, help="Run AI Analysis for selected property"):
+                    st.session_state['trigger_ai_analysis'] = True
+                    st.toast("🚀 Starting AI Analysis...", icon="🔄")
+                    st.rerun()
+            
+            # Ensure selected_property variable matches session state (for downstream use)
+            selected_property = st.session_state.get('selected_property', selected_property)
+            
+            # Progress bar placeholder - appears at top when analysis is running
+            if st.session_state.get('trigger_ai_analysis') or st.session_state.get('analysis_in_progress'):
+                st.session_state['analysis_progress_container'] = st.container()
         else:
             selected_property = None
             st.info("No Property column found; analysis will use all rows.")
@@ -233,7 +260,6 @@ class ProductionResults:
                 st.session_state['last_structured_data'] = preview_data
 
                 # 2. Display Visual Reports (Top Level)
-                st.markdown("### 📋 Automated Data Report")
                 
                 # Get Report Period from Analysis Result
                 report_period_str = preview_data.get("report_period", "Unknown Period")
@@ -268,9 +294,14 @@ class ProductionResults:
         # Add Upload to LLM button ONLY if no analysis exists
         # Check if we already have results in session state to avoid double buttons
         existing_results = get_existing_analysis_results()
+        
+        # Check if the quick-run button at the top was clicked
+        quick_run_triggered = st.session_state.pop('trigger_ai_analysis', False)
+        
         if not existing_results:
             show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)
-            if show_analyze:
+            # Trigger analysis if either button clicked OR quick-run was triggered
+            if show_analyze or quick_run_triggered:
                 ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
         else:
             # If results exist, just render them directly
@@ -287,8 +318,7 @@ class ProductionResults:
         # Helper to safely persist DFs for export
         export_cache = {}
 
-        # 0. Portfolio Snapshot (from Internal Sheet)
-        st.markdown("#### Portfolio Snapshot")
+        # 0. Portfolio Snapshot (from Internal Sheet) - Wrapped for print
         snapshot_html = ""
         
         # Try to get the raw T12 Summary Data for Export
@@ -305,12 +335,13 @@ class ProductionResults:
                 export_cache['portfolio_html'] = snapshot_html
 
         if snapshot_html:
+            st.markdown("#### Portfolio Snapshot")
             st.markdown(snapshot_html, unsafe_allow_html=True)
         else:
+            st.markdown("#### Portfolio Snapshot")
             st.caption("ℹ️ Portfolio snapshot not available for this workbook.")
 
-        # 1. KPI Snapshot Table (Merged Monthly + YTD)
-        st.markdown("#### KPI Snapshot")
+        # 1. KPI Snapshot Table (Merged Monthly + YTD) - Header in wrapper below
         # Extract MoM changes from result
         mom_changes = analysis_result.get('mom_changes', {})
         monthly_kpi = analysis_result.get('kpi', {})
@@ -379,10 +410,10 @@ class ProductionResults:
             ytd_kpi=ytd_kpi,
             mom_changes=mom_changes
         )
+        st.markdown("#### KPI Snapshot")
         st.markdown(kpi_html, unsafe_allow_html=True)
         
-        # 2. Financial Data Section
-        st.markdown("#### Monthly Financial Data")
+        # 2. Financial Data Section - Wrapped for print (header + table stay together)
         if 'monthly_data' in analysis_result:
             m_df = pd.DataFrame(analysis_result['monthly_data'])
             if not m_df.empty:
@@ -393,6 +424,7 @@ class ProductionResults:
                     
                     # Generate display HTML (will filter internally)
                     fin_html = report_gen.generate_financial_table(pivot_df)
+                    st.markdown("#### Monthly Financial Data")
                     st.markdown(fin_html, unsafe_allow_html=True)
                     
                     # Generate Export DF (Apply SAME filter as ReportGenerator)
@@ -472,7 +504,7 @@ class ProductionResults:
             # Display existing results
             st.markdown("## 📊 Full AI Analysis Report")
             ProductionResults._display_analysis_with_options(existing_output, config, selected_property)
-            ProductionResults._display_regenerate_option()
+            # Regenerate option removed per user request
             return
 
         # No existing results - trigger analysis immediately
@@ -514,19 +546,19 @@ class ProductionResults:
         # Main report content
         ProductionResults._display_raw_response_as_main_report(output, selected_property)
         
-        # Add a preview view at the bottom for verification
-        if 'last_structured_data' in st.session_state:
-            with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
-                st.markdown("### 📊 Local Python Analysis Verification")
-                st.info("This is the exact minimized data sent to the AI for variance analysis.")
-                raw_data = st.session_state['last_structured_data']
-                minimal_payload = {
-                    "property_name": raw_data.get("property_name"),
-                    "report_period": raw_data.get("report_period"),
-                    "budget_variances": raw_data.get("budget_variances", {}),
-                    "trailing_anomalies": raw_data.get("trailing_anomalies", {})
-                }
-                st.json(minimal_payload)
+        # LLM Payload Preview - Hidden per user request
+        # if 'last_structured_data' in st.session_state:
+        #     with st.expander("📦 LLM Payload Preview (Structured JSON)", expanded=False):
+        #         st.markdown("### 📊 Local Python Analysis Verification")
+        #         st.info("This is the exact minimized data sent to the AI for variance analysis.")
+        #         raw_data = st.session_state['last_structured_data']
+        #         minimal_payload = {
+        #             "property_name": raw_data.get("property_name"),
+        #             "report_period": raw_data.get("report_period"),
+        #             "budget_variances": raw_data.get("budget_variances", {}),
+        #             "trailing_anomalies": raw_data.get("trailing_anomalies", {})
+        #         }
+        #         st.json(minimal_payload)
     
     @staticmethod
     def _display_raw_response_as_main_report(output: Dict[str, Any], selected_property: str):
@@ -538,7 +570,7 @@ class ProductionResults:
             final_response = raw_response
             
             # --- RENDER AI NARRATIVE SECTION ---
-            st.markdown("### 🤖 AI Analysis & Recommendations")
+            # Header removed per user request
             
             # Attempt to parse as JSON for Python-side rendering
             try:
@@ -574,9 +606,7 @@ class ProductionResults:
             
             st.caption(f"Response length: {len(raw_response):,} characters")
             
-            # Download options
-            st.markdown("### 📥 Download Report")
-            col1, col2, col3 = st.columns(3)
+            # Download options (compact section below)
             
             # Prepare Visual Data for Export
             visual_data = {}
@@ -619,49 +649,28 @@ class ProductionResults:
                 generate_html_download
             )
             
-            # Generate and offer downloads
-            col1, col2, col3, col4 = st.columns(4)
+            # Compact Download Section - Icon-only buttons (right-aligned)
+            st.markdown("---")
+            _, export_label, c1, c2, c3, c4 = st.columns([8, 1, 0.5, 0.5, 0.5, 0.5])  # Spacer + icons
             
-            with col1:
+            with export_label:
+                st.caption("📥")
+            
+            with c1:
                 pdf_bytes = generate_pdf_report(processed_output=export_payload, visual_data=visual_data)
-                st.download_button(
-                    label="📄 PDF (App Styling)",
-                    data=pdf_bytes,
-                    file_name=f"{selected_property}_T12_Analysis.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
+                st.download_button("📄", pdf_bytes, f"{selected_property}_T12.pdf", "application/pdf", help="PDF")
                 
-            with col2:
+            with c2:
                 word_bytes = generate_word_report(processed_output=export_payload, visual_data=visual_data)
-                st.download_button(
-                    label="📝 Word (Editable)",
-                    data=word_bytes,
-                    file_name=f"{selected_property}_T12_Analysis.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
+                st.download_button("📝", word_bytes, f"{selected_property}_T12.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", help="Word")
                 
-            with col3:
+            with c3:
                 txt_bytes = generate_text_report(processed_output=export_payload)
-                st.download_button(
-                    label="📋 Text Summary",
-                    data=txt_bytes,
-                    file_name=f"{selected_property}_T12_Analysis.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
+                st.download_button("📋", txt_bytes, f"{selected_property}_T12.txt", "text/plain", help="Text")
 
-            with col4:
+            with c4:
                 html_bytes = generate_html_download(processed_output=export_payload, visual_data=visual_data)
-                st.download_button(
-                    label="🌐 Web Report (Print)",
-                    data=html_bytes,
-                    file_name=f"{selected_property}_T12_Analysis.html",
-                    mime="text/html",
-                    help="For best 'Print to PDF' results.",
-                    use_container_width=True
-                )
+                st.download_button("🌐", html_bytes, f"{selected_property}_T12.html", "text/html", help="HTML")
                 
 
         else:

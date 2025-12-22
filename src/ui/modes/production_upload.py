@@ -67,8 +67,8 @@ class ProductionUpload:
                     monthly_df.to_pickle(CACHE_MONTHLY)
                     ytd_df.to_pickle(CACHE_YTD)
                     
-                    # Save to exports folder as requested
-                    self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
+                    # Save to exports folder - DISABLED per user request
+                    # self._save_processed_data(monthly_df, ytd_df, uploaded_file.name)
                     
                     progress_bar.progress(100, text="✅ Complete!")
                     st.success("✅ File processed successfully! Monthly and YTD data available.")

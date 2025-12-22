@@ -117,6 +117,56 @@ class ReportGenerator:
                     page-break-inside: avoid;
                     break-inside: avoid;
                 }}
+                
+                /* Hide edit icons when printing */
+                .no-print, .edit-icon, .save-icon {{
+                    display: none !important;
+                }}
+            }}
+            
+            /* Hover-reveal edit icons - hidden by default */
+            .question-cell {{
+                position: relative;
+            }}
+            .edit-icon {{
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                cursor: pointer;
+                font-size: 0.9em;
+                padding: 4px;
+                background: rgba(255,255,255,0.9);
+                border-radius: 4px;
+                z-index: 10;
+            }}
+            .question-cell:hover .edit-icon {{
+                opacity: 0.7;
+            }}
+            .edit-icon:hover {{
+                opacity: 1 !important;
+                background: #e3f2fd;
+            }}
+            .save-icon {{
+                cursor: pointer;
+                color: #2e7d32;
+                font-size: 1.1em;
+                margin-left: 8px;
+            }}
+            .save-icon:hover {{
+                color: #1b5e20;
+            }}
+            .edit-textarea {{
+                width: 100%;
+                min-height: 60px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-family: inherit;
+                font-size: inherit;
+                resize: vertical;
             }}
         </style>
         """
@@ -564,14 +614,53 @@ class ReportGenerator:
             html += "</tr>"
 
             
-        html += "</tbody></table></div>"
         return html
-    def generate_ai_variance_tables(self, ai_data: dict) -> str:
-        """Renders AI-generated JSON narratives as professional HTML tables."""
+    def generate_ai_variance_tables(
+        self, 
+        ai_data: dict, 
+        overrides: dict = None, 
+        edit_mode_bv: bool = False, 
+        edit_mode_ta: bool = False,
+        table_id_prefix: str = ""
+    ) -> str:
+        """
+        Renders AI-generated JSON narratives as professional HTML tables.
+        
+        Args:
+            ai_data: AI-generated variance data
+            overrides: User-edited questions from QuestionStore (optional)
+            edit_mode_bv: If True, render Budget Variances questions as editable
+            edit_mode_ta: If True, render Trailing Anomalies questions as editable
+            table_id_prefix: Prefix for form element IDs (for Streamlit state)
+        """
         if not ai_data or not isinstance(ai_data, dict):
             return "<p><i>No narrative data available to render.</i></p>"
+        
+        overrides = overrides or {}
             
         html = f"{self.css_styles}\n"
+        
+        def get_questions(section: str, category: str, metric: str, default_questions: list) -> list:
+            """Get questions from overrides if available, otherwise use default."""
+            try:
+                return overrides.get(section, {}).get(category, {}).get(metric, default_questions)
+            except:
+                return default_questions
+        
+        def render_question_cell(questions: list, section: str, category: str, metric: str, edit_mode: bool) -> str:
+            """Render the question cell with optional edit mode."""
+            cell_id = f"{table_id_prefix}_{section}_{category}_{metric}".replace(" ", "_").replace(".", "_")
+            
+            if edit_mode:
+                # Render as editable text areas
+                textarea_html = ""
+                for i, q in enumerate(questions):
+                    textarea_html += f'<textarea class="edit-textarea" name="{cell_id}_q{i}" data-metric="{metric}" data-idx="{i}">{q}</textarea>'
+                return f"<td class='question-cell' style='text-align: left;'>{textarea_html}</td>"
+            else:
+                # Render as static text (editing is done via sidebar)
+                q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+                return f"<td class='question-cell' style='text-align: left;'>{q_html}</td>"
         
         # Helper for robust sorting (highest positive % -> lowest negative %)
         def get_sort_val(item):
@@ -586,7 +675,7 @@ class ReportGenerator:
                 return -999999.0 # Push errors to bottom
         
         # 1. Budget Variances Section
-        html += "<h3 style='margin-top: 30px;'>1️⃣ Budget Variances</h3>"
+        html += "<h3 style='margin-top: 30px;'>Budget Variances</h3>"
         
         # User defined exclusions for variance reporting
         excluded_metrics = [
@@ -619,17 +708,18 @@ class ReportGenerator:
                     actual = item.get("actual", 0)
                     budget = item.get("budget", 0)
                     var_pct = item.get("variance_pct", 0)
-                    questions = item.get("questions", [])
-                    q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+                    default_questions = item.get("questions", [])
+                    questions = get_questions("budget_variances", cat, metric, default_questions)
+                    question_cell = render_question_cell(questions, "budget_variances", cat, metric, edit_mode_bv)
                     
                     fmt_actual = f"${actual:,.2f}" if isinstance(actual, (int, float)) else str(actual)
                     fmt_budget = f"${budget:,.2f}" if isinstance(budget, (int, float)) else str(budget)
                     
-                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td><td style='text-align: left;'>{q_html}</td></tr>"
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td>{question_cell}</tr>"
                 html += "</tbody></table>"
                 
         # 2. Trailing Anomalies Section
-        html += "<h3 style='margin-top: 40px;'>2️⃣ Trailing Anomalies</h3>"
+        html += "<h3 style='margin-top: 40px;'>Trailing Anomalies</h3>"
         ta = ai_data.get("trailing_anomalies", {})
         if not ta or (not ta.get("Revenue") and not ta.get("Expenses") and not ta.get("Balance Sheet")):
              html += "<p>No significant trailing anomalies reported.</p>"
@@ -654,13 +744,14 @@ class ReportGenerator:
                     current = item.get("current", 0)
                     t3_avg = item.get("t3_avg", 0)
                     dev_pct = item.get("deviation_pct", 0)
-                    questions = item.get("questions", [])
-                    q_html = "<br>".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+                    default_questions = item.get("questions", [])
+                    questions = get_questions("trailing_anomalies", cat, metric, default_questions)
+                    question_cell = render_question_cell(questions, "trailing_anomalies", cat, metric, edit_mode_ta)
                     
                     fmt_current = f"${current:,.2f}" if isinstance(current, (int, float)) else str(current)
                     fmt_t3 = f"${t3_avg:,.2f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
                     
-                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td><td style='text-align: left;'>{q_html}</td></tr>"
+                    html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td>{question_cell}</tr>"
                 html += "</tbody></table>"
                 
         return html

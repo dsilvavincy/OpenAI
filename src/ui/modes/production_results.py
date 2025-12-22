@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from src.ui.ai_analysis import get_existing_analysis_results, run_ai_analysis_responses
 from src.utils.format_detection import get_stored_format
 from src.core.local_analysis import PropertyAnalyzer
+from src.core.question_store import question_store, QuestionStore
 
 logger = logging.getLogger(__name__)
 
@@ -217,34 +218,101 @@ class ProductionResults:
                 # Clear cached analysis when property changes
                 st.session_state.pop('processed_analysis_output', None)
         
-        if properties:
-            # Use columns: dropdown (80%) + run button (20%)
-            col1, col2 = st.columns([4, 1])
+        if properties:        
+
+            # Calculate detection logic EARLY so we can decide on layout
+            # Reuse logic to find property key (mimicking what was deleted below)
+            analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+            current_prop = st.session_state.get('selected_property', properties[0])
+            monthly_filtered = monthly_df[monthly_df['Property'] == current_prop]
+            if not monthly_filtered.empty:
+                latest = analyzer._get_latest_month(monthly_filtered)
+                period = latest.strftime("%B %Y") if latest else "Unknown"
+            else:
+                period = "Unknown"
+            property_key = QuestionStore.make_key(current_prop, period)
             
-            with col1:
-                selected_property = st.selectbox(
-                    "Select property to analyze",
-                    properties,
-                    index=properties.index(st.session_state['selected_property']) if st.session_state['selected_property'] in properties else 0,
-                    help="Only rows matching this property will be analyzed (both Monthly and YTD).",
-                    key="selected_property_select",
-                    on_change=on_property_change,
-                    label_visibility="collapsed"
-                )
+            has_history = question_store.has_analysis(property_key)
+            has_edits = question_store.has_overrides(property_key)
             
-            with col2:
-                # Quick Run button - triggers AI analysis
-                if st.button("🚀 Run Analysis", type="primary", use_container_width=True, help="Run AI Analysis for selected property"):
-                    st.session_state['trigger_ai_analysis'] = True
-                    st.toast("🚀 Starting AI Analysis...", icon="🔄")
-                    st.rerun()
+            # Initialize Action
+            action = None
+            quick_run_triggered = st.session_state.pop('trigger_ai_analysis', False)
+
+            # --- DYNAMIC LAYOUT ---
+            if not has_history and not has_edits:
+                # Standard Layout: Dropdown (4) + Run Button (1)
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    selected_property = st.selectbox(
+                        "Select property to analyze",
+                        properties,
+                        index=properties.index(st.session_state['selected_property']) if st.session_state['selected_property'] in properties else 0,
+                        help="Only rows matching this property will be analyzed.",
+                        key="selected_property_select",
+                        on_change=on_property_change,
+                        label_visibility="collapsed"
+                    )
+                
+                with col2:
+                     if st.button("🚀 Run Analysis", type="primary", use_container_width=True) or quick_run_triggered:
+                        action = 'fresh'
+            else:
+                # Re-run Layout: Dropdown (2) + Load (1) + Keep (1) + [Overwrite (1)]
+                # If edits exist, we need 3 button columns. If not, just 2.
+                if has_edits:
+                     # Layout: Dropdown (2.5) | Load (1) | Keep (1) | Overwrite (1)
+                     col1, btn1, btn2, btn3 = st.columns([2.5, 1, 1, 1])
+                else:
+                     # Layout: Dropdown (3) | Load (1) | Regen (1)
+                     col1, btn1, btn2 = st.columns([3, 1, 1])
+                
+                with col1:
+                    selected_property = st.selectbox(
+                        "Select property to analyze",
+                        properties,
+                        index=properties.index(st.session_state['selected_property']) if st.session_state['selected_property'] in properties else 0,
+                        help=f"Existing Report Found: {period}",
+                        key="selected_property_select",
+                        on_change=on_property_change,
+                        label_visibility="collapsed"
+                    )
+                
+                with btn1:
+                    if st.button("📂 Load Previous", use_container_width=True, help="Load saved report"):
+                        action = 'load'
+                
+                with btn2:
+                    if has_edits:
+                        if st.button("🎨 Keep Edits", use_container_width=True, help="Re-run but keep questions"):
+                            action = 'keep'
+                    else:
+                        if st.button("🔄 Re-generate", use_container_width=True, help="Run fresh analysis"):
+                            action = 'fresh'
+                            
+                if has_edits:
+                    with btn3:
+                        if st.button("🆕 Overwrite", use_container_width=True, help="Reset questions & run fresh", type="primary"):
+                            action = 'overwrite'
+                            question_store.delete_overrides(property_key)
+
+            # --- PROCESS ACTION ---
+            # If an action was triggered, set state (render will happen at bottom)
+            if action:
+                # Ensure selected property is current before running
+                sel_prop = st.session_state.get('selected_property', properties[0])
+                st.session_state[f'rerun_action_{sel_prop}'] = action
+                st.session_state.pop('processed_analysis_output', None)
+                
+            # If existing results are in memory, they will also be picked up by the render call at bottom
+
             
             # Ensure selected_property variable matches session state (for downstream use)
             selected_property = st.session_state.get('selected_property', selected_property)
             
-            # Progress bar placeholder - appears at top when analysis is running
-            if st.session_state.get('trigger_ai_analysis') or st.session_state.get('analysis_in_progress'):
-                st.session_state['analysis_progress_container'] = st.container()
+            # Always create a container at the top for status messages/progress
+            st.session_state['analysis_progress_container'] = st.container()
         else:
             selected_property = None
             st.info("No Property column found; analysis will use all rows.")
@@ -259,18 +327,18 @@ class ProductionResults:
                 # Store in session state for reuse
                 st.session_state['last_structured_data'] = preview_data
                 
-                # LLM Payload Preview - Visible for verification BEFORE analysis
-                st.info("Debugging: New Code IS Running - Look for Payload Preview below")
-                with st.expander("📦 DEBUG: Data Preview (No Cost)", expanded=True):
-                    st.markdown("### 📊 Local Python Analysis Verification")
-                    st.info("This is the exact minimized data sent to the AI for variance analysis.")
-                    minimal_payload = {
-                        "property_name": preview_data.get("property_name"),
-                        "report_period": preview_data.get("report_period"),
-                        "budget_variances": preview_data.get("budget_variances", {}),
-                        "trailing_anomalies": preview_data.get("trailing_anomalies", {})
-                    }
-                    st.json(minimal_payload)
+                # LLM Payload Preview - Hidden for production (uncomment for debugging)
+                # st.info("Debugging: New Code IS Running - Look for Payload Preview below")
+                # with st.expander("📦 DEBUG: Data Preview (No Cost)", expanded=True):
+                #     st.markdown("### 📊 Local Python Analysis Verification")
+                #     st.info("This is the exact minimized data sent to the AI for variance analysis.")
+                #     minimal_payload = {
+                #         "property_name": preview_data.get("property_name"),
+                #         "report_period": preview_data.get("report_period"),
+                #         "budget_variances": preview_data.get("budget_variances", {}),
+                #         "trailing_anomalies": preview_data.get("trailing_anomalies", {})
+                #     }
+                #     st.json(minimal_payload)
 
                 # 2. Display Visual Reports (Top Level)
                 
@@ -279,6 +347,9 @@ class ProductionResults:
                 
                 st.markdown(f"**Report Period:** {report_period_str}")
                 ProductionResults._render_visual_tables(preview_data, selected_property)
+
+                # 3. AI Analysis Report (Rendered Below Tables)
+                ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
 
                 # 3. Collaborative Debug View (Hidden for Production)
                 # with st.expander(f"🛠️ DEBUG: Analysis Data Trace - {selected_property}", expanded=False):
@@ -304,21 +375,7 @@ class ProductionResults:
                 import traceback
                 st.code(traceback.format_exc())
         
-        # Add Upload to LLM button ONLY if no analysis exists
-        # Check if we already have results in session state to avoid double buttons
-        existing_results = get_existing_analysis_results()
-        
-        # Check if the quick-run button at the top was clicked
-        quick_run_triggered = st.session_state.pop('trigger_ai_analysis', False)
-        
-        if not existing_results:
-            show_analyze = st.button("🚀 Run AI Analysis on this Data", type="primary", use_container_width=True)
-            # Trigger analysis if either button clicked OR quick-run was triggered
-            if show_analyze or quick_run_triggered:
-                ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
-        else:
-            # If results exist, just render them directly
-            ProductionResults._render_ai_analysis(monthly_df, ytd_df, config, selected_property)
+
 
     @staticmethod
     def _render_visual_tables(analysis_result: Dict[str, Any], selected_property: str):
@@ -440,16 +497,11 @@ class ProductionResults:
             if not m_df.empty:
                 if 'Metric' in m_df.columns and 'Period' in m_df.columns and 'Value' in m_df.columns:
                     # User Request: Multiply Trailing 12 month NOI by 1000
-                    # Robust matching: strip whitespace and ignore case
+                    # (Scaling moved to ReportGenerator.generate_financial_table)
                     try:
-                        print("DEBUG: Unique Metrics found:", m_df['Metric'].unique(), flush=True) # <<< DEBUG LINE
                         m_df['Value'] = pd.to_numeric(m_df['Value'], errors='coerce').fillna(0)
-                        mask = m_df['Metric'].astype(str).str.strip().str.lower() == "trailing 12 month noi"
-                        if mask.any():
-                            print(f"DEBUG: Scalling {mask.sum()} NOI rows by 1000", flush=True)
-                            m_df.loc[mask, 'Value'] = m_df.loc[mask, 'Value'] * 1000
-                    except Exception as e:
-                        print(f"DEBUG Error scaling NOI: {e}", flush=True)
+                    except Exception:
+                        pass
                     
                     # Use pivot_table with aggfunc='sum' to be resilient to any remaining duplicates
                     pivot_df = m_df.pivot_table(index='Metric', columns='Period', values='Value', aggfunc='sum')
@@ -528,19 +580,8 @@ class ProductionResults:
     @staticmethod
     def _render_ai_analysis(monthly_df: pd.DataFrame, ytd_df: pd.DataFrame, config: Dict[str, Any], selected_property: Optional[str] = None):
         """Render AI analysis with side-by-side option."""
-        # ... existing implementation ...
-        # (Assuming the rest of the method is unchanged except for calling the helper)
         # Check for existing analysis results first
         existing_output = get_existing_analysis_results()
-
-        if existing_output:
-            # Display existing results
-            st.markdown("## 📊 Full AI Analysis Report")
-            ProductionResults._display_analysis_with_options(existing_output, config, selected_property)
-            # Regenerate option removed per user request
-            return
-
-        # No existing results - trigger analysis immediately
         detected_format = get_stored_format()
 
         # Build model configuration
@@ -553,8 +594,64 @@ class ProductionResults:
         # Use the NEW recommended Responses API flow
         from src.ui.ai_analysis import run_ai_analysis_responses
         property_label = selected_property or config.get('property_name', '')
-        with st.spinner('Computing local metrics and generating AI report…'):
-            processed_output = run_ai_analysis_responses(
+        
+        # Calculate Property Key (Property + Period) to check for history
+        from src.core.local_analysis import PropertyAnalyzer
+        analyzer = PropertyAnalyzer(monthly_df, ytd_df)
+        analysis_property = selected_property or property_label
+        
+        # Determine period for the key
+        monthly_filtered = monthly_df[monthly_df['Property'] == analysis_property]
+        if not monthly_filtered.empty:
+            latest_month = analyzer._get_latest_month(monthly_filtered)
+            report_period = latest_month.strftime("%B %Y") if latest_month else "Unknown"
+        else:
+            report_period = "Unknown"
+            
+        property_key = QuestionStore.make_key(analysis_property, report_period)
+        
+        # --- Ensure history is saved even if just displaying from session state ---
+        existing_output = get_existing_analysis_results()
+        if existing_output and not question_store.has_analysis(property_key):
+            question_store.save_analysis(property_key, existing_output)
+            
+        action_key = f"rerun_action_{selected_property}"
+        rerun_action = st.session_state.get(action_key)
+        
+        # Logic:
+        # 1. If 'load', fetch from DB and set as existing_output
+        # 2. If 'fresh', 'keep', 'overwrite', run AI.
+        # 3. If no action but existing_output, show it.
+        
+        if rerun_action == 'load':
+             prev_analysis = question_store.get_analysis(property_key)
+             if prev_analysis:
+                 st.session_state['processed_analysis_output'] = prev_analysis
+                 st.session_state.pop(action_key, None) # Clear action
+                 existing_output = prev_analysis
+                 
+        should_run_ai = rerun_action in ['fresh', 'keep', 'overwrite']
+        
+        if existing_output and not should_run_ai:
+            ProductionResults._display_analysis_with_options(existing_output, config, selected_property)
+            return
+
+        if not should_run_ai:
+            return
+                
+
+
+        # --- FRESH AI RUN SECTION ---
+        # Render spinner in the top container (defined near buttons) so user sees it immediately
+        top_container = st.session_state.get('analysis_progress_container')
+        
+        # Helper to execute the run logic
+        def _execute_analysis_run():
+            # Clear existing cache to avoid blocking
+            st.session_state.pop('processed_analysis_output', None)
+            st.session_state['show_edit_dialog'] = False
+            
+            return run_ai_analysis_responses(
                 monthly_df,
                 ytd_df,
                 config['api_key'],
@@ -564,10 +661,38 @@ class ProductionResults:
                 model_config,
                 selected_property=selected_property
             )
+            
+        try:
+            if top_container:
+                with top_container:
+                    with st.spinner('Generating investigative questions and narrative…'):
+                        processed_output = _execute_analysis_run()
+            else:
+                with st.spinner('Generating investigative questions and narrative…'):
+                    processed_output = _execute_analysis_run()
+
+        except Exception as e:
+            msg = f"❌ AI Analysis Failed: {str(e)}"
+            if top_container:
+                top_container.error(msg)
+            else:
+                st.error(msg)
+            # Reset flags on error so user can try again
+            st.session_state.pop(action_key, None)
+            return
+        
+        if not processed_output:
+            st.warning("⚠️ AI Analysis returned no results. Please try again.")
+            st.session_state.pop(action_key, None)
+            return
 
         if processed_output:
-            st.markdown("---")
-            st.markdown("## 📊 Full AI Analysis Report")
+            # Save to persistent history
+            question_store.save_analysis(property_key, processed_output)
+            # Clear rerun action state and click flag
+            st.session_state.pop(action_key, None)
+
+                
             # Persist for subsequent reruns so the UI shows existing results
             st.session_state['processed_analysis_output'] = processed_output
             st.session_state['last_analyzed_property'] = selected_property
@@ -612,10 +737,68 @@ class ProductionResults:
                 # (Simple json.loads is usually fine if we cut correctly)
                 ai_data = json.loads(json_str)
                 
+                # Store AI data for edit functionality
+                st.session_state['current_ai_data'] = ai_data
+                
+                # Load question overrides from database
+                property_name = ai_data.get("property_name", selected_property)
+                report_period = ai_data.get("report_period", "Unknown")
+                property_key = QuestionStore.make_key(property_name, report_period)
+                overrides = question_store.get_overrides(property_key)
+                
+                # Store key for save operations
+                st.session_state['current_property_key'] = property_key
+                
                 from src.core.report_generator import ReportGenerator
                 report_gen = ReportGenerator()
-                narrative_html = report_gen.generate_ai_variance_tables(ai_data)
+                narrative_html = report_gen.generate_ai_variance_tables(ai_data, overrides=overrides)
                 st.markdown(narrative_html, unsafe_allow_html=True)
+                
+                # --- EDIT QUESTIONS SECTION (Hidden from Print) ---
+                # Store metrics data in session state for dialog access
+                all_metrics = []
+                for section in ["budget_variances", "trailing_anomalies"]:
+                    section_data = ai_data.get(section, {})
+                    for category in ["Revenue", "Expenses", "Balance Sheet"]:
+                        items = section_data.get(category, [])
+                        for item in items:
+                            metric = item.get("metric", "")
+                            if metric:
+                                default_qs = item.get("questions", [])
+                                current_qs = overrides.get(section, {}).get(category, {}).get(metric, default_qs)
+                                # Include variance data for display
+                                metric_data = {
+                                    "section": section,
+                                    "category": category,
+                                    "metric": metric,
+                                    "questions": current_qs
+                                }
+                                # Add variance values based on section type
+                                if section == "budget_variances":
+                                    metric_data["actual"] = item.get("actual", 0)
+                                    metric_data["budget"] = item.get("budget", 0)
+                                    metric_data["variance_pct"] = item.get("variance_pct", 0)
+                                else:  # trailing_anomalies
+                                    metric_data["current"] = item.get("current", 0)
+                                    metric_data["t3_avg"] = item.get("t3_avg", 0)
+                                    metric_data["deviation_pct"] = item.get("deviation_pct", 0)
+                                all_metrics.append(metric_data)
+                
+                st.session_state['all_metrics_for_edit'] = all_metrics
+                st.session_state['overrides_for_edit'] = overrides
+                st.session_state['current_property_key_for_save'] = property_key
+                
+                # --- SIDEBAR: BUTTON TO TRIGGER EDIT MODAL ---
+                if all_metrics:
+                    with st.sidebar:
+                        st.markdown("---")
+                        if st.button("✏️ Edit Questions", key="sidebar_open_edit_dialog", use_container_width=True, help="Edit investigative questions in a popup"):
+                            st.session_state['show_edit_dialog'] = True
+                            st.rerun()
+                
+                # Show modal if state is set
+                if st.session_state.get('show_edit_dialog', False):
+                    ProductionResults._show_edit_dialog(property_key)
                 
             except Exception as e:
                 # Fallback to raw markdown if JSON fails
@@ -703,3 +886,135 @@ class ProductionResults:
             from src.ui.ai_analysis import clear_analysis_results
             clear_analysis_results()
             st.rerun()
+    
+
+
+    @staticmethod
+    @st.dialog("✏️ Edit Investigative Questions", width="large")
+    def _show_edit_dialog(property_key: str):
+        """Modal dialog for editing investigative questions."""
+        all_metrics = st.session_state.get('all_metrics_for_edit', [])
+        
+        if not all_metrics:
+            st.info("No metrics with questions available to edit.")
+            if st.button("Close"):
+                st.session_state['show_edit_dialog'] = False
+                st.rerun()
+            return
+        
+        st.caption("Edit questions for any metric. Changes are saved and will be used in future reports for this property/period.")
+        
+        # Get pre-selected index if user clicked an inline edit icon
+        pre_selected_idx = st.session_state.get('selected_edit_metric_idx', 0)
+        
+        # Metric selector
+        metric_options = [f"{m['metric']} ({m['section'].replace('_', ' ').title()} - {m['category']})" for m in all_metrics]
+        selected_idx = st.selectbox(
+            "Select Metric to Edit", 
+            range(len(metric_options)), 
+            index=min(pre_selected_idx, len(metric_options) - 1),  # Use pre-selected index
+            format_func=lambda x: metric_options[x], 
+            key="dialog_metric_selector"
+        )
+        
+        if selected_idx is not None:
+            selected_metric = all_metrics[selected_idx]
+            metric_key = f"{selected_metric['section']}_{selected_metric['category']}_{selected_metric['metric']}"
+            
+            # Compact header with variance info in columns
+            st.markdown(f"#### {selected_metric['metric']}")
+            m_cols = st.columns(4)
+            
+            if selected_metric['section'] == 'budget_variances':
+                actual = selected_metric.get('actual', 0)
+                budget = selected_metric.get('budget', 0)
+                var_pct = selected_metric.get('variance_pct', 0)
+                fmt_actual = f"${actual:,.0f}" if isinstance(actual, (int, float)) else str(actual)
+                fmt_budget = f"${budget:,.0f}" if isinstance(budget, (int, float)) else str(budget)
+                
+                m_cols[0].caption("Actual")
+                m_cols[0].markdown(f"**{fmt_actual}**")
+                m_cols[1].caption("Budget")
+                m_cols[1].markdown(f"**{fmt_budget}**")
+                m_cols[2].caption("Variance")
+                m_cols[2].markdown(f"**{var_pct}%**")
+                m_cols[3].caption("Category")
+                m_cols[3].markdown(f"**{selected_metric['category']}**")
+            else:
+                current = selected_metric.get('current', 0)
+                t3_avg = selected_metric.get('t3_avg', 0)
+                dev_pct = selected_metric.get('deviation_pct', 0)
+                fmt_current = f"${current:,.0f}" if isinstance(current, (int, float)) else str(current)
+                fmt_t3 = f"${t3_avg:,.0f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
+                
+                m_cols[0].caption("Current")
+                m_cols[0].markdown(f"**{fmt_current}**")
+                m_cols[1].caption("T3 Avg")
+                m_cols[1].markdown(f"**{fmt_t3}**")
+                m_cols[2].caption("Deviation")
+                m_cols[2].markdown(f"**{dev_pct}%**")
+                m_cols[3].caption("Category")
+                m_cols[3].markdown(f"**{selected_metric['category']}**")
+            
+            st.markdown("---")
+            
+            # Initialize questions in session state per-metric (persists across metric switches)
+            edit_key = f"edit_qs_{metric_key}"
+            if edit_key not in st.session_state:
+                st.session_state[edit_key] = list(selected_metric['questions'])
+            
+            current_questions = st.session_state[edit_key]
+            
+            # Compact questions display
+            questions_to_delete = []
+            edited_questions = []
+            for i, q in enumerate(current_questions):
+                col1, col2 = st.columns([12, 1])
+                with col1:
+                    new_q = st.text_input(
+                        f"Q{i+1}", 
+                        value=q, 
+                        key=f"q_{metric_key}_{i}",
+                        label_visibility="collapsed"
+                    )
+                    edited_questions.append(new_q)
+                with col2:
+                    if st.button("🗑️", key=f"del_{metric_key}_{i}", help="Delete"):
+                        questions_to_delete.append(i)
+            
+            # Process deletions
+            if questions_to_delete:
+                for idx in sorted(questions_to_delete, reverse=True):
+                    st.session_state[edit_key].pop(idx)
+                st.rerun()
+            
+            # Update session state with current edits (persist across metric switches)
+            st.session_state[edit_key] = edited_questions
+            
+            # Compact action row
+            col1, col2, col3 = st.columns([2, 2, 3])
+            with col1:
+                if st.button("➕ Add", key=f"add_{metric_key}"):
+                    st.session_state[edit_key].append("")
+                    st.rerun()
+            with col2:
+                if st.button("💾 Save", type="primary", key=f"save_{metric_key}"):
+                    success = question_store.save_override(
+                        property_key,
+                        selected_metric['section'],
+                        selected_metric['category'],
+                        selected_metric['metric'],
+                        edited_questions
+                    )
+                    if success:
+                        st.toast(f"✅ Saved: {selected_metric['metric']}")
+                    else:
+                        st.error("Save failed")
+            with col3:
+                if st.button("❌ Close & Exit", key="close_dialog"):
+                    # Clear all edit states
+                    keys_to_clear = [k for k in st.session_state.keys() if k.startswith("edit_qs_") or k.startswith("q_")]
+                    for k in keys_to_clear:
+                        del st.session_state[k]
+                    st.session_state['show_edit_dialog'] = False
+                    st.rerun()

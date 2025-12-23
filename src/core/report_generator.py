@@ -378,6 +378,8 @@ class ReportGenerator:
                             display_val = f"{raw_val:.2f}"
                         elif "Rate" in h_str: # In Place Eff. Rate
                             display_val = f"${raw_val:,.0f}"
+                        elif "Units" in h_str or "#" in h_str: # # of Units
+                            display_val = f"{raw_val:,.0f}"
                         else:
                             display_val = f"{raw_val:,.2f}"
                     else:
@@ -600,13 +602,16 @@ class ReportGenerator:
                     display_val = "-"
                 elif 'trailing 12 month noi' in str(metric).lower():
                     # Compact formatting for large NOI values
-                    abs_val = abs(val)
-                    if abs_val >= 1_000_000:
-                        display_val = f"${val/1_000_000:.2f}M"
-                    elif abs_val >= 1_000:
-                        display_val = f"${val/1_000:.0f}K"
+                    if isinstance(val, (int, float)):
+                        abs_val = abs(val)
+                        if abs_val >= 1_000_000:
+                            display_val = f"${val/1_000_000:.2f}M"
+                        elif abs_val >= 1_000:
+                            display_val = f"${val/1_000:.0f}K"
+                        else:
+                            display_val = f"${val:,.0f}"
                     else:
-                        display_val = f"${val:,.0f}"
+                        display_val = str(val)
                 else:
                     display_val = str(val)
                     try:

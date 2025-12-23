@@ -76,6 +76,14 @@ class ReportGenerator:
             
             .metric-header {{ font-weight: bold; color: {COLOR_NAVY} !important; text-align: left !important; }}
             
+            /* Metric Column Specific Styling (First Column) */
+            .report-table th:first-child,
+            .report-table td:first-child {{
+                width: 150px;      /* Fixed compact width */
+                word-break: normal;   /* Break at spaces */
+                white-space: normal;  /* Wrap text */
+            }}
+            
             /* Print-Specific Styles for Chrome PDF Export */
             @media print {{
                 /* COMPACT MODE - Reduce sizes for print */
@@ -590,6 +598,15 @@ class ReportGenerator:
                 # Format Value String
                 if pd.isna(val):
                     display_val = "-"
+                elif 'trailing 12 month noi' in str(metric).lower():
+                    # Compact formatting for large NOI values
+                    abs_val = abs(val)
+                    if abs_val >= 1_000_000:
+                        display_val = f"${val/1_000_000:.2f}M"
+                    elif abs_val >= 1_000:
+                        display_val = f"${val/1_000:.0f}K"
+                    else:
+                        display_val = f"${val:,.0f}"
                 else:
                     display_val = str(val)
                     try:
@@ -712,8 +729,14 @@ class ReportGenerator:
                     questions = get_questions("budget_variances", cat, metric, default_questions)
                     question_cell = render_question_cell(questions, "budget_variances", cat, metric, edit_mode_bv)
                     
-                    fmt_actual = f"${actual:,.2f}" if isinstance(actual, (int, float)) else str(actual)
-                    fmt_budget = f"${budget:,.2f}" if isinstance(budget, (int, float)) else str(budget)
+                    # User Request: Multiply Actual and Budget by 1000 and remove decimals
+                    if isinstance(actual, (int, float)):
+                        actual = actual * 1000
+                    if isinstance(budget, (int, float)):
+                        budget = budget * 1000
+                    
+                    fmt_actual = f"${actual:,.0f}" if isinstance(actual, (int, float)) else str(actual)
+                    fmt_budget = f"${budget:,.0f}" if isinstance(budget, (int, float)) else str(budget)
                     
                     html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_actual}</td><td>{fmt_budget}</td><td>{var_pct}%</td>{question_cell}</tr>"
                 html += "</tbody></table>"
@@ -743,13 +766,20 @@ class ReportGenerator:
 
                     current = item.get("current", 0)
                     t3_avg = item.get("t3_avg", 0)
+                    
+                    # User Request: Multiply Current and Avg by 1000 and remove decimals
+                    if isinstance(current, (int, float)):
+                         current = current * 1000
+                    if isinstance(t3_avg, (int, float)):
+                         t3_avg = t3_avg * 1000
+
                     dev_pct = item.get("deviation_pct", 0)
                     default_questions = item.get("questions", [])
                     questions = get_questions("trailing_anomalies", cat, metric, default_questions)
                     question_cell = render_question_cell(questions, "trailing_anomalies", cat, metric, edit_mode_ta)
                     
-                    fmt_current = f"${current:,.2f}" if isinstance(current, (int, float)) else str(current)
-                    fmt_t3 = f"${t3_avg:,.2f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
+                    fmt_current = f"${current:,.0f}" if isinstance(current, (int, float)) else str(current)
+                    fmt_t3 = f"${t3_avg:,.0f}" if isinstance(t3_avg, (int, float)) else str(t3_avg)
                     
                     html += f"<tr><td class='metric-header'>{metric}</td><td>{fmt_current}</td><td>{fmt_t3}</td><td>{dev_pct}%</td>{question_cell}</tr>"
                 html += "</tbody></table>"

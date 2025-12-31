@@ -46,10 +46,11 @@ class ProductionSidebar:
             </style>
         """, unsafe_allow_html=True)
 
-        # Initialize API key in session state if not present
         if 'api_key_input' not in st.session_state:
             saved_key = self._get_saved_api_key()
-            st.session_state['api_key_input'] = saved_key or st.session_state.get('api_key', '') or os.getenv("OPENAI_API_KEY", '') or api_key
+            # Check secrets first, then env, then passed arg
+            secret_key = st.secrets.get("OPENAI_API_KEY", "") if "OPENAI_API_KEY" in st.secrets else ""
+            st.session_state['api_key_input'] = saved_key or st.session_state.get('api_key', '') or secret_key or os.getenv("OPENAI_API_KEY", '') or api_key
         
         # Ensure 'api_key' in session state matches the input for other components
         st.session_state['api_key'] = st.session_state['api_key_input']

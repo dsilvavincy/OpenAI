@@ -258,9 +258,62 @@ def run_ai_analysis_responses(monthly_df, ytd_df, api_key, property_name, proper
             return None
             
     except Exception as e:
-        st.error(f"❌ Error during Responses API analysis: {str(e)}")
-        import traceback
-        st.error(f"Details: {traceback.format_exc()}")
+        # Check for Authentication Error (User key failed)
+        is_auth_error = "authentication" in str(e).lower() or "api key" in str(e).lower() or "401" in str(e)
+        
+        if is_auth_error:
+            # Check if we have a system key to fall back to
+            system_key = None
+            if hasattr(st, "secrets") and "OPENAI_API_KEY" in st.secrets:
+                system_key = st.secrets["OPENAI_API_KEY"]
+            else:
+                import os
+                system_key = os.getenv("OPENAI_API_KEY")
+            
+            # If we have a system key and it's different from the one that failed
+            if system_key and system_key != api_key:
+                st.warning("⚠️ User API Key failed. Attempting fallback to system default key...")
+                try:
+                    # Retry with system key
+                    ai_response = analyze_with_responses_api(
+                        structured_data=structured_data,
+                        api_key=system_key,
+                        model=model_config['model_selection'],
+                        temperature=model_config['temperature'],
+                        stream_callback=update_streaming,
+                        progress_callback=update_progress,
+                    )
+                    
+                    # If successful, clean up
+                    ai_status.empty()
+                    ai_progress.empty()
+                    st.toast("✅ Analysis succeeded with System Key!", icon="🔄")
+                    st.success("✅ Recovered using system API Key.")
+                    
+                    # Store result (same as success block above)
+                    st.session_state['last_enhanced_analysis_result'] = ai_response
+                    st.session_state['last_analysis_method'] = "Responses API (System Fallback)"
+                    
+                    if ai_response and not ai_response.startswith("Error:"):
+                        property_info = {
+                            "name": analysis_property or "Unknown Property",
+                            "address": property_address or "No address provided"
+                        }
+                        processed_output = post_process_output(ai_response, property_info)
+                        processed_output["raw_response"] = ai_response
+                        processed_output["structured_data"] = structured_data
+                        processed_output["api_method"] = "responses_api"
+                        return processed_output
+                        
+                except Exception as fallback_error:
+                    st.error(f"❌ Fallback failed too: {str(fallback_error)}")
+            else:
+                 st.error(f"❌ Authentication failed: {str(e)}")
+                 st.info("💡 Please check your API Key.")
+        else:
+            st.error(f"❌ Error during Responses API analysis: {str(e)}")
+            import traceback
+            st.error(f"Details: {traceback.format_exc()}")
         return None
 
 def display_analysis_results(processed_output, display_mode="structured"):

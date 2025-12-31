@@ -99,9 +99,13 @@ if os.path.exists(logo_secondary_path):
 
 def main():
     """Main application entry point using dual-mode UI system."""
-    # Initialize session state for API key from environment
+    # Initialize session state for API key from environment or secrets
     if 'api_key' not in st.session_state:
-        st.session_state['api_key'] = os.getenv("OPENAI_API_KEY", "")
+        # Priority: Streamlit Secrets -> Environment Variable -> Empty
+        if "OPENAI_API_KEY" in st.secrets:
+            st.session_state['api_key'] = st.secrets["OPENAI_API_KEY"]
+        else:
+            st.session_state['api_key'] = os.getenv("OPENAI_API_KEY", "")
     
     # Initialize progress tracking for backward compatibility
     create_progress_tracker()
